@@ -1,0 +1,33 @@
+name: EOD Stock Screener
+
+on:
+  schedule:
+    - cron: '30 10 * * 1-5'   # 10:30 UTC = 4:00 PM IST, after NSE close, Mon-Fri
+  workflow_dispatch: {}        # manual trigger from the Actions tab — use this first to test
+
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pattern detection tests
+        run: python test_patterns.py
+
+      - name: Run screener
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python main.py
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: latest-screen
+          path: latest_screen.json
