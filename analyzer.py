@@ -47,7 +47,7 @@ except ImportError:
 
 WATCHLIST = [
     "ETERNAL.NS", "DLF.NS", "IEX.NS", "UTTAMSUGAR.NS",
-    "IDFCFIRSTB.NS", "BANDHANBK.NS", "CENTRALBNK.NS",
+    "IDFCFIRSTB.NS", "BANDHANBNK.NS", "CENTRALBK.NS",
     "HDFCBANK.NS", "TITAN.NS", "MCX.NS", "BSE.NS",
 ]
 
@@ -258,12 +258,26 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     )
 
 
+def _flatten_columns(data: pd.DataFrame, ticker: str) -> pd.DataFrame:
+    """yfinance sometimes returns MultiIndex columns even for a single
+    ticker, and the level order (field-first vs ticker-first) isn't
+    consistent across versions. Flatten to plain Open/High/Low/Close/
+    Volume columns regardless of which layout came back."""
+    if not isinstance(data.columns, pd.MultiIndex):
+        return data
+    lvl0 = set(data.columns.get_level_values(0))
+    if ticker in lvl0:
+        return data.xs(ticker, axis=1, level=0)
+    return data.droplevel(1, axis=1)
+
+
 def fetch_ticker(ticker: str) -> Optional[pd.DataFrame]:
     if yf is None:
         raise RuntimeError("yfinance not installed — pip install yfinance")
     data = yf.download(ticker, period=f"{LOOKBACK_DAYS}d", interval="1d", progress=False)
     if data.empty:
         return None
+    data = _flatten_columns(data, ticker)
     data = data.rename(columns=str.title)
     return data
 

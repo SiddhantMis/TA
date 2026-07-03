@@ -10,7 +10,7 @@ agrees with those manual calls, not just synthetic examples.
 """
 import sys
 import pandas as pd
-from analyzer import classify_single, classify_two_candle, trend_direction
+from analyzer import classify_single, classify_two_candle, trend_direction, _flatten_columns
 
 
 def row(o, h, l, c):
@@ -75,6 +75,30 @@ def test_trend_direction_downtrend():
         "Close": [h - 4 for h in highs], "Volume": [1_000_000] * 20,
     })
     assert trend_direction(df, 19) == "downtrend", trend_direction(df, 19)
+
+
+def test_flatten_multiindex_field_level_first():
+    # Simulates the yfinance layout that caused "truth value of a Series
+    # is ambiguous" on 9 of 11 tickers in the first live run
+    idx = pd.MultiIndex.from_product([["Open", "High", "Low", "Close", "Volume"], ["ETERNAL.NS"]])
+    data = pd.DataFrame([[100, 105, 99, 103, 1_000_000]] * 5, columns=idx)
+    flat = _flatten_columns(data, "ETERNAL.NS")
+    assert set(flat.columns) == {"Open", "High", "Low", "Close", "Volume"}, list(flat.columns)
+    assert isinstance(flat["Close"], pd.Series), type(flat["Close"])
+
+
+def test_flatten_multiindex_ticker_level_first():
+    idx = pd.MultiIndex.from_product([["ETERNAL.NS"], ["Open", "High", "Low", "Close", "Volume"]])
+    data = pd.DataFrame([[100, 105, 99, 103, 1_000_000]] * 5, columns=idx)
+    flat = _flatten_columns(data, "ETERNAL.NS")
+    assert set(flat.columns) == {"Open", "High", "Low", "Close", "Volume"}, list(flat.columns)
+    assert isinstance(flat["Close"], pd.Series), type(flat["Close"])
+
+
+def test_flatten_leaves_normal_columns_untouched():
+    data = pd.DataFrame({"Open": [1], "High": [2], "Low": [0], "Close": [1.5], "Volume": [100]})
+    flat = _flatten_columns(data, "ANY.NS")
+    assert list(flat.columns) == ["Open", "High", "Low", "Close", "Volume"]
 
 
 if __name__ == "__main__":
