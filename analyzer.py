@@ -356,12 +356,12 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         pattern_ok = trend in ("downtrend", "choppy")
     elif pattern == "hammer_or_hanging_man":
         pattern_ok = trend == "downtrend"  # Hanging Man (uptrend case) is a warning, not a signal here
-    # NOTE: no bearish-pattern branch exists (bearish_engulfing,
-    # dark_cloud_cover, bearish_marubozu, shooting_star_or_inverted_hammer
-    # always fall through to pattern_ok=False). This screener is
-    # structurally long-only. Unresolved: intentional, or a second
-    # instance of the same scope bug the reversal-MA fix caught. Not
-    # guessing at this without a decision — see conversation.
+    # No bearish-pattern branch exists (bearish_engulfing, dark_cloud_cover,
+    # bearish_marubozu, shooting_star_or_inverted_hammer always fall through
+    # to pattern_ok=False). Deliberate, not a scope bug: this trades cash
+    # equity delivery, not F&O — there's no mechanism to carry a short
+    # position overnight, so a bearish signal has nothing to attach an
+    # action to. Revisit only if a derivatives account enters the picture.
 
     sr = get_sr_levels(df, idx)
     support = sr["support"]
