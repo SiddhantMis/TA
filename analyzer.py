@@ -27,10 +27,14 @@ import json
 import sys
 import time
 from dataclasses import dataclass, asdict
+from datetime import datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
+
+IST = ZoneInfo("Asia/Kolkata")
 
 try:
     import yfinance as yf
@@ -224,19 +228,39 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         curr["Volume"] / curr["vol_ma20"]
         if curr["vol_ma20"] and not np.isnan(curr["vol_ma20"]) else np.nan
     )
-    volume_ok = not np.isnan(vol_ratio) and vol_ratio >= 1.0
+    # bool(...) wrapper matters here: vol_ratio is numpy.float64, and a
+    # numpy.float64 >= 1.0 comparison returns numpy.bool_, not a Python
+    # bool. That numpy.bool_ was leaking into `checks`, turning `sum()`
+    # into a numpy.int64 and `passed >= 4` into a numpy.bool_ -- both of
+    # which json.dumps(default=str) silently stringifies instead of
+    # raising, so "checks_passed": 2 came out as "checks_passed": "2".
+    volume_ok = bool(not np.isnan(vol_ratio) and vol_ratio >= 1.0)
 
     above_ema20 = bool(curr["Close"] > curr["ema20"])
     above_sma50 = bool(curr["Close"] > curr["sma50"]) if not np.isnan(curr["sma50"]) else False
+
+    # Check 5 used to be a flat "above both MAs" regardless of context.
+    # That's a continuation-trade check, but check 2 only ever approves a
+    # bullish pattern when trend is "downtrend" or "choppy" -- this
+    # screener is reversal/bottom-fishing, not continuation. A stock
+    # that's genuinely forming a bottom is expected to still be below
+    # both MAs; that's consistent with the setup, not a strike against
+    # it. Requiring it to already be above both MAs describes a trade
+    # that's already confirmed a new uptrend -- a later, more crowded
+    # entry than the one this checklist is trying to catch early.
+    if trend == "downtrend":
+        ma_check = not above_ema20 and not above_sma50
+    else:
+        ma_check = above_ema20 and above_sma50
 
     checks = [
         trend in ("uptrend", "downtrend"),   # 1. defined trend, not choppy
         bool(pattern) and pattern_ok,        # 2. pattern present, matches context
         near_support,                        # 3. near a defined S/R zone
         volume_ok,                           # 4. volume confirms
-        above_ema20 and above_sma50,         # 5. MA alignment
+        ma_check,                            # 5. MA alignment (context-aware)
     ]
-    passed = sum(checks)
+    passed = int(sum(checks))
 
     return ScreenResult(
         ticker=ticker,
@@ -254,7 +278,7 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         rsi=round(float(curr["rsi14"]), 2) if not np.isnan(curr["rsi14"]) else None,
         checks_passed=passed,
         checks_total=len(checks),
-        flag=passed >= 4,  # 4-of-5 threshold; R:R and sizing still manual
+        flag=bool(passed >= 4),  # 4-of-5 threshold; R:R and sizing still manual
     )
 
 
@@ -271,10 +295,30 @@ def _flatten_columns(data: pd.DataFrame, ticker: str) -> pd.DataFrame:
     return data.droplevel(1, axis=1)
 
 
+def _drop_unsettled_today(data: pd.DataFrame) -> pd.DataFrame:
+    """Yahoo can hand back a same-day row with an understated Volume figure
+    (partial session, or an intraday snapshot) and there's no wall-clock
+    time at which that's guaranteed safe to trust -- the 4pm IST cron slot
+    is only 30 min after NSE close and isn't a reliable settlement point
+    either. Drop any row stamped with today's IST calendar date so every
+    run, scheduled or manual, always scores the last *completed* session.
+    Trade-off: a run on the same day as a real close will report T-1, not
+    T-0, until the next day's row exists."""
+    if data.empty:
+        return data
+    today_ist = datetime.now(IST).date()
+    if data.index[-1].date() == today_ist:
+        data = data.iloc[:-1]
+    return data
+
+
 def fetch_ticker(ticker: str) -> Optional[pd.DataFrame]:
     if yf is None:
         raise RuntimeError("yfinance not installed — pip install yfinance")
     data = yf.download(ticker, period=f"{LOOKBACK_DAYS}d", interval="1d", progress=False)
+    if data.empty:
+        return None
+    data = _drop_unsettled_today(data)
     if data.empty:
         return None
     data = _flatten_columns(data, ticker)
