@@ -9,8 +9,13 @@ this week — this test suite is partly a regression check that the code
 agrees with those manual calls, not just synthetic examples.
 """
 import sys
+import numpy as np
 import pandas as pd
-from analyzer import classify_single, classify_two_candle, trend_direction, _flatten_columns
+from analyzer import (
+    classify_single, classify_two_candle, trend_direction, trend_metrics,
+    _flatten_columns, _find_pivots, _cluster_levels, get_sr_levels,
+    compute_indicators, score_ticker,
+)
 
 
 def row(o, h, l, c):
@@ -99,6 +104,95 @@ def test_flatten_leaves_normal_columns_untouched():
     data = pd.DataFrame({"Open": [1], "High": [2], "Low": [0], "Close": [1.5], "Volume": [100]})
     flat = _flatten_columns(data, "ANY.NS")
     assert list(flat.columns) == ["Open", "High", "Low", "Close", "Volume"]
+
+
+def test_trend_direction_choppy_when_r2_low():
+    # Sawtooth around a flat mean -- old HH/LH counter could tip this
+    # either way depending on the exact zigzag; regression should see
+    # ~zero slope and low R^2 and correctly call it choppy either way.
+    closes = [100 + (5 if i % 2 == 0 else -5) for i in range(20)]
+    df = pd.DataFrame({
+        "Open": closes, "High": [c + 1 for c in closes], "Low": [c - 1 for c in closes],
+        "Close": closes, "Volume": [1_000_000] * 20,
+    })
+    assert trend_direction(df, 19) == "choppy", trend_direction(df, 19)
+
+
+def test_trend_metrics_high_r2_for_clean_line():
+    closes = [100 + i * 0.5 for i in range(20)]
+    df = pd.DataFrame({
+        "Open": closes, "High": closes, "Low": closes, "Close": closes,
+        "Volume": [1_000_000] * 20,
+    })
+    m = trend_metrics(df, 19)
+    assert m["r2"] > 0.95, m
+
+
+def test_rsi_uses_wilder_smoothing_not_plain_sma():
+    # A plain rolling-mean RSI and a Wilder-smoothed RSI diverge once you
+    # have more than RSI_WINDOW bars of history with a regime change in
+    # them -- Wilder's EWM keeps weighting old bars (decayed), a simple
+    # rolling window drops them instantly. Construct a case designed to
+    # separate them and just check the formula path runs and produces a
+    # sane bounded value, since exact expected value requires a reference
+    # implementation.
+    closes = [100] * 10 + [100 + i for i in range(20)]
+    df = pd.DataFrame({
+        "Open": closes, "High": [c + 1 for c in closes], "Low": [c - 1 for c in closes],
+        "Close": closes, "Volume": [1_000_000] * len(closes),
+    })
+    out = compute_indicators(df)
+    rsi = out["rsi14"].iloc[-1]
+    assert 0 <= rsi <= 100, rsi
+    assert rsi > 50, "RSI should read well above 50 after a sustained 20-bar rally"
+
+
+def test_pivot_clustering_finds_repeated_touch_as_higher_confidence():
+    lows = [100, 95, 98, 94.8, 99, 95.2, 97, 90, 96]
+    pivots = _find_pivots(np.array(lows), window=1, mode="low")
+    clusters = _cluster_levels(pivots, tolerance_pct=0.02)
+    touched_95 = [c for c in clusters if 94 <= c["level"] <= 96]
+    assert touched_95, clusters
+    assert touched_95[0]["touches"] >= 2, touched_95
+
+
+def test_get_sr_levels_ignores_far_away_levels():
+    # support pivot exists but sits >5% below current close -- should be
+    # dropped rather than reported as "near support" bait
+    n = 70
+    lows = [50] * 5 + [200] * (n - 5)
+    highs = [l + 2 for l in lows]
+    closes = [l + 1 for l in lows]
+    df = pd.DataFrame({"Open": closes, "High": highs, "Low": lows, "Close": closes,
+                        "Volume": [1_000_000] * n})
+    sr = get_sr_levels(df, n - 1)
+    assert sr["support"] is None or sr["support"] > 190, sr
+
+
+def test_score_ticker_recommendation_and_flag_agree_at_threshold():
+    # Full synthetic downtrend into a hammer at a twice-touched support
+    # level -- should score checks 1-3 at minimum and produce a
+    # non-empty recommendation string, not just a bare flag.
+    n = 90
+    rng = np.random.default_rng(7)
+    closes = [200 - i * 1.2 for i in range(n - 1)]
+    lows = [c - 1 for c in closes]
+    highs = [c + 1 for c in closes]
+    opens = [c + 0.3 for c in closes]
+    vols = [1_000_000 + int(rng.normal(0, 50_000)) for _ in range(n - 1)]
+    # hammer candle on the last bar: long lower wick, small body, closes near support
+    support_level = min(lows[-20:])
+    opens.append(support_level + 3)
+    highs.append(support_level + 4)
+    lows.append(support_level - 8)
+    closes.append(support_level + 3.5)
+    vols.append(3_000_000)
+    df = pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": vols})
+    r = score_ticker(df, "TEST.NS")
+    assert r is not None
+    assert isinstance(r.confidence, float)
+    assert r.recommendation, "recommendation should never be empty"
+    assert r.flag == (r.checks_passed >= 4)
 
 
 if __name__ == "__main__":

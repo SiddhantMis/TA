@@ -15,17 +15,18 @@ def send_discord_alert(flagged: list[dict], webhook_url: str | None = None) -> N
         return
 
     if not flagged:
-        content = "EOD screen: no tickers cleared the checklist today."
+        content = "EOD screen: nothing worth a manual look today (this is a pre-filter, not a verdict)."
     else:
-        lines = [f"**EOD screen — {len(flagged)} flagged**"]
+        lines = [f"**EOD screen — {len(flagged)} worth a manual look**"]
         for r in flagged:
             lines.append(
                 f"`{r['ticker']}` @ {r['close']} — {r['pattern']} | "
                 f"trend: {r['trend']} | vol: {r['volume_ratio']}x | "
-                f"support: {r['support_level']} | "
-                f"{r['checks_passed']}/{r['checks_total']} checks"
+                f"support: {r['support_level']} ({r['support_touches']} touches) | "
+                f"{r['checks_passed']}/{r['checks_total']} checks, confidence {r['confidence']}% | "
+                f"{r['recommendation']}"
             )
-        content = "\n".join(lines)
+        content = "\n".join(lines) + "\n_Pre-filter output — sections 6-9 (R:R, sizing, stop) still need to be done by hand._"
 
     payload = json.dumps({"content": content}).encode()
     req = urllib.request.Request(
