@@ -5,6 +5,9 @@ on:
     - cron: '30 10 * * 1-5'   # 10:30 UTC = 4:00 PM IST, after NSE close, Mon-Fri
   workflow_dispatch: {}        # manual trigger from the Actions tab — use this first to test
 
+permissions:
+  contents: write   # needed to commit docs/latest_screen.json back to the repo
+
 jobs:
   screen:
     runs-on: ubuntu-latest
@@ -26,8 +29,16 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python main.py
 
-      - name: Upload results
+      - name: Commit results to docs/
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/latest_screen.json
+          git diff --staged --quiet || git commit -m "Update screen results [skip ci]"
+          git push
+
+      - name: Upload results as artifact too
         uses: actions/upload-artifact@v4
         with:
           name: latest-screen
-          path: latest_screen.json
+          path: docs/latest_screen.json
