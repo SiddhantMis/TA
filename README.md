@@ -7,9 +7,11 @@ on you, using Trade_Evaluation_Sheet.xlsx sections 6-9.
 ## What's actually been verified vs. what hasn't
 
 **Verified (runs with zero network access, checked in this session):**
-Pattern detection logic (`test_patterns.py`) — 8/8 passing, including
-regression checks against real HDFCBANK/ETERNAL/MCX candles that were
-hand-verified earlier this week.
+Pattern detection logic (`test_patterns.py`) — 25/25 passing, covering
+single-candle (Marubozu, Doji, Spinning Top, Hammer/Hanging Man,
+Shooting Star/Inverted Hammer), two-candle (Engulfing, Piercing, Dark
+Cloud Cover, Harami), and three-candle (Morning Star, Evening Star)
+patterns, plus trend regression, pivot S/R, and RSI.
 
 **Not yet verified:** the live `yfinance` fetch path (`fetch_ticker`,
 `run_screen`). It couldn't be run in the build sandbox — no route to
@@ -58,9 +60,32 @@ The 5 checks, weighted (pattern + trend weighted highest, volume lowest):
    measured direction changes but never consistency or magnitude.
 2. **Pattern matches context** (weight 2) — candlestick pattern present,
    consistent with the trend read. Bullish patterns only ever pass this
-   during a downtrend/choppy read (reversal setups) — **there is no
-   bearish-pattern branch, so this screener is structurally long-only**,
-   whether or not that's intentional. Open question, not yet resolved.
+   during a downtrend/choppy read (reversal setups). **No bearish-pattern
+   branch exists — deliberate, not unresolved:** this trades cash equity
+   delivery, not F&O, so there's no mechanism to act on a bearish signal
+   (no shorting, no carrying a position down). Revisit only if a
+   derivatives account enters the picture.
+
+   Patterns detected, in priority order (3-candle > 2-candle > single —
+   more candles agreeing is a stronger claim than one candle's shape):
+   Morning Star / Evening Star (3-candle) → Engulfing / Piercing / Dark
+   Cloud Cover / Harami (2-candle) → Marubozu / Doji / Hammer-Hanging Man
+   / Shooting Star-Inverted Hammer / Spinning Top (single-candle).
+
+   Two things worth knowing about these specifically:
+   - **Harami is intentionally not weighted differently from
+     engulfing/piercing in the checklist score**, even though it's a
+     structurally weaker signal (an inside candle showing the prior move
+     stalled, not reversed). This shows up as a note on the result
+     instead — check `notes` before trusting a Harami-driven flag as much
+     as an engulfing-driven one.
+   - **Morning/Evening Star deliberately drop the textbook gap
+     requirement.** Indian cash-equity names don't reliably gap the way
+     the US-market version of this pattern assumes; the small "star"
+     body plus the third candle reclaiming candle 1's midpoint carries
+     the definition instead. If you're cross-checking a flagged Morning
+     Star against a source that requires a gap, it may not match — that's
+     the loosened rule, not a bug.
 3. **Near a real support/resistance zone** (weight 1.5) — pivot-based
    clustering (swing highs/lows within 1.5% of each other = one zone),
    not a naive rolling min/max. Each result reports `support_touches`;

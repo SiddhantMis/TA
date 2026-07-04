@@ -178,6 +178,63 @@ def classify_two_candle(prev, curr) -> Optional[str]:
         if curr["Open"] > prev["High"] and curr["Close"] < midpoint:
             return "dark_cloud_cover"
 
+    return _harami(prev, curr)
+
+
+def _harami(prev, curr) -> Optional[str]:
+    """Harami: curr's real body sits entirely inside prev's real body, and
+    is meaningfully smaller (< 50% of prev's body) — an "inside candle"
+    signaling the prior move has lost conviction. Direction is read off
+    prev's color, not curr's: a big red candle (prev) followed by a small
+    contained candle is a bullish Harami regardless of whether that small
+    candle itself closed up or down.
+
+    Weaker signal than engulfing/piercing by construction — it's "the move
+    stalled," not "the move reversed." Flagged as lower-conviction in
+    score_ticker's notes, not scored differently here."""
+    prev_top, prev_bot = max(prev["Open"], prev["Close"]), min(prev["Open"], prev["Close"])
+    curr_top, curr_bot = max(curr["Open"], curr["Close"]), min(curr["Open"], curr["Close"])
+    prev_body = prev_top - prev_bot
+    curr_body = curr_top - curr_bot
+    if prev_body <= 0:
+        return None
+    contained = curr_top <= prev_top and curr_bot >= prev_bot
+    if not contained or curr_body > 0.5 * prev_body:
+        return None
+    if _bearish(prev):
+        return "bullish_harami"
+    if _bullish(prev):
+        return "bearish_harami"
+    return None
+
+
+def classify_three_candle(c1, c2, c3) -> Optional[str]:
+    """Morning Star (bullish) / Evening Star (bearish): a decisive candle,
+    a small-bodied "star" that stalls the move, then a decisive candle back
+    the other way that closes past the midpoint of candle 1's body.
+
+    Deliberately NOT requiring a gap between candles — Indian cash-equity
+    names frequently don't gap the way the textbook US-market version of
+    this pattern assumes; the "star" (small body, low conviction) plus the
+    third candle's close reclaiming candle 1's midpoint is treated as the
+    load-bearing part of the definition. This is a real loosening of the
+    textbook rule, not an oversight — worth knowing if you're cross-checking
+    against a source that requires the gap."""
+    def body_ratio(row):
+        rng = row["High"] - row["Low"]
+        return (abs(row["Close"] - row["Open"]) / rng) if rng > 0 else 0.0
+
+    if body_ratio(c1) < 0.5 or body_ratio(c3) < 0.5:
+        return None  # c1 and c3 must be decisive candles, not indecision
+    if body_ratio(c2) >= 0.35:
+        return None  # c2 must be a small-bodied "star"
+
+    c1_mid = (c1["Open"] + c1["Close"]) / 2
+
+    if _bearish(c1) and _bullish(c3) and c3["Close"] > c1_mid:
+        return "morning_star"
+    if _bullish(c1) and _bearish(c3) and c3["Close"] < c1_mid:
+        return "evening_star"
     return None
 
 
@@ -344,24 +401,37 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     idx = len(df) - 1
     curr = df.iloc[idx]
     prev = df.iloc[idx - 1]
+    prev2 = df.iloc[idx - 2] if idx >= 2 else None
 
     trend = trend_direction(df, idx)
     tmetrics = trend_metrics(df, idx)
     trend_r2 = round(tmetrics["r2"], 2) if tmetrics else None
 
-    pattern = classify_two_candle(prev, curr) or classify_single(curr)
+    # Precedence: 3-candle beats 2-candle beats single. More candles
+    # agreeing on the same read is a stronger claim than one candle's
+    # shape — same reasoning as why engulfing (2-candle) already
+    # outranked marubozu (1-candle) in the old chain, just made explicit
+    # now that a 3-candle pattern exists to rank above both.
+    pattern = None
+    if prev2 is not None:
+        pattern = classify_three_candle(prev2, prev, curr)
+    if pattern is None:
+        pattern = classify_two_candle(prev, curr)
+    if pattern is None:
+        pattern = classify_single(curr)
 
     pattern_ok = False
-    if pattern in ("bullish_engulfing", "piercing_pattern", "bullish_marubozu"):
+    if pattern in ("bullish_engulfing", "piercing_pattern", "bullish_marubozu", "morning_star", "bullish_harami"):
         pattern_ok = trend in ("downtrend", "choppy")
     elif pattern == "hammer_or_hanging_man":
         pattern_ok = trend == "downtrend"  # Hanging Man (uptrend case) is a warning, not a signal here
     # No bearish-pattern branch exists (bearish_engulfing, dark_cloud_cover,
-    # bearish_marubozu, shooting_star_or_inverted_hammer always fall through
-    # to pattern_ok=False). Deliberate, not a scope bug: this trades cash
-    # equity delivery, not F&O — there's no mechanism to carry a short
-    # position overnight, so a bearish signal has nothing to attach an
-    # action to. Revisit only if a derivatives account enters the picture.
+    # bearish_marubozu, shooting_star_or_inverted_hammer, evening_star,
+    # bearish_harami always fall through to pattern_ok=False). Deliberate,
+    # not a scope bug: this trades cash equity delivery, not F&O — there's
+    # no mechanism to carry a short position overnight, so a bearish signal
+    # has nothing to attach an action to. Revisit only if a derivatives
+    # account enters the picture.
 
     sr = get_sr_levels(df, idx)
     support = sr["support"]
@@ -435,6 +505,8 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         notes.append("no candlestick pattern on the latest bar")
     if not pattern_ok and pattern is not None:
         notes.append(f"pattern '{pattern}' detected but doesn't match trend context — not scored as a signal")
+    if pattern in ("bullish_harami", "bearish_harami"):
+        notes.append("Harami is a lower-conviction reversal signal than engulfing/piercing — the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone")
 
     # Advisory threshold, not a decision: this narrows the watchlist to
     # what's worth the manual checklist (sections 6-9: R:R, position

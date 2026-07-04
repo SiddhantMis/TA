@@ -12,7 +12,7 @@ import sys
 import numpy as np
 import pandas as pd
 from analyzer import (
-    classify_single, classify_two_candle, trend_direction, trend_metrics,
+    classify_single, classify_two_candle, classify_three_candle, trend_direction, trend_metrics,
     _flatten_columns, _find_pivots, _cluster_levels, get_sr_levels,
     compute_indicators, score_ticker,
 )
@@ -193,6 +193,83 @@ def test_score_ticker_recommendation_and_flag_agree_at_threshold():
     assert isinstance(r.confidence, float)
     assert r.recommendation, "recommendation should never be empty"
     assert r.flag == (r.checks_passed >= 4)
+
+
+def test_bullish_harami_detected():
+    # prev: big red candle, curr: small candle fully inside prev's body
+    prev = row(250.00, 251.00, 234.00, 235.00)   # body 235-250, big red
+    curr = row(240.00, 242.00, 239.00, 241.00)   # body 240-241, inside 235-250
+    assert classify_two_candle(prev, curr) == "bullish_harami", classify_two_candle(prev, curr)
+
+
+def test_harami_rejected_when_curr_not_contained():
+    prev = row(250.00, 251.00, 234.00, 235.00)  # bearish
+    curr = row(233.00, 253.00, 232.00, 252.00)  # bullish, engulfs prev's body -> engulfing, not harami
+    assert classify_two_candle(prev, curr) == "bullish_engulfing", classify_two_candle(prev, curr)
+
+
+def test_harami_rejected_when_curr_body_too_large_relative_to_prev():
+    prev = row(250.00, 251.00, 234.00, 235.00)   # body = 15
+    curr = row(240.00, 249.00, 239.00, 249.00)   # body = 9, > 50% of 15 -> not a harami
+    assert classify_two_candle(prev, curr) is None, classify_two_candle(prev, curr)
+
+
+def test_morning_star_detected():
+    c1 = row(250.00, 251.00, 234.00, 235.00)     # long red, body 235-250 (mid=242.5)
+    c2 = row(232.00, 234.00, 230.00, 233.00)     # small star below c1's body
+    c3 = row(233.00, 246.00, 232.50, 245.00)     # long green, closes above c1 midpoint (242.5)
+    assert classify_three_candle(c1, c2, c3) == "morning_star", classify_three_candle(c1, c2, c3)
+
+
+def test_evening_star_detected():
+    c1 = row(235.00, 251.00, 234.00, 250.00)     # long green, body 235-250 (mid=242.5)
+    c2 = row(252.00, 254.00, 251.00, 253.00)     # small star above c1's body
+    c3 = row(252.00, 253.00, 239.00, 240.00)     # long red, closes below c1 midpoint (242.5)
+    assert classify_three_candle(c1, c2, c3) == "evening_star", classify_three_candle(c1, c2, c3)
+
+
+def test_morning_star_rejected_when_third_candle_doesnt_reclaim_midpoint():
+    c1 = row(250.00, 251.00, 234.00, 235.00)     # mid = 242.5
+    c2 = row(232.00, 234.00, 230.00, 233.00)
+    c3 = row(233.00, 240.00, 232.50, 239.00)     # closes at 239, below midpoint 242.5 -> not a reclaim
+    assert classify_three_candle(c1, c2, c3) is None, classify_three_candle(c1, c2, c3)
+
+
+def test_morning_star_rejected_when_middle_candle_not_small():
+    c1 = row(250.00, 251.00, 234.00, 235.00)
+    c2 = row(232.00, 245.00, 230.00, 244.00)     # big body, not a "star"
+    c3 = row(233.00, 246.00, 232.50, 245.00)
+    assert classify_three_candle(c1, c2, c3) is None, classify_three_candle(c1, c2, c3)
+
+
+def test_score_ticker_three_candle_precedence_over_single():
+    # Build a downtrend ending in a genuine morning star so score_ticker's
+    # 3-candle-first precedence actually gets exercised end to end, not
+    # just the standalone classify_three_candle unit.
+    n = 90
+    rng = np.random.default_rng(11)
+    closes = [200 - i * 1.0 for i in range(n - 3)]
+    lows = [c - 1 for c in closes]
+    highs = [c + 1 for c in closes]
+    opens = [c + 0.3 for c in closes]
+    vols = [1_000_000 + int(rng.normal(0, 30_000)) for _ in range(n - 3)]
+
+    base = closes[-1]
+    # c1: long red
+    opens += [base + 15]; highs += [base + 16]; lows += [base - 1]; closes += [base]
+    vols += [1_200_000]
+    # c2: small star below c1's body
+    opens += [base - 2]; highs += [base - 0.5]; lows += [base - 4]; closes += [base - 3]
+    vols += [900_000]
+    # c3: long green closing above c1's midpoint
+    c1_mid = (base + 15 + base) / 2
+    opens += [base - 3]; highs += [c1_mid + 6]; lows += [base - 3.5]; closes += [c1_mid + 5]
+    vols += [2_500_000]
+
+    df = pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": vols})
+    r = score_ticker(df, "TEST.NS")
+    assert r is not None
+    assert r.pattern == "morning_star", r.pattern
 
 
 if __name__ == "__main__":
