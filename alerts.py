@@ -5,6 +5,7 @@ it here or paste it anywhere outside that settings page.
 """
 import os
 import json
+import urllib.error
 import urllib.request
 
 
@@ -29,7 +30,25 @@ def send_discord_alert(flagged: list[dict], webhook_url: str | None = None) -> N
         content = "\n".join(lines) + "\n_Pre-filter output — sections 6-9 (R:R, sizing, stop) still need to be done by hand._"
 
     payload = json.dumps({"content": content}).encode()
+    # Discord's endpoint sits behind Cloudflare, which has been known to
+    # 403 the default urllib User-Agent ("Python-urllib/3.x") outright,
+    # independent of whether the webhook URL itself is valid. A real UA
+    # string avoids that specific false-positive block.
     req = urllib.request.Request(
-        webhook_url, data=payload, headers={"Content-Type": "application/json"}
+        webhook_url,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (compatible; TA-screener-bot/1.0)",
+        },
     )
-    urllib.request.urlopen(req, timeout=10)
+    # A failed alert should never take down the whole run -- by the time
+    # this is called, main.py has already written latest_screen.json, so
+    # the only thing lost on failure is the notification, not the data.
+    try:
+        urllib.request.urlopen(req, timeout=10)
+    except urllib.error.HTTPError as e:
+        body = e.read().decode(errors="replace")
+        print(f"[alerts] Discord post failed: HTTP {e.code} — {body}")
+    except urllib.error.URLError as e:
+        print(f"[alerts] Discord post failed: {e.reason}")
