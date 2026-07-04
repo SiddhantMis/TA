@@ -9,16 +9,19 @@ import urllib.error
 import urllib.request
 
 
-def send_discord_alert(flagged: list[dict], webhook_url: str | None = None) -> None:
+def send_discord_alert(flagged: list[dict], webhook_url: str | None = None, run_timestamp=None) -> None:
     webhook_url = webhook_url or os.environ.get("DISCORD_WEBHOOK_URL")
     if not webhook_url:
         print("[alerts] DISCORD_WEBHOOK_URL not set, skipping alert")
         return
 
+    ts_str = run_timestamp.strftime("%Y-%m-%d %H:%M IST") if run_timestamp else "unknown time"
+    session_note = f"(last COMPLETE session as of {ts_str} — for planning tomorrow's open, not today's close)"
+
     if not flagged:
-        content = "EOD screen: nothing worth a manual look today (this is a pre-filter, not a verdict)."
+        content = f"EOD screen: nothing worth a manual look today (this is a pre-filter, not a verdict). {session_note}"
     else:
-        lines = [f"**EOD screen — {len(flagged)} worth a manual look**"]
+        lines = [f"**EOD screen — {len(flagged)} worth a manual look** {session_note}"]
         for r in flagged:
             lines.append(
                 f"`{r['ticker']}` @ {r['close']} — {r['pattern']} | "

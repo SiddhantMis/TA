@@ -1,8 +1,10 @@
 import json
-from analyzer import run_screen
+from datetime import datetime
+from analyzer import run_screen, IST
 from alerts import send_discord_alert
 
 if __name__ == "__main__":
+    run_ts = datetime.now(IST)
     results = run_screen()
     flagged = [r for r in results if r["flag"]]
 
@@ -11,7 +13,14 @@ if __name__ == "__main__":
     # that's the thing this whole pipeline exists to produce. The alert
     # is a notification on top of that, not a precondition for it.
     with open("latest_screen.json", "w") as f:
-        json.dump({"all": results, "flagged": flagged}, f, indent=2, default=str)
+        json.dump({
+            "run_timestamp": run_ts.isoformat(),
+            "note": "Every 'date'/'close' below is the last COMPLETE session as of run_timestamp, "
+                     "never a same-day live price. A flag here is for planning tomorrow's open — "
+                     "not for acting before today's 3:30 PM close.",
+            "all": results,
+            "flagged": flagged,
+        }, f, indent=2, default=str)
 
-    send_discord_alert(flagged)
-    print(f"Screened {len(results)} tickers, {len(flagged)} flagged.")
+    send_discord_alert(flagged, run_timestamp=run_ts)
+    print(f"Screened {len(results)} tickers, {len(flagged)} flagged. Data as of run at {run_ts.isoformat()}.")
