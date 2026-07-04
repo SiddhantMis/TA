@@ -409,16 +409,20 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
 
     # Precedence: 3-candle beats 2-candle beats single. More candles
     # agreeing on the same read is a stronger claim than one candle's
-    # shape — same reasoning as why engulfing (2-candle) already
-    # outranked marubozu (1-candle) in the old chain, just made explicit
-    # now that a 3-candle pattern exists to rank above both.
-    pattern = None
-    if prev2 is not None:
-        pattern = classify_three_candle(prev2, prev, curr)
-    if pattern is None:
-        pattern = classify_two_candle(prev, curr)
-    if pattern is None:
-        pattern = classify_single(curr)
+    # shape. But compute all three regardless of which one wins — a loose
+    # 3-candle match (Morning/Evening Star, no gap required) can suppress
+    # a cleaner, already-validated 2-candle or single-candle match on the
+    # exact same bar just by running first. "Check the flag manually"
+    # only works if the report shows what got suppressed, not just the
+    # winner.
+    three_candle = classify_three_candle(prev2, prev, curr) if prev2 is not None else None
+    two_candle = classify_two_candle(prev, curr)
+    single = classify_single(curr)
+    pattern = three_candle or two_candle or single
+
+    suppressed = None
+    if three_candle and (two_candle or single) and (two_candle or single) != three_candle:
+        suppressed = two_candle or single
 
     pattern_ok = False
     if pattern in ("bullish_engulfing", "piercing_pattern", "bullish_marubozu", "morning_star", "bullish_harami"):
@@ -507,6 +511,8 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         notes.append(f"pattern '{pattern}' detected but doesn't match trend context — not scored as a signal")
     if pattern in ("bullish_harami", "bearish_harami"):
         notes.append("Harami is a lower-conviction reversal signal than engulfing/piercing — the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone")
+    if suppressed:
+        notes.append(f"'{suppressed}' also matched on this candle but was suppressed by 3-candle precedence ({pattern}) — check both by hand before deciding which read to trust")
 
     # Advisory threshold, not a decision: this narrows the watchlist to
     # what's worth the manual checklist (sections 6-9: R:R, position

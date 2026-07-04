@@ -272,6 +272,35 @@ def test_score_ticker_three_candle_precedence_over_single():
     assert r.pattern == "morning_star", r.pattern
 
 
+def test_suppressed_pattern_surfaced_not_dropped():
+    # c2/c3 alone form a valid bullish_engulfing; c1/c2/c3 together form
+    # a valid morning_star. 3-candle precedence wins as `pattern`, but the
+    # engulfing match must show up as a suppressed alternate — "check
+    # manually" only works if the report shows what got buried.
+    c1 = row(250.00, 251.00, 234.00, 235.00)
+    c2 = row(233.00, 234.00, 231.00, 232.00)
+    c3 = row(231.00, 246.00, 230.50, 245.00)
+    assert classify_three_candle(c1, c2, c3) == "morning_star"
+    assert classify_two_candle(c2, c3) == "bullish_engulfing"
+
+    n = 90
+    closes = [200 - i * 1.0 for i in range(n - 3)]
+    lows = [c - 1 for c in closes]
+    highs = [c + 1 for c in closes]
+    opens = [c + 0.5 for c in closes]
+    vols = [1_000_000] * (n - 3)
+
+    for c in (c1, c2, c3):
+        opens.append(c["Open"]); highs.append(c["High"]); lows.append(c["Low"]); closes.append(c["Close"])
+        vols.append(1_500_000)
+
+    df = pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": vols})
+    r = score_ticker(df, "TEST.NS")
+    assert r is not None
+    assert r.pattern == "morning_star", r.pattern
+    assert any("bullish_engulfing" in note for note in r.notes), r.notes
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0
