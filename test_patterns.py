@@ -22,6 +22,21 @@ def row(o, h, l, c):
     return pd.Series({"Open": o, "High": h, "Low": l, "Close": c})
 
 
+def _pad_history(n, base=300.0, seed=0):
+    """Flat-ish padding history so a test dataframe clears score_ticker's
+    minimum-length gate (now ~SR_LOOKBACK rows, for the 2-year S/R window)
+    without disturbing the specific recent-candle behavior each test is
+    actually checking. Returns lists, not a DataFrame, so callers can
+    concatenate with their own hand-built recent candles."""
+    rng = np.random.default_rng(seed)
+    closes = [base + rng.normal(0, 2) for _ in range(n)]
+    opens = [c + rng.normal(0, 1) for c in closes]
+    highs = [max(o, c) + abs(rng.normal(2, 1)) for o, c in zip(opens, closes)]
+    lows = [min(o, c) - abs(rng.normal(2, 1)) for o, c in zip(opens, closes)]
+    vols = [1_000_000 + int(rng.normal(0, 50_000)) for _ in range(n)]
+    return opens, highs, lows, closes, vols
+
+
 def test_bullish_marubozu():
     # MCX, June 22 close — confirmed Marubozu in conversation
     r = row(2822.00, 2870.40, 2822.00, 2863.60)
@@ -174,12 +189,13 @@ def test_score_ticker_recommendation_and_flag_agree_at_threshold():
     # level -- should score checks 1-3 at minimum and produce a
     # non-empty recommendation string, not just a bare flag.
     n = 90
+    pad_o, pad_h, pad_l, pad_c, pad_v = _pad_history(450, base=300.0, seed=70)
     rng = np.random.default_rng(7)
-    closes = [200 - i * 1.2 for i in range(n - 1)]
-    lows = [c - 1 for c in closes]
-    highs = [c + 1 for c in closes]
-    opens = [c + 0.3 for c in closes]
-    vols = [1_000_000 + int(rng.normal(0, 50_000)) for _ in range(n - 1)]
+    closes = pad_c + [200 - i * 1.2 for i in range(n - 1)]
+    lows = pad_l + [c - 1 for c in closes[450:]]
+    highs = pad_h + [c + 1 for c in closes[450:]]
+    opens = pad_o + [c + 0.3 for c in closes[450:]]
+    vols = pad_v + [1_000_000 + int(rng.normal(0, 50_000)) for _ in range(n - 1)]
     # hammer candle on the last bar: long lower wick, small body, closes near support
     support_level = min(lows[-20:])
     opens.append(support_level + 3)
@@ -247,12 +263,13 @@ def test_score_ticker_three_candle_precedence_over_single():
     # 3-candle-first precedence actually gets exercised end to end, not
     # just the standalone classify_three_candle unit.
     n = 90
+    pad_o, pad_h, pad_l, pad_c, pad_v = _pad_history(450, base=300.0, seed=11)
     rng = np.random.default_rng(11)
-    closes = [200 - i * 1.0 for i in range(n - 3)]
-    lows = [c - 1 for c in closes]
-    highs = [c + 1 for c in closes]
-    opens = [c + 0.3 for c in closes]
-    vols = [1_000_000 + int(rng.normal(0, 30_000)) for _ in range(n - 3)]
+    closes = pad_c + [200 - i * 1.0 for i in range(n - 3)]
+    lows = pad_l + [c - 1 for c in closes[450:]]
+    highs = pad_h + [c + 1 for c in closes[450:]]
+    opens = pad_o + [c + 0.3 for c in closes[450:]]
+    vols = pad_v + [1_000_000 + int(rng.normal(0, 30_000)) for _ in range(n - 3)]
 
     base = closes[-1]
     # c1: long red
@@ -284,11 +301,12 @@ def test_suppressed_pattern_surfaced_not_dropped():
     assert classify_two_candle(c2, c3) == "bullish_engulfing"
 
     n = 90
-    closes = [200 - i * 1.0 for i in range(n - 3)]
-    lows = [c - 1 for c in closes]
-    highs = [c + 1 for c in closes]
-    opens = [c + 0.5 for c in closes]
-    vols = [1_000_000] * (n - 3)
+    pad_o, pad_h, pad_l, pad_c, pad_v = _pad_history(450, base=300.0, seed=42)
+    closes = pad_c + [200 - i * 1.0 for i in range(n - 3)]
+    lows = pad_l + [c - 1 for c in closes[450:]]
+    highs = pad_h + [c + 1 for c in closes[450:]]
+    opens = pad_o + [c + 0.5 for c in closes[450:]]
+    vols = pad_v + [1_000_000] * (n - 3)
 
     for c in (c1, c2, c3):
         opens.append(c["Open"]); highs.append(c["High"]); lows.append(c["Low"]); closes.append(c["Close"])

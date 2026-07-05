@@ -61,9 +61,21 @@ WATCHLIST = [
     "HDFCBANK.NS", "TITAN.NS", "MCX.NS", "BSE.NS",
 ]
 
-LOOKBACK_DAYS = 120
+LOOKBACK_PERIOD = "2y"          # yfinance's own vocabulary (1d/5d/1mo/.../2y/5y/max) -
+                                 # an arbitrary "730d" string isn't in that documented
+                                 # set and isn't worth the risk of finding out it's
+                                 # handled differently from the small values already
+                                 # tested against real data
 SR_WINDOW = 20                  # legacy rolling min/max — kept only as a fallback
-SR_LOOKBACK = 60                # bars scanned for pivot-based S/R
+SR_LOOKBACK = 480                # ~2 years of trading days for pivot-based S/R.
+                                 # TREND_WINDOW below is deliberately NOT changed —
+                                 # short-term momentum and multi-year S/R are different
+                                 # questions; conflating them would break the trend
+                                 # read, not improve it. SR_MAX_DISTANCE_PCT already
+                                 # filters out old levels that are no longer near
+                                 # price, so age isn't a separate problem to solve —
+                                 # a level from 18 months ago only survives the filter
+                                 # if it's still relevant today.
 PIVOT_WINDOW = 3                # bars each side that must be higher/lower for a pivot
 CLUSTER_TOLERANCE_PCT = 0.015   # pivots within 1.5% of each other = same zone
 SR_MAX_DISTANCE_PCT = 0.05      # ignore a zone more than 5% from current close
@@ -584,7 +596,13 @@ def _drop_unsettled_today(data: pd.DataFrame) -> pd.DataFrame:
 def fetch_ticker(ticker: str) -> Optional[pd.DataFrame]:
     if yf is None:
         raise RuntimeError("yfinance not installed — pip install yfinance")
-    data = yf.download(ticker, period=f"{LOOKBACK_DAYS}d", interval="1d", progress=False)
+    # auto_adjust=True set explicitly, not relying on whatever yfinance's
+    # current default happens to be. At 2 years of history the odds of a
+    # split or bonus issue falling inside the window are real -- HDFCBANK's
+    # own chart earlier in this build showed exactly that kind of
+    # discontinuity. Unadjusted OHLC across a split would hand the S/R
+    # pivot logic a fake price cliff to treat as a real level.
+    data = yf.download(ticker, period=LOOKBACK_PERIOD, interval="1d", auto_adjust=True, progress=False)
     if data.empty:
         return None
     data = _drop_unsettled_today(data)
