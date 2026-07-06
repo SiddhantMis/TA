@@ -697,6 +697,9 @@ def run_screen(watchlist: list[str] = WATCHLIST) -> list[dict]:
             r = score_ticker(df, t)
             if r:
                 results.append(asdict(r))
+            else:
+                print(f"[skip] {t}: fetched data but not enough history to score "
+                      f"(needs 2y+ for S/R; likely a recent IPO)", file=sys.stderr)
         except Exception as e:
             print(f"[error] {t}: {e}", file=sys.stderr)
         time.sleep(YF_SLEEP_SECONDS)
