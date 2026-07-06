@@ -79,6 +79,14 @@ SR_LOOKBACK = 480                # ~2 years of trading days for pivot-based S/R.
 PIVOT_WINDOW = 3                # bars each side that must be higher/lower for a pivot
 CLUSTER_TOLERANCE_PCT = 0.015   # pivots within 1.5% of each other = same zone
 SR_MAX_DISTANCE_PCT = 0.05      # ignore a zone more than 5% from current close
+SR_LEVELS_PER_SIDE = 3          # how many support/resistance levels to report
+                                 # per side for display (S1/S2/S3, R1/R2/R3).
+                                 # Unrelated to SR_MAX_DISTANCE_PCT above --
+                                 # that filter is what score_ticker's checklist
+                                 # trades against (proximity matters for a
+                                 # signal), this is for seeing the ladder
+                                 # regardless of distance, which is the entire
+                                 # point of asking for S2/S3.
 SUPPORT_PROXIMITY_PCT = 0.02
 VOLUME_MA_WINDOW = 20
 RSI_WINDOW = 14
@@ -306,14 +314,22 @@ def trend_direction(df: pd.DataFrame, idx: int, window: int = TREND_WINDOW) -> s
 
 def _find_pivots(values: np.ndarray, window: int, mode: str) -> list[float]:
     """mode='low' finds swing lows (local minima), mode='high' finds
-    swing highs. A point is a pivot only if it's the extreme value in
-    its full window on both sides — interior points of a flat run don't
-    all qualify, which avoids over-counting a single multi-day plateau
-    as several independent touches."""
+    swing highs. A point qualifies only if it's the extreme value in
+    its full window on both sides AND that window isn't perfectly
+    flat -- if every value in the window is equal, there's no genuine
+    local extreme to point to, and the previous version of this check
+    (values[i] == seg.min()) would have every interior bar of a flat
+    plateau satisfy that trivially, registering one 'pivot' per bar
+    instead of recognizing there's no real swing point at all. This
+    isn't just a synthetic-data edge case: a circuit-frozen NSE
+    session can produce several consecutive days with Open=High=Low=
+    Close, which would hit exactly this path on real data."""
     pivots = []
     n = len(values)
     for i in range(window, n - window):
         seg = values[i - window: i + window + 1]
+        if seg.max() == seg.min():
+            continue  # flat window -- no genuine local extreme, not one pivot per bar
         if mode == "low" and values[i] == seg.min():
             pivots.append(float(values[i]))
         elif mode == "high" and values[i] == seg.max():
@@ -339,10 +355,25 @@ def _cluster_levels(prices: list[float], tolerance_pct: float) -> list[dict]:
 def get_sr_levels(df: pd.DataFrame, idx: int) -> dict:
     """Returns nearest credible support (below close) and resistance
     (above close) using pivot clustering over the SR_LOOKBACK bars
-    before idx. Falls back to simple rolling min/max (already in df)
-    if no pivot cluster exists within SR_MAX_DISTANCE_PCT — e.g. too
-    little history, or a stock trending too cleanly to have set a
-    recent swing point nearby."""
+    before idx, PLUS a ranked ladder of up to SR_LEVELS_PER_SIDE levels
+    on each side (S1 = nearest below, S2 = next below that, etc.).
+
+    The single nearest/level fields still only count within
+    SR_MAX_DISTANCE_PCT -- that's what score_ticker's checklist trades
+    against. The ladder is NOT constrained by that filter, on purpose:
+    seeing S2/S3 regardless of distance is the whole point of asking
+    for them, not something to clip to a 5% band.
+
+    touches is None (not 0) whenever a level came from the rolling-
+    min/max fallback rather than a real pivot cluster -- a real cluster
+    always has >=1 member, so touches=0 could never legitimately mean
+    "a confirmed zone with zero confirmations." 0 was ambiguous with
+    "thin but real"; None isn't. The ladder has no fallback equivalent
+    at all: if there's no second cluster, there's no S2, full stop --
+    the fallback exists so score_ticker's checklist has *something* to
+    check proximity against, not to manufacture display levels that
+    aren't backed by any real pivot.
+    """
     start = max(0, idx - SR_LOOKBACK)
     seg = df.iloc[start:idx]  # excludes idx itself, same convention as trend_metrics
     close = float(df.iloc[idx]["Close"])
@@ -362,13 +393,20 @@ def get_sr_levels(df: pd.DataFrame, idx: int) -> dict:
             return None
         return best
 
+    def ladder(clusters, side, n):
+        candidates = [c for c in clusters if (c["level"] <= close if side == "support" else c["level"] >= close)]
+        candidates.sort(key=lambda c: abs(close - c["level"]))
+        return [{"level": round(c["level"], 2), "touches": c["touches"]} for c in candidates[:n]]
+
     support = nearest(support_clusters, "support")
     resistance = nearest(resistance_clusters, "resistance")
     return {
         "support": support["level"] if support else None,
-        "support_touches": support["touches"] if support else 0,
+        "support_touches": support["touches"] if support else None,
         "resistance": resistance["level"] if resistance else None,
-        "resistance_touches": resistance["touches"] if resistance else 0,
+        "resistance_touches": resistance["touches"] if resistance else None,
+        "support_ladder": ladder(support_clusters, "support", SR_LEVELS_PER_SIDE),
+        "resistance_ladder": ladder(resistance_clusters, "resistance", SR_LEVELS_PER_SIDE),
     }
 
 
@@ -389,9 +427,11 @@ class ScreenResult:
     pattern_matches_trend: bool
     near_support: bool
     support_level: Optional[float]
-    support_touches: int
+    support_touches: Optional[int]
     resistance_level: Optional[float]
-    resistance_touches: int
+    resistance_touches: Optional[int]
+    support_ladder: list
+    resistance_ladder: list
     volume_ratio: Optional[float]
     above_ema20: bool
     above_sma50: bool
@@ -454,13 +494,22 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     support_touches = sr["support_touches"]
     resistance = sr["resistance"]
     resistance_touches = sr["resistance_touches"]
-    # fallback to legacy rolling min if pivot clustering found nothing usable
+    support_ladder = sr["support_ladder"]
+    resistance_ladder = sr["resistance_ladder"]
+    # fallback to legacy rolling min if pivot clustering found nothing usable.
+    # touches stays None here, not 0 -- a real cluster always has >=1 member,
+    # so 0 could never mean "confirmed zone, zero confirmations." None is the
+    # only value that unambiguously means "not a real tested level."
+    used_fallback_support = False
+    used_fallback_resistance = False
     if support is None and not np.isnan(curr["support"]):
         support = float(curr["support"])
-        support_touches = 0  # flag as unconfirmed — single rolling-window low, not a tested zone
+        support_touches = None
+        used_fallback_support = True
     if resistance is None and not np.isnan(curr["resistance"]):
         resistance = float(curr["resistance"])
-        resistance_touches = 0
+        resistance_touches = None
+        used_fallback_resistance = True
 
     near_support = bool(
         support is not None and support > 0 and
@@ -515,7 +564,9 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     notes = []
     if trend == "choppy" and tmetrics is not None:
         notes.append(f"trend fit is weak (R^2={tmetrics['r2']:.2f}, threshold {TREND_MIN_R2}) — direction read is uncertain")
-    if near_support and support_touches < 2:
+    if used_fallback_support:
+        notes.append("support level is an estimate (rolling low, no confirmed pivot cluster found nearby) — not a tested zone")
+    elif near_support and support_touches is not None and support_touches < 2:
         notes.append("support zone based on <2 historical touches — thin evidence, treat as tentative")
     if pattern is None:
         notes.append("no candlestick pattern on the latest bar")
@@ -549,6 +600,8 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         support_touches=support_touches,
         resistance_level=round(resistance, 2) if resistance is not None else None,
         resistance_touches=resistance_touches,
+        support_ladder=support_ladder,
+        resistance_ladder=resistance_ladder,
         volume_ratio=round(float(vol_ratio), 2) if not np.isnan(vol_ratio) else None,
         above_ema20=above_ema20,
         above_sma50=above_sma50,

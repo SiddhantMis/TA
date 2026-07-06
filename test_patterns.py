@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from analyzer import (
     classify_single, classify_two_candle, classify_three_candle, trend_direction, trend_metrics,
-    _flatten_columns, _find_pivots, _cluster_levels, get_sr_levels,
+    _flatten_columns, _find_pivots, _cluster_levels, get_sr_levels, SR_LEVELS_PER_SIDE,
     compute_indicators, score_ticker,
 )
 
@@ -317,6 +317,72 @@ def test_suppressed_pattern_surfaced_not_dropped():
     assert r is not None
     assert r.pattern == "morning_star", r.pattern
     assert any("bullish_engulfing" in note for note in r.notes), r.notes
+
+
+def test_get_sr_ladder_returns_multiple_ranked_levels():
+    # Three separate historical dips at 190, 170, 150 -- all below a
+    # current close of 250, all further than SR_MAX_DISTANCE_PCT (5%)
+    # from it. The single "support" field should find nothing (too far
+    # for a tradeable signal) -- but the ladder should list all three,
+    # nearest-to-close first, since seeing S2/S3 regardless of distance
+    # is the entire point of asking for them.
+    n = 70
+    base = 250.0
+    rng = np.random.default_rng(5)
+    lows = [base + rng.normal(0, 0.3) for _ in range(n)]
+    for center, depth in [(13, 190.0), (33, 170.0), (53, 150.0)]:
+        for offset in range(-2, 3):
+            lows[center + offset] = depth + abs(offset) * 5
+    highs = [l + 3 for l in lows]
+    opens = [l + 1 for l in lows]
+    closes = [l + 1 for l in lows]
+    closes[-1] = base
+    highs[-1] = base + 2
+    opens[-1] = base
+    lows[-1] = base - 2
+    vols = [1_000_000] * n
+
+    df = pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": vols})
+    sr = get_sr_levels(df, n - 1)
+
+    # The single "support" field may legitimately find something close
+    # to price now that realistic noise creates genuine small pivots
+    # near the current level -- that's not what this test is about.
+    # What matters: the far-away 190/170/150 dips show up in the ladder
+    # in the right order, regardless of whatever the nearest single
+    # field reports.
+    levels = [l["level"] for l in sr["support_ladder"]]
+    assert 190.0 in levels and 170.0 in levels, sr["support_ladder"]
+    assert levels == sorted(levels, reverse=True), "ladder should be nearest-to-close first (S1, S2, S3...)"
+    assert len(levels) <= SR_LEVELS_PER_SIDE
+
+
+def test_fallback_support_has_none_touches_not_zero():
+    # A near-flat series with no real swing pivot nearby -- get_sr_levels
+    # correctly finds no usable cluster, so score_ticker substitutes the
+    # legacy rolling-min fallback. touches must be None, not 0: a real
+    # cluster always has >=1 member, so 0 was ambiguous between "a thin
+    # but real 0-touch zone" (impossible) and "no real zone at all, this
+    # is a rough guess" (what's actually happening here).
+    # A monotonic decline has no interior local min/max at all -- every
+    # point's neighbors are consistently higher-before/lower-after, so
+    # zero pivots form anywhere, which is what actually forces the
+    # fallback (a flat series would just risk tripping the flat-window
+    # skip added above instead of testing the fallback path itself).
+    n = 90
+    pad_o, pad_h, pad_l, pad_c, pad_v = _pad_history(450, base=400.0, seed=99)
+    closes = pad_c + [400 - i * 0.5 for i in range(n - 1)]
+    lows = [c - 0.3 for c in closes]
+    highs = [c + 0.3 for c in closes]
+    opens = closes[:]
+    vols = pad_v + [1_000_000] * (n - 1)
+
+    df = pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": vols})
+    r = score_ticker(df, "TEST.NS")
+    assert r is not None
+    assert r.support_touches is None, r.support_touches
+    assert r.resistance_touches is None, r.resistance_touches
+    assert any("estimate" in n for n in r.notes), r.notes
 
 
 if __name__ == "__main__":

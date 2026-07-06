@@ -54,6 +54,23 @@
 
         const confClass = c => c >= 60 ? 'conf-high' : c >= 35 ? 'conf-mid' : 'conf-low';
 
+        // touches is null exactly when a level came from the rolling
+        // min/max fallback, not a real pivot cluster -- a real cluster
+        // always has >=1 member, so null is the only value that means
+        // "not a tested zone" without being ambiguous with a genuine
+        // thin-but-real result.
+        const fmtLevel = (level, touches) => {
+          if (level == null) return '—';
+          if (touches == null) return `${level} (est.)`;
+          return `${level} (${touches}x)`;
+        };
+        const fmtLadder = (ladder, primaryLevel) => {
+          if (!ladder || ladder.length === 0) return '';
+          const rest = ladder.filter(l => l.level !== primaryLevel);
+          if (rest.length === 0) return '';
+          return `<br><span style="color:#7a8194;font-size:11px">also: ${rest.map(l => `${l.level} (${l.touches}x)`).join(', ')}</span>`;
+        };
+
         const html = `
           <table>
             <thead>
@@ -72,8 +89,8 @@
                   <td>${r.close}</td>
                   <td>${r.trend}${r.trend_r2 != null ? ` (R²=${r.trend_r2})` : ''}</td>
                   <td>${r.pattern || '—'}</td>
-                  <td>${r.support_level ?? '—'}${r.support_touches != null ? ` (${r.support_touches}x)` : ''}</td>
-                  <td>${r.resistance_level ?? '—'}${r.resistance_touches != null ? ` (${r.resistance_touches}x)` : ''}</td>
+                  <td>${fmtLevel(r.support_level, r.support_touches)}${fmtLadder(r.support_ladder, r.support_level)}</td>
+                  <td>${fmtLevel(r.resistance_level, r.resistance_touches)}${fmtLadder(r.resistance_ladder, r.resistance_level)}</td>
                   <td>${r.volume_ratio ?? '—'}</td>
                   <td>${r.rsi ?? '—'}</td>
                   <td>${r.checks_passed}/${r.checks_total}</td>
