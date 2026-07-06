@@ -208,7 +208,38 @@ def test_score_ticker_recommendation_and_flag_agree_at_threshold():
     assert r is not None
     assert isinstance(r.confidence, float)
     assert r.recommendation, "recommendation should never be empty"
-    assert r.flag == (r.checks_passed >= 4)
+    assert r.flag == bool(r.pattern is not None and r.pattern_matches_trend and r.checks_passed >= 4)
+
+
+def test_flag_requires_pattern_not_just_four_of_five():
+    # Same downtrend-into-support-with-volume setup as the test above,
+    # but the final candle is deliberately ordinary -- no marubozu, no
+    # doji, no hammer/star wick ratio, no two-candle relationship with
+    # the prior bar. Trend/support/volume/RSI can still all pass on
+    # their own. Before the fix, that was enough: flag=passed>=4 didn't
+    # care whether pattern was one of the four. It has to be false now.
+    n = 90
+    pad_o, pad_h, pad_l, pad_c, pad_v = _pad_history(450, base=300.0, seed=70)
+    rng = np.random.default_rng(7)
+    closes = pad_c + [200 - i * 1.2 for i in range(n - 1)]
+    lows = pad_l + [c - 1 for c in closes[450:]]
+    highs = pad_h + [c + 1 for c in closes[450:]]
+    opens = pad_o + [c + 0.3 for c in closes[450:]]
+    vols = pad_v + [1_000_000 + int(rng.normal(0, 50_000)) for _ in range(n - 1)]
+    support_level = min(lows[-20:])
+    # ordinary candle: body/range ~0.6 (not marubozu >0.85, not doji <0.10),
+    # wicks roughly equal (not hammer/star, which need one wick >=2x body)
+    opens.append(support_level + 0.5)
+    highs.append(support_level + 1.3)
+    lows.append(support_level + 0.3)
+    closes.append(support_level + 1.0)
+    vols.append(3_000_000)  # volume check still passes on its own
+    df = pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": vols})
+    r = score_ticker(df, "TEST.NS")
+    assert r is not None
+    assert r.pattern is None, r.pattern  # confirms this candle really doesn't match anything
+    assert r.checks_passed >= 4, r.checks_passed  # confirms the other four really do pass
+    assert r.flag is False, "flag fired with no candlestick pattern -- the exact bug being tested for"
 
 
 def test_bullish_harami_detected():

@@ -612,7 +612,13 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         confidence=confidence,
         recommendation=recommendation,
         notes=notes,
-        flag=bool(passed >= 4),  # kept for backward compat with main.py's alert filter
+        flag=bool(pattern is not None and pattern_ok and passed >= 4),
+        # pattern-matches-context is a hard gate, not one vote among
+        # five. A result that passes trend/support/volume/RSI with NO
+        # candlestick pattern isn't a weaker version of "candlestick +
+        # trend + confirmation" -- it's a different, unvalidated claim
+        # wearing the same flag. Previously flag=passed>=4 on the raw
+        # boolean count let exactly that through silently.
     )
 
 
