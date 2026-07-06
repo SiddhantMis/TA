@@ -59,6 +59,20 @@ WATCHLIST = [
     "ETERNAL.NS", "DLF.NS", "IEX.NS", "UTTAMSUGAR.NS",
     "IDFCFIRSTB.NS", "BANDHANBNK.NS", "CENTRALBK.NS",
     "HDFCBANK.NS", "TITAN.NS", "MCX.NS", "BSE.NS",
+    # added from Kite watchlist group 2 — see conversation for the
+    # 4 flagged uncertainties (GOLDBEES/SILVERBEES are commodity ETFs,
+    # not equities; ARE&M has an unverified special character; TMPV is
+    # an OCR guess; IDEA/JUBLFOOD showed as BSE-listed in the source
+    # screenshot but are added here as .NS for consistency)
+    "LT.NS", "GOLDBEES.NS", "SILVERBEES.NS", "ADANIENSOL.NS",
+    "ADANIENT.NS", "ADANIGREEN.NS", "ADANIPORTS.NS", "ADANIPOWER.NS",
+    "VOLTAS.NS", "BAJAJHFL.NS", "PFC.NS", "IDEA.NS", "PNB.NS",
+    "IRFC.NS", "TATASTEEL.NS", "ARE&M.NS", "RBLBANK.NS", "JIOFIN.NS",
+    "ITC.NS", "TATAPOWER.NS", "TMPV.NS", "JSWSTEEL.NS", "PIDILITIND.NS",
+    "INDUSINDBK.NS", "AXISBANK.NS", "TATACHEM.NS", "EXIDEIND.NS",
+    "CIPLA.NS", "JUBLFOOD.NS", "ASHOKLEY.NS", "APOLLOTYRE.NS",
+    "IREDA.NS", "BALRAMCHIN.NS", "MAXHEALTH.NS", "DEEPAKNTR.NS",
+    "RELIANCE.NS", "COALINDIA.NS",
 ]
 
 LOOKBACK_PERIOD = "2y"          # yfinance's own vocabulary (1d/5d/1mo/.../2y/5y/max) -
