@@ -1,5 +1,5 @@
 {
-  "run_timestamp": "2026-07-08T11:00:31.312264+05:30",
+  "run_timestamp": "2026-07-08T17:27:44.575614+05:30",
   "note": "Every 'date'/'close' below is the last COMPLETE session as of run_timestamp, never a same-day live price. A flag here is for planning tomorrow's open \u2014 not for acting before today's 3:30 PM close.",
   "all": [
     {
@@ -175,18 +175,18 @@
     },
     {
       "ticker": "UTTAMSUGAR.NS",
-      "date": "2026-07-06",
-      "data_stale_days": 2,
-      "close": 241.82,
+      "date": "2026-07-07",
+      "data_stale_days": 1,
+      "close": 239.71,
       "trend": "choppy",
-      "trend_r2": 0.3,
+      "trend_r2": 0.04,
       "pattern": "shooting_star_or_inverted_hammer",
       "pattern_matches_trend": false,
       "near_support": false,
       "support_level": 234.11,
       "support_touches": 5,
-      "resistance_level": 248.51,
-      "resistance_touches": 5,
+      "resistance_level": 240.5,
+      "resistance_touches": 1,
       "support_ladder": [
         {
           "level": 234.11,
@@ -203,31 +203,30 @@
       ],
       "resistance_ladder": [
         {
+          "level": 240.5,
+          "touches": 1
+        },
+        {
           "level": 248.51,
           "touches": 5
         },
         {
           "level": 259.57,
           "touches": 4
-        },
-        {
-          "level": 271.08,
-          "touches": 8
         }
       ],
-      "volume_ratio": 4.67,
+      "volume_ratio": 1.56,
       "above_ema20": true,
-      "above_sma50": true,
-      "rsi": 58.12,
+      "above_sma50": false,
+      "rsi": 55.14,
       "rsi_confirms": true,
       "checks_passed": 2,
       "checks_total": 5,
       "confidence": 26.7,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.30, threshold 0.35) \u2014 direction read is uncertain",
-        "pattern 'shooting_star_or_inverted_hammer' detected but doesn't match trend context \u2014 not scored as a signal",
-        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+        "trend fit is weak (R^2=0.04, threshold 0.35) \u2014 direction read is uncertain",
+        "pattern 'shooting_star_or_inverted_hammer' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
@@ -285,11 +284,11 @@
     },
     {
       "ticker": "BANDHANBNK.NS",
-      "date": "2026-07-06",
-      "data_stale_days": 2,
-      "close": 207.39,
+      "date": "2026-07-07",
+      "data_stale_days": 1,
+      "close": 205.1,
       "trend": "downtrend",
-      "trend_r2": 0.67,
+      "trend_r2": 0.56,
       "pattern": null,
       "pattern_matches_trend": false,
       "near_support": false,
@@ -321,18 +320,17 @@
           "touches": 1
         }
       ],
-      "volume_ratio": 1.34,
+      "volume_ratio": 0.96,
       "above_ema20": true,
       "above_sma50": true,
-      "rsi": 53.79,
+      "rsi": 51.09,
       "rsi_confirms": false,
-      "checks_passed": 2,
+      "checks_passed": 1,
       "checks_total": 5,
-      "confidence": 40.0,
+      "confidence": 26.7,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "no candlestick pattern on the latest bar",
-        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+        "no candlestick pattern on the latest bar"
       ],
       "flag": false
     },
@@ -451,18 +449,18 @@
     },
     {
       "ticker": "TITAN.NS",
-      "date": "2026-07-06",
-      "data_stale_days": 2,
-      "close": 4484.4,
+      "date": "2026-07-07",
+      "data_stale_days": 1,
+      "close": 4604.2,
       "trend": "choppy",
-      "trend_r2": 0.16,
-      "pattern": "piercing_pattern",
-      "pattern_matches_trend": true,
+      "trend_r2": 0.19,
+      "pattern": null,
+      "pattern_matches_trend": false,
       "near_support": false,
-      "support_level": 4345.7,
-      "support_touches": 2,
-      "resistance_level": 4579.5,
-      "resistance_touches": 2,
+      "support_level": 3962.8,
+      "support_touches": null,
+      "resistance_level": 4655.9,
+      "resistance_touches": null,
       "support_ladder": [
         {
           "level": 4345.7,
@@ -477,24 +475,20 @@
           "touches": 8
         }
       ],
-      "resistance_ladder": [
-        {
-          "level": 4579.5,
-          "touches": 2
-        }
-      ],
-      "volume_ratio": 0.78,
+      "resistance_ladder": [],
+      "volume_ratio": 3.94,
       "above_ema20": true,
       "above_sma50": true,
-      "rsi": 63.95,
-      "rsi_confirms": true,
-      "checks_passed": 2,
+      "rsi": 69.87,
+      "rsi_confirms": false,
+      "checks_passed": 1,
       "checks_total": 5,
-      "confidence": 40.0,
+      "confidence": 13.3,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.16, threshold 0.35) \u2014 direction read is uncertain",
-        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+        "trend fit is weak (R^2=0.19, threshold 0.35) \u2014 direction read is uncertain",
+        "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
+        "no candlestick pattern on the latest bar"
       ],
       "flag": false
     },
@@ -933,18 +927,18 @@
     },
     {
       "ticker": "ADANIPORTS.NS",
-      "date": "2026-07-06",
-      "data_stale_days": 2,
-      "close": 1864.4,
+      "date": "2026-07-07",
+      "data_stale_days": 1,
+      "close": 1833.9,
       "trend": "choppy",
-      "trend_r2": 0.1,
-      "pattern": "spinning_top",
+      "trend_r2": 0.14,
+      "pattern": null,
       "pattern_matches_trend": false,
       "near_support": false,
       "support_level": 1772.36,
       "support_touches": 2,
-      "resistance_level": 1891.1,
-      "resistance_touches": null,
+      "resistance_level": 1837.7,
+      "resistance_touches": 4,
       "support_ladder": [
         {
           "level": 1772.36,
@@ -959,20 +953,24 @@
           "touches": 1
         }
       ],
-      "resistance_ladder": [],
-      "volume_ratio": 0.47,
+      "resistance_ladder": [
+        {
+          "level": 1837.7,
+          "touches": 4
+        }
+      ],
+      "volume_ratio": 0.82,
       "above_ema20": true,
       "above_sma50": true,
-      "rsi": 60.44,
+      "rsi": 54.13,
       "rsi_confirms": true,
       "checks_passed": 1,
       "checks_total": 5,
       "confidence": 13.3,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.10, threshold 0.35) \u2014 direction read is uncertain",
-        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal",
-        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+        "trend fit is weak (R^2=0.14, threshold 0.35) \u2014 direction read is uncertain",
+        "no candlestick pattern on the latest bar"
       ],
       "flag": false
     },
@@ -1035,13 +1033,13 @@
     },
     {
       "ticker": "VOLTAS.NS",
-      "date": "2026-07-06",
-      "data_stale_days": 2,
-      "close": 1284.5,
+      "date": "2026-07-07",
+      "data_stale_days": 1,
+      "close": 1288.0,
       "trend": "downtrend",
-      "trend_r2": 0.72,
-      "pattern": "bullish_harami",
-      "pattern_matches_trend": true,
+      "trend_r2": 0.8,
+      "pattern": "spinning_top",
+      "pattern_matches_trend": false,
       "near_support": false,
       "support_level": 1232.1,
       "support_touches": 21,
@@ -1071,18 +1069,17 @@
           "touches": 3
         }
       ],
-      "volume_ratio": 1.25,
+      "volume_ratio": 1.37,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 45.49,
+      "rsi": 46.53,
       "rsi_confirms": false,
-      "checks_passed": 3,
+      "checks_passed": 2,
       "checks_total": 5,
-      "confidence": 66.7,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "confidence": 40.0,
+      "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone",
-        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
@@ -1524,7 +1521,7 @@
       "checks_passed": 4,
       "checks_total": 5,
       "confidence": 73.3,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "recommendation": "Worth a manual look \u2014 most criteria align",
       "notes": [
         "trend fit is weak (R^2=0.38, threshold 0.35) \u2014 direction read is uncertain"
       ],
@@ -1751,56 +1748,50 @@
     },
     {
       "ticker": "PIDILITIND.NS",
-      "date": "2026-07-06",
-      "data_stale_days": 2,
-      "close": 1616.9,
-      "trend": "choppy",
-      "trend_r2": 0.59,
-      "pattern": "bullish_harami",
-      "pattern_matches_trend": true,
-      "near_support": true,
-      "support_level": 1597.54,
-      "support_touches": 1,
-      "resistance_level": 1621.76,
-      "resistance_touches": 10,
+      "date": "2026-07-07",
+      "data_stale_days": 1,
+      "close": 1622.3,
+      "trend": "uptrend",
+      "trend_r2": 0.63,
+      "pattern": "spinning_top",
+      "pattern_matches_trend": false,
+      "near_support": false,
+      "support_level": 1482.9,
+      "support_touches": null,
+      "resistance_level": 1695.86,
+      "resistance_touches": 1,
       "support_ladder": [
         {
-          "level": 1597.54,
-          "touches": 1
-        },
-        {
-          "level": 1458.4,
-          "touches": 48
+          "level": 1463.57,
+          "touches": 50
         },
         {
           "level": 1303.25,
           "touches": 3
+        },
+        {
+          "level": 1259.0,
+          "touches": 1
         }
       ],
       "resistance_ladder": [
-        {
-          "level": 1621.76,
-          "touches": 10
-        },
         {
           "level": 1695.86,
           "touches": 1
         }
       ],
-      "volume_ratio": 0.58,
+      "volume_ratio": 0.69,
       "above_ema20": true,
       "above_sma50": true,
-      "rsi": 71.18,
+      "rsi": 72.17,
       "rsi_confirms": false,
-      "checks_passed": 2,
+      "checks_passed": 1,
       "checks_total": 5,
-      "confidence": 46.7,
+      "confidence": 26.7,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.59, threshold 0.35) \u2014 direction read is uncertain",
-        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone",
-        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+        "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
+        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
@@ -1863,13 +1854,13 @@
     },
     {
       "ticker": "AXISBANK.NS",
-      "date": "2026-07-06",
-      "data_stale_days": 2,
-      "close": 1339.6,
+      "date": "2026-07-07",
+      "data_stale_days": 1,
+      "close": 1341.0,
       "trend": "choppy",
-      "trend_r2": 0.03,
-      "pattern": null,
-      "pattern_matches_trend": false,
+      "trend_r2": 0.09,
+      "pattern": "bullish_harami",
+      "pattern_matches_trend": true,
       "near_support": false,
       "support_level": 1309.5,
       "support_touches": 2,
@@ -1895,40 +1886,39 @@
           "touches": 7
         }
       ],
-      "volume_ratio": 0.81,
+      "volume_ratio": 0.98,
       "above_ema20": false,
       "above_sma50": true,
-      "rsi": 50.66,
+      "rsi": 51.11,
       "rsi_confirms": true,
-      "checks_passed": 1,
+      "checks_passed": 2,
       "checks_total": 5,
-      "confidence": 13.3,
+      "confidence": 40.0,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.03, threshold 0.35) \u2014 direction read is uncertain",
-        "no candlestick pattern on the latest bar",
-        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+        "trend fit is weak (R^2=0.09, threshold 0.35) \u2014 direction read is uncertain",
+        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
       ],
       "flag": false
     },
     {
       "ticker": "TATACHEM.NS",
-      "date": "2026-07-06",
-      "data_stale_days": 2,
-      "close": 696.15,
+      "date": "2026-07-07",
+      "data_stale_days": 1,
+      "close": 718.6,
       "trend": "downtrend",
-      "trend_r2": 0.42,
-      "pattern": "spinning_top",
+      "trend_r2": 0.49,
+      "pattern": null,
       "pattern_matches_trend": false,
-      "near_support": true,
-      "support_level": 683.91,
-      "support_touches": 6,
-      "resistance_level": 716.71,
-      "resistance_touches": 3,
+      "near_support": false,
+      "support_level": 683.78,
+      "support_touches": 7,
+      "resistance_level": 775.0,
+      "resistance_touches": null,
       "support_ladder": [
         {
-          "level": 683.91,
-          "touches": 6
+          "level": 683.78,
+          "touches": 7
         },
         {
           "level": 586.24,
@@ -1941,30 +1931,29 @@
       ],
       "resistance_ladder": [
         {
-          "level": 716.71,
-          "touches": 3
-        },
-        {
           "level": 762.43,
           "touches": 10
         },
         {
           "level": 805.29,
           "touches": 2
+        },
+        {
+          "level": 846.81,
+          "touches": 4
         }
       ],
-      "volume_ratio": 0.26,
-      "above_ema20": false,
+      "volume_ratio": 0.88,
+      "above_ema20": true,
       "above_sma50": false,
-      "rsi": 38.8,
-      "rsi_confirms": true,
-      "checks_passed": 3,
+      "rsi": 48.93,
+      "rsi_confirms": false,
+      "checks_passed": 1,
       "checks_total": 5,
-      "confidence": 60.0,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "confidence": 26.7,
+      "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal",
-        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+        "no candlestick pattern on the latest bar"
       ],
       "flag": false
     },
@@ -2026,22 +2015,22 @@
     },
     {
       "ticker": "CIPLA.NS",
-      "date": "2026-07-06",
-      "data_stale_days": 2,
-      "close": 1472.3,
+      "date": "2026-07-07",
+      "data_stale_days": 1,
+      "close": 1451.8,
       "trend": "uptrend",
-      "trend_r2": 0.77,
-      "pattern": "morning_star",
+      "trend_r2": 0.8,
+      "pattern": "bearish_engulfing",
       "pattern_matches_trend": false,
-      "near_support": false,
-      "support_level": 1432.58,
-      "support_touches": 27,
+      "near_support": true,
+      "support_level": 1432.19,
+      "support_touches": 26,
       "resistance_level": 1501.2,
       "resistance_touches": 37,
       "support_ladder": [
         {
-          "level": 1432.58,
-          "touches": 27
+          "level": 1432.19,
+          "touches": 26
         },
         {
           "level": 1340.54,
@@ -2062,36 +2051,39 @@
           "touches": 5
         }
       ],
-      "volume_ratio": 0.47,
+      "volume_ratio": 0.72,
       "above_ema20": true,
       "above_sma50": true,
-      "rsi": 70.59,
+      "rsi": 61.71,
       "rsi_confirms": false,
-      "checks_passed": 1,
+      "checks_passed": 2,
       "checks_total": 5,
-      "confidence": 26.7,
+      "confidence": 46.7,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "pattern 'morning_star' detected but doesn't match trend context \u2014 not scored as a signal",
-        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+        "pattern 'bearish_engulfing' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
     {
       "ticker": "JUBLFOOD.NS",
-      "date": "2026-07-06",
-      "data_stale_days": 2,
-      "close": 438.25,
+      "date": "2026-07-07",
+      "data_stale_days": 1,
+      "close": 454.95,
       "trend": "choppy",
-      "trend_r2": 0.02,
-      "pattern": "spinning_top",
+      "trend_r2": 0.14,
+      "pattern": null,
       "pattern_matches_trend": false,
       "near_support": true,
-      "support_level": 433.35,
-      "support_touches": 2,
-      "resistance_level": 449.95,
-      "resistance_touches": null,
+      "support_level": 448.35,
+      "support_touches": 1,
+      "resistance_level": 467.42,
+      "resistance_touches": 2,
       "support_ladder": [
+        {
+          "level": 448.35,
+          "touches": 1
+        },
         {
           "level": 433.35,
           "touches": 2
@@ -2115,19 +2107,19 @@
           "touches": 1
         }
       ],
-      "volume_ratio": 2.96,
+      "volume_ratio": 4.06,
       "above_ema20": true,
-      "above_sma50": false,
-      "rsi": 56.95,
-      "rsi_confirms": true,
-      "checks_passed": 3,
+      "above_sma50": true,
+      "rsi": 65.62,
+      "rsi_confirms": false,
+      "checks_passed": 2,
       "checks_total": 5,
-      "confidence": 46.7,
+      "confidence": 33.3,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.02, threshold 0.35) \u2014 direction read is uncertain",
-        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal",
-        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+        "trend fit is weak (R^2=0.14, threshold 0.35) \u2014 direction read is uncertain",
+        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
+        "no candlestick pattern on the latest bar"
       ],
       "flag": false
     },
@@ -2302,13 +2294,13 @@
     },
     {
       "ticker": "BALRAMCHIN.NS",
-      "date": "2026-07-06",
-      "data_stale_days": 2,
-      "close": 571.0,
+      "date": "2026-07-07",
+      "data_stale_days": 1,
+      "close": 571.65,
       "trend": "choppy",
-      "trend_r2": 0.02,
-      "pattern": "bullish_engulfing",
-      "pattern_matches_trend": true,
+      "trend_r2": 0.14,
+      "pattern": "hammer_or_hanging_man",
+      "pattern_matches_trend": false,
       "near_support": false,
       "support_level": 523.0,
       "support_touches": null,
@@ -2342,36 +2334,36 @@
           "touches": 1
         }
       ],
-      "volume_ratio": 1.61,
+      "volume_ratio": 0.68,
       "above_ema20": true,
       "above_sma50": true,
-      "rsi": 61.47,
+      "rsi": 61.67,
       "rsi_confirms": true,
-      "checks_passed": 3,
+      "checks_passed": 1,
       "checks_total": 5,
-      "confidence": 53.3,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "confidence": 13.3,
+      "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.02, threshold 0.35) \u2014 direction read is uncertain",
+        "trend fit is weak (R^2=0.14, threshold 0.35) \u2014 direction read is uncertain",
         "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
-        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+        "pattern 'hammer_or_hanging_man' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
     {
       "ticker": "MAXHEALTH.NS",
-      "date": "2026-07-06",
-      "data_stale_days": 2,
-      "close": 1132.5,
+      "date": "2026-07-07",
+      "data_stale_days": 1,
+      "close": 1118.4,
       "trend": "uptrend",
-      "trend_r2": 0.82,
-      "pattern": "bearish_engulfing",
+      "trend_r2": 0.76,
+      "pattern": null,
       "pattern_matches_trend": false,
       "near_support": false,
-      "support_level": 993.98,
-      "support_touches": null,
-      "resistance_level": 1185.31,
-      "resistance_touches": 17,
+      "support_level": 1069.52,
+      "support_touches": 9,
+      "resistance_level": 1167.9,
+      "resistance_touches": null,
       "support_ladder": [
         {
           "level": 1069.52,
@@ -2400,19 +2392,17 @@
           "touches": 5
         }
       ],
-      "volume_ratio": 0.61,
+      "volume_ratio": 0.94,
       "above_ema20": true,
       "above_sma50": true,
-      "rsi": 63.6,
+      "rsi": 59.53,
       "rsi_confirms": false,
       "checks_passed": 1,
       "checks_total": 5,
       "confidence": 26.7,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
-        "pattern 'bearish_engulfing' detected but doesn't match trend context \u2014 not scored as a signal",
-        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+        "no candlestick pattern on the latest bar"
       ],
       "flag": false
     },
@@ -2634,7 +2624,7 @@
       "checks_passed": 4,
       "checks_total": 5,
       "confidence": 73.3,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "recommendation": "Worth a manual look \u2014 most criteria align",
       "notes": [
         "trend fit is weak (R^2=0.38, threshold 0.35) \u2014 direction read is uncertain"
       ],
