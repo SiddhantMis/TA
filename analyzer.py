@@ -33,7 +33,7 @@ import json
 import sys
 import time
 from dataclasses import dataclass, asdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -434,6 +434,7 @@ def get_sr_levels(df: pd.DataFrame, idx: int) -> dict:
 class ScreenResult:
     ticker: str
     date: str
+    data_stale_days: Optional[int]
     close: float
     trend: str
     trend_r2: Optional[float]
@@ -591,6 +592,17 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     if suppressed:
         notes.append(f"'{suppressed}' also matched on this candle but was suppressed by 3-candle precedence ({pattern}) — check both by hand before deciding which read to trust")
 
+    data_date = curr.name.date() if hasattr(curr.name, "date") else None
+    data_stale_days = None
+    if data_date is not None:
+        data_stale_days = _data_staleness_business_days(data_date, datetime.now(IST).date())
+        if data_stale_days > 1:
+            notes.append(
+                f"data is {data_stale_days} trading day(s) old, not the most recent close — "
+                f"yfinance likely hadn't posted the newer session at fetch time. This flag/score "
+                f"is based on stale data, not a same-day snapshot."
+            )
+
     # Advisory threshold, not a decision: this narrows the watchlist to
     # what's worth the manual checklist (sections 6-9: R:R, position
     # size, time stop) — it does not tell you to enter anything.
@@ -604,6 +616,7 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     return ScreenResult(
         ticker=ticker,
         date=str(curr.name.date()) if hasattr(curr.name, "date") else str(curr.name),
+        data_stale_days=data_stale_days,
         close=round(float(curr["Close"]), 2),
         trend=trend,
         trend_r2=trend_r2,
@@ -664,6 +677,25 @@ def _drop_unsettled_today(data: pd.DataFrame) -> pd.DataFrame:
     if data.index[-1].date() == today_ist:
         data = data.iloc[:-1]
     return data
+
+
+def _data_staleness_business_days(last_date, today_ist) -> int:
+    """Rough business-day gap between the data's actual date and now --
+    weekends only, no NSE holiday calendar, so an occasional holiday
+    reads as one day 'more stale' than it really is. Not meant to be a
+    precise trading calendar -- meant to catch the case _drop_unsettled_
+    today doesn't: yfinance simply hasn't posted the newest session yet
+    at fetch time, so the data is a full day (or more) old with no
+    signal of that anywhere in the output. A run at 6pm the day after a
+    real close, silently scoring the day before that, is exactly this
+    gap -- it already happened once, unflagged, before this existed."""
+    d = last_date
+    days = 0
+    while d < today_ist:
+        d += timedelta(days=1)
+        if d.weekday() < 5:
+            days += 1
+    return days
 
 
 def fetch_ticker(ticker: str) -> Optional[pd.DataFrame]:

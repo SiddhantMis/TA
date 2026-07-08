@@ -11,9 +11,11 @@ agrees with those manual calls, not just synthetic examples.
 import sys
 import numpy as np
 import pandas as pd
+from datetime import date
 from analyzer import (
     classify_single, classify_two_candle, classify_three_candle, trend_direction, trend_metrics,
     _flatten_columns, _find_pivots, _cluster_levels, get_sr_levels, SR_LEVELS_PER_SIDE,
+    _data_staleness_business_days,
     compute_indicators, score_ticker,
 )
 
@@ -240,6 +242,25 @@ def test_flag_requires_pattern_not_just_four_of_five():
     assert r.pattern is None, r.pattern  # confirms this candle really doesn't match anything
     assert r.checks_passed >= 4, r.checks_passed  # confirms the other four really do pass
     assert r.flag is False, "flag fired with no candlestick pattern -- the exact bug being tested for"
+
+
+def test_staleness_catches_the_actual_bse_scenario():
+    # Real event: a run on Wed Jul 8 scored data dated Mon Jul 6 -- two
+    # trading days old, not the same-day partial bar _drop_unsettled_
+    # today already guards against. This must register as unusually
+    # stale, not pass silently.
+    last_date = date(2026, 7, 6)   # Monday
+    today = date(2026, 7, 8)       # Wednesday
+    assert _data_staleness_business_days(last_date, today) == 2
+
+
+def test_staleness_does_not_flag_a_normal_weekend_gap():
+    # Friday's data checked on Monday is the ordinary, expected T-1 case
+    # -- this must NOT read as unusually stale just because a weekend
+    # sits in between.
+    last_date = date(2026, 7, 3)   # Friday
+    today = date(2026, 7, 6)       # Monday
+    assert _data_staleness_business_days(last_date, today) == 1
 
 
 def test_bullish_harami_detected():

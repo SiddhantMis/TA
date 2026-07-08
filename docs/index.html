@@ -85,7 +85,7 @@
               ${rows.map(r => `
                 <tr class="${r.flag ? 'flagged' : ''}">
                   <td><strong>${r.ticker}</strong></td>
-                  <td>${r.date}</td>
+                  <td>${r.date}${r.data_stale_days != null && r.data_stale_days > 1 ? ` <span class="err">(${r.data_stale_days}d stale)</span>` : ''}</td>
                   <td>${r.close}</td>
                   <td>${r.trend}${r.trend_r2 != null ? ` (R²=${r.trend_r2})` : ''}</td>
                   <td>${r.pattern || '—'}</td>
