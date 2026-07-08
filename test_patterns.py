@@ -211,6 +211,46 @@ def test_score_ticker_recommendation_and_flag_agree_at_threshold():
     assert isinstance(r.confidence, float)
     assert r.recommendation, "recommendation should never be empty"
     assert r.flag == bool(r.pattern is not None and r.pattern_matches_trend and r.checks_passed >= 4)
+    # The invariant that actually matters to a reader: flag and the
+    # recommendation TEXT must agree. The previous version of this
+    # assertion checked flag against internal fields that happened to
+    # move together -- it would NOT have caught JIOFIN.NS's real case
+    # (flag=true, recommendation="Borderline"), since that divergence
+    # came from recommendation using a separate confidence/checks[0]
+    # condition this assertion never touched.
+    assert r.flag == (r.recommendation == "Worth a manual look — most criteria align")
+
+
+def test_flag_and_recommendation_agree_on_choppy_trend_with_valid_pattern():
+    # Reproduces the actual JIOFIN.NS shape from the 2026-07-07 run:
+    # trend=choppy (fails check 1, "defined trend" only counts up/down-
+    # trend) but the pattern's context is still valid in a choppy read,
+    # confidence lands under the old hard-coded 75 threshold. Before
+    # the fix: flag=true (didn't care about checks[0] or the 75 cutoff)
+    # while recommendation="Borderline" (required both). Directly
+    # contradictory on the same row of the same page.
+    n = 90
+    pad_o, pad_h, pad_l, pad_c, pad_v = _pad_history(450, base=240.0, seed=21)
+    rng = np.random.default_rng(21)
+    # choppy: oscillating, not a clean ramp -- keeps trend_metrics' R^2
+    # below TREND_MIN_R2 so check 1 genuinely fails
+    closes = pad_c + [240 + (3 if i % 2 == 0 else -3) + rng.normal(0, 0.5) for i in range(n - 3)]
+    lows = [c - 1.5 for c in closes]
+    highs = [c + 1.5 for c in closes]
+    opens = [c + 0.2 for c in closes]
+    vols = pad_v + [1_000_000] * (n - 3)
+    # morning star on the final 3 bars: big red, small-body star, big green
+    opens += [244, 240.5, 238]
+    highs += [244.5, 241, 244]
+    lows += [238, 239.5, 237.5]
+    closes += [238.5, 240, 243]
+    vols += [1_500_000, 1_200_000, 2_500_000]
+    df = pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": vols})
+    r = score_ticker(df, "TEST.NS")
+    assert r is not None
+    assert r.flag == (r.recommendation == "Worth a manual look — most criteria align"), (
+        r.flag, r.recommendation, r.trend, r.confidence, r.checks_passed
+    )
 
 
 def test_flag_requires_pattern_not_just_four_of_five():

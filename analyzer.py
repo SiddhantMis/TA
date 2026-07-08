@@ -606,7 +606,21 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     # Advisory threshold, not a decision: this narrows the watchlist to
     # what's worth the manual checklist (sections 6-9: R:R, position
     # size, time stop) — it does not tell you to enter anything.
-    if confidence >= 75 and checks[0] and checks[1]:
+    #
+    # worth_manual_look is THE gate — used for both flag and the top
+    # recommendation tier below. Previously these were two separate
+    # conditions (flag: pattern gate + raw passed>=4; recommendation:
+    # confidence>=75 + checks[0]+checks[1]) that could disagree: a
+    # result could show flag=true (highlighted on the page) while its
+    # own recommendation text said "Borderline" -- directly
+    # self-contradictory to whoever's reading it. JIOFIN.NS on the
+    # 2026-07-07 run hit exactly this (confidence 73.3, just under the
+    # old 75 threshold, checks[0] failing because "choppy" doesn't
+    # count as a defined trend even though it's a valid pattern
+    # context) -- flagged and labeled "Borderline" at the same time.
+    worth_manual_look = bool(pattern is not None and pattern_ok and passed >= 4)
+
+    if worth_manual_look:
         recommendation = "Worth a manual look — most criteria align"
     elif confidence >= 50:
         recommendation = "Borderline — some criteria miss, verify each by hand before acting"
@@ -639,13 +653,9 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         confidence=confidence,
         recommendation=recommendation,
         notes=notes,
-        flag=bool(pattern is not None and pattern_ok and passed >= 4),
-        # pattern-matches-context is a hard gate, not one vote among
-        # five. A result that passes trend/support/volume/RSI with NO
-        # candlestick pattern isn't a weaker version of "candlestick +
-        # trend + confirmation" -- it's a different, unvalidated claim
-        # wearing the same flag. Previously flag=passed>=4 on the raw
-        # boolean count let exactly that through silently.
+        flag=worth_manual_look,
+        # same boolean as the "Worth a manual look" recommendation text
+        # above -- computed once, used twice, cannot diverge again.
     )
 
 
