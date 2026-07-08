@@ -340,14 +340,25 @@ def _find_pivots(values: np.ndarray, window: int, mode: str) -> list[float]:
     Close, which would hit exactly this path on real data."""
     pivots = []
     n = len(values)
-    for i in range(window, n - window):
+    i = window
+    while i < n - window:
         seg = values[i - window: i + window + 1]
         if seg.max() == seg.min():
+            i += 1
             continue  # flat window -- no genuine local extreme, not one pivot per bar
+        found = False
         if mode == "low" and values[i] == seg.min():
             pivots.append(float(values[i]))
+            found = True
         elif mode == "high" and values[i] == seg.max():
             pivots.append(float(values[i]))
+            found = True
+        if found:
+            pivot_value = values[i]
+            while i < n - window and values[i] == pivot_value:
+                i += 1
+        else:
+            i += 1
     return pivots
 
 
@@ -357,7 +368,8 @@ def _cluster_levels(prices: list[float], tolerance_pct: float) -> list[dict]:
     prices = sorted(prices)
     clusters, current = [], [prices[0]]
     for p in prices[1:]:
-        if abs(p - current[-1]) / current[-1] <= tolerance_pct:
+        anchor = current[0]
+        if abs(p - anchor) / anchor <= tolerance_pct:
             current.append(p)
         else:
             clusters.append(current)
@@ -494,10 +506,10 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     pattern_ok = False
     if pattern in ("bullish_engulfing", "piercing_pattern", "bullish_marubozu", "morning_star", "bullish_harami"):
         pattern_ok = trend in ("downtrend", "choppy")
-    elif pattern == "hammer_or_hanging_man":
+    elif pattern in ("hammer_or_hanging_man", "shooting_star_or_inverted_hammer"):
         pattern_ok = trend == "downtrend"  # Hanging Man (uptrend case) is a warning, not a signal here
     # No bearish-pattern branch exists (bearish_engulfing, dark_cloud_cover,
-    # bearish_marubozu, shooting_star_or_inverted_hammer, evening_star,
+    # bearish_marubozu, evening_star,
     # bearish_harami always fall through to pattern_ok=False). Deliberate,
     # not a scope bug: this trades cash equity delivery, not F&O — there's
     # no mechanism to carry a short position overnight, so a bearish signal

@@ -1,14 +1,23 @@
 import json
 import os
 from datetime import datetime
-from analyzer import run_screen, IST
-from alerts import send_discord_alert
+from analyzer import WATCHLIST, run_screen, IST
+from alerts import send_discord_alert, send_discord_failure
 
 OUTPUT_PATH = "docs/latest_screen.json"
 
 if __name__ == "__main__":
     run_ts = datetime.now(IST)
     results = run_screen()
+
+    if WATCHLIST and not results:
+        message = (
+            f"0 of {len(WATCHLIST)} tickers produced a score. Treat this as a data "
+            "fetch/scoring failure, not a normal zero-candidate day."
+        )
+        send_discord_failure(message, run_timestamp=run_ts)
+        raise RuntimeError(message)
+
     flagged = [r for r in results if r["flag"]]
 
     # Write results BEFORE attempting the Discord post. A dead webhook or

@@ -477,6 +477,43 @@ def test_fallback_support_has_none_touches_not_zero():
     assert any("estimate" in n for n in r.notes), r.notes
 
 
+def test_inverted_hammer_scores_as_bullish_reversal_after_downtrend():
+    n = 90
+    pad_o, pad_h, pad_l, pad_c, pad_v = _pad_history(450, base=300.0, seed=123)
+    closes = pad_c + [240 - i * 0.8 for i in range(n - 1)]
+    lows = pad_l + [c - 1 for c in closes[450:]]
+    highs = pad_h + [c + 1 for c in closes[450:]]
+    opens = pad_o + [c + 0.3 for c in closes[450:]]
+    vols = pad_v + [1_000_000] * (n - 1)
+
+    base = closes[-1] - 1.0
+    opens.append(base)
+    closes.append(base + 0.4)
+    highs.append(base + 5.0)
+    lows.append(base - 0.1)
+    vols.append(1_500_000)
+
+    df = pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": vols})
+    r = score_ticker(df, "TEST.NS")
+    assert r is not None
+    assert r.pattern == "shooting_star_or_inverted_hammer", r.pattern
+    assert r.trend == "downtrend", r.trend
+    assert r.pattern_matches_trend is True
+
+
+def test_cluster_levels_does_not_chain_beyond_anchor_tolerance():
+    clusters = _cluster_levels([100.0, 101.4, 102.8], tolerance_pct=0.015)
+    assert len(clusters) == 2, clusters
+    assert clusters[0]["touches"] == 2, clusters
+    assert clusters[1]["level"] == 102.8, clusters
+
+
+def test_partial_plateau_counts_as_one_pivot():
+    lows = np.array([105.0, 100.0, 95.0, 95.0, 95.0, 100.0, 105.0])
+    pivots = _find_pivots(lows, window=1, mode="low")
+    assert pivots == [95.0], pivots
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

@@ -55,3 +55,30 @@ def send_discord_alert(flagged: list[dict], webhook_url: str | None = None, run_
         print(f"[alerts] Discord post failed: HTTP {e.code} — {body}")
     except urllib.error.URLError as e:
         print(f"[alerts] Discord post failed: {e.reason}")
+
+
+def send_discord_failure(message: str, webhook_url: str | None = None, run_timestamp=None) -> None:
+    webhook_url = webhook_url or os.environ.get("DISCORD_WEBHOOK_URL")
+    if not webhook_url:
+        print("[alerts] DISCORD_WEBHOOK_URL not set, skipping failure alert")
+        return
+
+    ts_str = run_timestamp.strftime("%Y-%m-%d %H:%M IST") if run_timestamp else "unknown time"
+    payload = json.dumps({
+        "content": f"**EOD screen failed** at {ts_str}: {message}"
+    }).encode()
+    req = urllib.request.Request(
+        webhook_url,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (compatible; TA-screener-bot/1.0)",
+        },
+    )
+    try:
+        urllib.request.urlopen(req, timeout=10)
+    except urllib.error.HTTPError as e:
+        body = e.read().decode(errors="replace")
+        print(f"[alerts] Discord failure post failed: HTTP {e.code} — {body}")
+    except urllib.error.URLError as e:
+        print(f"[alerts] Discord failure post failed: {e.reason}")
