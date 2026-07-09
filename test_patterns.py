@@ -12,6 +12,7 @@ import sys
 import numpy as np
 import pandas as pd
 from main import check_total_failure
+from alerts import build_alert_content, DISCORD_CONTENT_LIMIT
 from datetime import date
 from analyzer import (
     classify_single, classify_two_candle, classify_three_candle, trend_direction, trend_metrics,
@@ -513,6 +514,41 @@ def test_partial_plateau_counts_as_one_pivot():
     lows = np.array([105.0, 100.0, 95.0, 95.0, 95.0, 100.0, 105.0])
     pivots = _find_pivots(lows, window=1, mode="low")
     assert pivots == [95.0], pivots
+
+
+def _fake_flag(ticker):
+    return {
+        "ticker": ticker, "close": 1234.56, "pattern": "bullish_engulfing",
+        "trend": "downtrend", "volume_ratio": 1.85, "support_level": 1200.0,
+        "support_touches": 3, "checks_passed": 4, "checks_total": 5,
+        "confidence": 73.3, "recommendation": "Worth a manual look — most criteria align",
+    }
+
+
+def test_build_alert_content_untouched_when_short():
+    content = build_alert_content([_fake_flag("A.NS"), _fake_flag("B.NS")], "(test session)")
+    assert len(content) <= DISCORD_CONTENT_LIMIT
+    assert "truncated" not in content
+    assert "A.NS" in content and "B.NS" in content
+
+
+def test_build_alert_content_truncates_when_over_limit():
+    # 30 fake flags at this line length is comfortably over 2000 chars --
+    # the actual scenario the 48-ticker watchlist can now produce on a
+    # good day, not a contrived edge case.
+    flagged = [_fake_flag(f"TICKER{i}.NS") for i in range(30)]
+    content = build_alert_content(flagged, "(test session)")
+    assert len(content) <= DISCORD_CONTENT_LIMIT, len(content)
+    assert "truncated" in content
+    assert "more flagged" in content
+    # the footer must survive truncation, not get cut off along with the ticker lines
+    assert "sections 6-9" in content
+
+
+def test_build_alert_content_empty_flag_list_unaffected():
+    content = build_alert_content([], "(test session)")
+    assert "nothing worth a manual look" in content
+    assert len(content) <= DISCORD_CONTENT_LIMIT
 
 
 def test_check_total_failure_fires_when_everything_fails():

@@ -54,6 +54,17 @@
 
         const confClass = c => c >= 60 ? 'conf-high' : c >= 35 ? 'conf-mid' : 'conf-low';
 
+        // Every field below comes from a fixed watchlist + code-generated
+        // strings today, so this is low current risk -- but the page
+        // builds rows via innerHTML, and if any future field (a
+        // persisted note, a ticker pulled from somewhere less
+        // controlled) ever contained HTML, it would render, not
+        // display as text. Escaping every interpolated field closes
+        // that regardless of what feeds this later.
+        const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+
         // touches is null exactly when a level came from the rolling
         // min/max fallback, not a real pivot cluster -- a real cluster
         // always has >=1 member, so null is the only value that means
@@ -84,19 +95,19 @@
             <tbody>
               ${rows.map(r => `
                 <tr class="${r.flag ? 'flagged' : ''}">
-                  <td><strong>${r.ticker}</strong></td>
-                  <td>${r.date}${r.data_stale_days != null && r.data_stale_days > 1 ? ` <span class="err">(${r.data_stale_days}d stale)</span>` : ''}</td>
+                  <td><strong>${esc(r.ticker)}</strong></td>
+                  <td>${esc(r.date)}${r.data_stale_days != null && r.data_stale_days > 1 ? ` <span class="err">(${r.data_stale_days}d stale)</span>` : ''}</td>
                   <td>${r.close}</td>
-                  <td>${r.trend}${r.trend_r2 != null ? ` (R²=${r.trend_r2})` : ''}</td>
-                  <td>${r.pattern || '—'}</td>
+                  <td>${esc(r.trend)}${r.trend_r2 != null ? ` (R²=${r.trend_r2})` : ''}</td>
+                  <td>${esc(r.pattern) || '—'}</td>
                   <td>${fmtLevel(r.support_level, r.support_touches)}${fmtLadder(r.support_ladder, r.support_level)}</td>
                   <td>${fmtLevel(r.resistance_level, r.resistance_touches)}${fmtLadder(r.resistance_ladder, r.resistance_level)}</td>
                   <td>${r.volume_ratio ?? '—'}</td>
                   <td>${r.rsi ?? '—'}</td>
                   <td>${r.checks_passed}/${r.checks_total}</td>
                   <td class="${confClass(r.confidence || 0)}">${r.confidence ?? '—'}</td>
-                  <td>${r.recommendation || '—'}</td>
-                  <td><ul class="notes-list">${(r.notes || []).map(n => `<li>${n}</li>`).join('')}</ul></td>
+                  <td>${esc(r.recommendation) || '—'}</td>
+                  <td><ul class="notes-list">${(r.notes || []).map(n => `<li>${esc(n)}</li>`).join('')}</ul></td>
                 </tr>
               `).join('')}
             </tbody>
