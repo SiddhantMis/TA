@@ -2,11 +2,11 @@ name: EOD Stock Screener
 
 on:
   schedule:
-    - cron: '30 10 * * 1-5'   # 10:30 UTC = 4:00 PM IST, after NSE close, Mon-Fri
-  workflow_dispatch: {}        # manual trigger from the Actions tab — use this first to test
+    - cron: '30 13 * * 1-5'   # 13:30 UTC = 7:00 PM IST, after Yahoo EOD data is expected
+  workflow_dispatch: {}
 
 permissions:
-  contents: write   # needed to commit docs/latest_screen.json back to the repo
+  contents: write
 
 jobs:
   screen:
