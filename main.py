@@ -1,10 +1,22 @@
 import json
 import os
-from datetime import datetime
-from analyzer import WATCHLIST, run_screen, IST
+from datetime import date, datetime, time as dt_time
+
+import analyzer as analyzer_module
+from analyzer import WATCHLIST, IST, run_screen
 from alerts import send_discord_alert, send_discord_failure
 
 OUTPUT_PATH = "docs/latest_screen.json"
+EOD_CUTOFF = dt_time(19, 0)
+
+
+def enable_settled_daily_candle() -> None:
+    """After the EOD cutoff, keep today's completed daily bar if Yahoo has it."""
+
+    def _identity(data):
+        return data
+
+    analyzer_module._drop_unsettled_today = _identity
 
 
 def check_total_failure(watchlist: list, results: list) -> str | None:
@@ -24,12 +36,25 @@ def check_total_failure(watchlist: list, results: list) -> str | None:
 
 if __name__ == "__main__":
     run_ts = datetime.now(IST)
+    if run_ts.time() >= EOD_CUTOFF:
+        enable_settled_daily_candle()
+
     results = run_screen()
 
     failure_message = check_total_failure(WATCHLIST, results)
     if failure_message:
         send_discord_failure(failure_message, run_timestamp=run_ts)
         raise RuntimeError(failure_message)
+
+    if run_ts.time() >= EOD_CUTOFF and results:
+        latest_score_date = max(date.fromisoformat(r["date"]) for r in results)
+        if latest_score_date != run_ts.date():
+            failure_message = (
+                f"Latest screener data is {latest_score_date.isoformat()}, not today's close ({run_ts.date().isoformat()}). "
+                "Yahoo has not published the completed EOD candle yet."
+            )
+            send_discord_failure(failure_message, run_timestamp=run_ts)
+            raise RuntimeError(failure_message)
 
     flagged = [r for r in results if r["flag"]]
 
