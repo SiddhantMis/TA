@@ -6,17 +6,30 @@ from alerts import send_discord_alert, send_discord_failure
 
 OUTPUT_PATH = "docs/latest_screen.json"
 
+
+def check_total_failure(watchlist: list, results: list) -> str | None:
+    """Returns a failure message if every ticker in a non-empty watchlist
+    produced zero results, else None. Pulled out of the __main__ block
+    specifically so this can be unit-tested directly -- it previously
+    lived inline, untestable without a subprocess or a full yfinance
+    mock, and shipped with zero test coverage despite being the
+    highest-severity fix in that commit."""
+    if watchlist and not results:
+        return (
+            f"0 of {len(watchlist)} tickers produced a score. Treat this as a data "
+            "fetch/scoring failure, not a normal zero-candidate day."
+        )
+    return None
+
+
 if __name__ == "__main__":
     run_ts = datetime.now(IST)
     results = run_screen()
 
-    if WATCHLIST and not results:
-        message = (
-            f"0 of {len(WATCHLIST)} tickers produced a score. Treat this as a data "
-            "fetch/scoring failure, not a normal zero-candidate day."
-        )
-        send_discord_failure(message, run_timestamp=run_ts)
-        raise RuntimeError(message)
+    failure_message = check_total_failure(WATCHLIST, results)
+    if failure_message:
+        send_discord_failure(failure_message, run_timestamp=run_ts)
+        raise RuntimeError(failure_message)
 
     flagged = [r for r in results if r["flag"]]
 

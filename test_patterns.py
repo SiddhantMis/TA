@@ -11,6 +11,7 @@ agrees with those manual calls, not just synthetic examples.
 import sys
 import numpy as np
 import pandas as pd
+from main import check_total_failure
 from datetime import date
 from analyzer import (
     classify_single, classify_two_candle, classify_three_candle, trend_direction, trend_metrics,
@@ -512,6 +513,31 @@ def test_partial_plateau_counts_as_one_pivot():
     lows = np.array([105.0, 100.0, 95.0, 95.0, 95.0, 100.0, 105.0])
     pivots = _find_pivots(lows, window=1, mode="low")
     assert pivots == [95.0], pivots
+
+
+def test_check_total_failure_fires_when_everything_fails():
+    # The scenario the whole fix exists for -- previously invisible,
+    # untested even in the commit that added it.
+    msg = check_total_failure(["A.NS", "B.NS", "C.NS"], [])
+    assert msg is not None
+    assert "0 of 3" in msg
+
+
+def test_check_total_failure_silent_on_normal_zero_flags_day():
+    # The distinction the fix depends on getting right: SOME results
+    # with nothing flagged is a completely normal day. Easy to get
+    # backwards (checking "not flagged" instead of "not results") --
+    # that would fire this on every ordinary quiet market day.
+    fake_results = [{"ticker": "A.NS", "flag": False}, {"ticker": "B.NS", "flag": False}]
+    msg = check_total_failure(["A.NS", "B.NS"], fake_results)
+    assert msg is None, msg
+
+
+def test_check_total_failure_silent_on_empty_watchlist():
+    # An empty watchlist producing zero results is correctly reflecting
+    # empty input, not a failure -- must not fire.
+    msg = check_total_failure([], [])
+    assert msg is None, msg
 
 
 if __name__ == "__main__":
