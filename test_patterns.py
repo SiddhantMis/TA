@@ -11,9 +11,11 @@ agrees with those manual calls, not just synthetic examples.
 import sys
 import numpy as np
 import pandas as pd
-from main import check_total_failure
+from main import check_total_failure, check_stale_after_cutoff, enable_settled_daily_candle
+import analyzer as analyzer_module
 from alerts import build_alert_content, DISCORD_CONTENT_LIMIT
-from datetime import date
+from datetime import date, datetime, time as dt_time
+from zoneinfo import ZoneInfo
 from analyzer import (
     classify_single, classify_two_candle, classify_three_candle, trend_direction, trend_metrics,
     _flatten_columns, _find_pivots, _cluster_levels, get_sr_levels, SR_LEVELS_PER_SIDE,
@@ -413,6 +415,73 @@ def test_suppressed_pattern_surfaced_not_dropped():
     assert any("bullish_engulfing" in note for note in r.notes), r.notes
 
 
+def _build_support_touch_fixture(num_touches: int, seed: int):
+    """Downtrend into a support level near 200, touched `num_touches`
+    times via separate dip shapes at the same price, ending on a
+    bullish marubozu right at that level. Isolated helper so both
+    touch-count tests build genuinely comparable fixtures that differ
+    only in how many times support was actually tested."""
+    n = 520
+    base = 300.0
+    rng = np.random.default_rng(seed)
+    closes = [base - i * (base - 205) / (n - 20) for i in range(n - 20)]
+    lows = [c - 1 + rng.normal(0, 0.3) for c in closes]
+    highs = [c + 1 for c in closes]
+    opens = [c + 0.3 for c in closes]
+
+    # carve `num_touches` separate dips down to ~200 at spaced-out points
+    spacing = (n - 20) // (num_touches + 1)
+    for k in range(1, num_touches + 1):
+        center = k * spacing
+        for offset in range(-2, 3):
+            idx = center + offset
+            if 0 <= idx < len(lows):
+                lows[idx] = 200.0 + abs(offset) * 0.8
+
+    vols = [1_000_000] * len(closes)
+
+    # final bullish marubozu right at the support level
+    opens.append(200.3); highs.append(203.6); lows.append(200.0); closes.append(203.5)
+    vols.append(2_000_000)
+
+    return pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": vols})
+
+
+def test_confidence_increases_with_support_touch_count():
+    df_few = _build_support_touch_fixture(num_touches=1, seed=101)
+    df_many = _build_support_touch_fixture(num_touches=5, seed=102)
+    r_few = score_ticker(df_few, "FEW.NS")
+    r_many = score_ticker(df_many, "MANY.NS")
+    assert r_few is not None and r_many is not None
+    assert r_few.near_support and r_many.near_support, (r_few.near_support, r_many.near_support)
+    assert r_few.support_touches is not None and r_many.support_touches is not None
+    assert r_many.support_touches > r_few.support_touches, (r_few.support_touches, r_many.support_touches)
+    assert r_many.confidence > r_few.confidence, (
+        f"more touches should mean higher confidence: "
+        f"{r_few.support_touches} touches -> {r_few.confidence}%, "
+        f"{r_many.support_touches} touches -> {r_many.confidence}%"
+    )
+
+
+def test_fallback_support_still_gets_full_binary_credit():
+    # Explicit decision on #3: fallback stays as-is, binary, just
+    # clearly labeled -- not scaled by touches, since there's no real
+    # touch count to scale by. This confirms the graduated logic added
+    # for #4 didn't accidentally start penalizing the fallback case,
+    # which was deliberately left alone.
+    n = 90
+    pad_o, pad_h, pad_l, pad_c, pad_v = _pad_history(450, base=400.0, seed=55)
+    closes = pad_c + [400 - i * 0.5 for i in range(n - 1)]  # monotonic -- forces zero real pivots
+    lows = [c - 0.3 for c in closes]
+    highs = [c + 0.3 for c in closes]
+    opens = closes[:]
+    vols = pad_v + [1_000_000] * (n - 1)
+    df = pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": vols})
+    r = score_ticker(df, "TEST.NS")
+    assert r is not None
+    assert r.support_touches is None  # confirms this is genuinely the fallback path
+
+
 def test_get_sr_ladder_returns_multiple_ranked_levels():
     # Three separate historical dips at 190, 170, 150 -- all below a
     # current close of 250, all further than SR_MAX_DISTANCE_PCT (5%)
@@ -574,6 +643,56 @@ def test_check_total_failure_silent_on_empty_watchlist():
     # empty input, not a failure -- must not fire.
     msg = check_total_failure([], [])
     assert msg is None, msg
+
+
+IST = ZoneInfo("Asia/Kolkata")
+CUTOFF = dt_time(19, 0)
+
+
+def test_check_stale_after_cutoff_silent_before_cutoff():
+    # Before 7 PM, today's date genuinely not being in the data yet is
+    # expected (market may still be open) -- must not fire.
+    run_ts = datetime(2026, 7, 9, 16, 0, tzinfo=IST)  # 4 PM, before cutoff
+    results = [{"date": "2026-07-08"}]  # yesterday's date, normal pre-cutoff state
+    assert check_stale_after_cutoff(run_ts, results, CUTOFF) is None
+
+
+def test_check_stale_after_cutoff_fires_when_data_still_lags():
+    # Past 7 PM, today's candle should be present since the drop-guard
+    # was disabled specifically to let it through. If the latest date
+    # in the data still isn't today, Yahoo hasn't published yet --
+    # this is the exact BSE incident from earlier in this project
+    # (data a full day behind, silently), now caught explicitly.
+    run_ts = datetime(2026, 7, 9, 20, 0, tzinfo=IST)  # 8 PM, past cutoff
+    results = [{"date": "2026-07-08"}]  # still yesterday -- Yahoo hasn't posted today
+    msg = check_stale_after_cutoff(run_ts, results, CUTOFF)
+    assert msg is not None
+    assert "2026-07-08" in msg and "2026-07-09" in msg
+
+
+def test_check_stale_after_cutoff_silent_when_data_is_current():
+    run_ts = datetime(2026, 7, 9, 20, 0, tzinfo=IST)
+    results = [{"date": "2026-07-09"}]  # today's date IS present -- correct, no failure
+    assert check_stale_after_cutoff(run_ts, results, CUTOFF) is None
+
+
+def test_check_stale_after_cutoff_silent_on_empty_results():
+    # Empty results is check_total_failure's job to catch, not this
+    # one's -- must not double-fire on the same underlying problem.
+    run_ts = datetime(2026, 7, 9, 20, 0, tzinfo=IST)
+    assert check_stale_after_cutoff(run_ts, [], CUTOFF) is None
+
+
+def test_enable_settled_daily_candle_disables_the_drop_guard():
+    original = analyzer_module._drop_unsettled_today
+    try:
+        enable_settled_daily_candle()
+        sentinel = object()
+        assert analyzer_module._drop_unsettled_today(sentinel) is sentinel, (
+            "after enabling, the drop-guard should be a no-op that returns its input unchanged"
+        )
+    finally:
+        analyzer_module._drop_unsettled_today = original  # don't leak this into other tests
 
 
 if __name__ == "__main__":

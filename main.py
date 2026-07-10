@@ -34,6 +34,27 @@ def check_total_failure(watchlist: list, results: list) -> str | None:
     return None
 
 
+def check_stale_after_cutoff(run_ts: datetime, results: list, cutoff: dt_time) -> str | None:
+    """After the EOD cutoff, today's candle should be present -- the
+    drop-unsettled-today guard was disabled specifically to allow it
+    through. This verifies that assumption held: if it's past cutoff
+    and the latest scored date still isn't today, Yahoo genuinely
+    hasn't published yet, and that needs to fail loudly rather than
+    silently ship yesterday's close as if it were current. Pulled out
+    for the same reason as check_total_failure -- this shipped with
+    zero test coverage inside the __main__ block, untestable without
+    a subprocess or a full yfinance mock."""
+    if run_ts.time() < cutoff or not results:
+        return None
+    latest_score_date = max(date.fromisoformat(r["date"]) for r in results)
+    if latest_score_date != run_ts.date():
+        return (
+            f"Latest screener data is {latest_score_date.isoformat()}, not today's close "
+            f"({run_ts.date().isoformat()}). Yahoo has not published the completed EOD candle yet."
+        )
+    return None
+
+
 if __name__ == "__main__":
     run_ts = datetime.now(IST)
     if run_ts.time() >= EOD_CUTOFF:
@@ -46,15 +67,10 @@ if __name__ == "__main__":
         send_discord_failure(failure_message, run_timestamp=run_ts)
         raise RuntimeError(failure_message)
 
-    if run_ts.time() >= EOD_CUTOFF and results:
-        latest_score_date = max(date.fromisoformat(r["date"]) for r in results)
-        if latest_score_date != run_ts.date():
-            failure_message = (
-                f"Latest screener data is {latest_score_date.isoformat()}, not today's close ({run_ts.date().isoformat()}). "
-                "Yahoo has not published the completed EOD candle yet."
-            )
-            send_discord_failure(failure_message, run_timestamp=run_ts)
-            raise RuntimeError(failure_message)
+    stale_message = check_stale_after_cutoff(run_ts, results, EOD_CUTOFF)
+    if stale_message:
+        send_discord_failure(stale_message, run_timestamp=run_ts)
+        raise RuntimeError(stale_message)
 
     flagged = [r for r in results if r["flag"]]
 

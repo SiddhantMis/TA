@@ -102,6 +102,15 @@ SR_LEVELS_PER_SIDE = 3          # how many support/resistance levels to report
                                  # regardless of distance, which is the entire
                                  # point of asking for S2/S3.
 SUPPORT_PROXIMITY_PCT = 0.02
+SR_TOUCH_STRENGTH_CAP = 5       # touches at/above this get full confidence
+                                 # credit for the S/R check; below it,
+                                 # credit scales linearly. Picked as a
+                                 # round number, not derived from
+                                 # anything -- same caveat as every
+                                 # other constant in this file: not
+                                 # backtested, revisit if the forward-
+                                 # return log ever has enough data to
+                                 # say whether this cap is remotely right.
 VOLUME_MA_WINDOW = 20
 RSI_WINDOW = 14
 EMA_SHORT = 20
@@ -543,6 +552,28 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         abs(float(curr["Close"]) - support) / support <= SUPPORT_PROXIMITY_PCT
     )
 
+    # Support strength scales with touch count -- Ch.11: "the more
+    # touches, the stronger the level." A real pivot-confirmed zone
+    # with 1 touch and one with 6 touches previously contributed the
+    # exact same weight to confidence; only near_support's raw True/
+    # False mattered. This affects confidence only, not the pass/fail
+    # gate itself (checks[2] stays a plain boolean below, so `flag`'s
+    # logic is untouched) -- it's specifically about how much a real
+    # support level should move the needle, not whether it counts.
+    #
+    # Fallback levels stay binary on purpose (kept as-is, not changed):
+    # they're not from real pivot clustering, so there's no touch
+    # count to scale by -- min(0 touches out of 5) would always score
+    # a fallback level as near-worthless even when it's the best signal
+    # available, which isn't what "leave the fallback case alone,
+    # just keep it labeled" was asking for.
+    if near_support and not used_fallback_support and support_touches is not None:
+        support_strength = min(support_touches, SR_TOUCH_STRENGTH_CAP) / SR_TOUCH_STRENGTH_CAP
+    elif near_support:
+        support_strength = 1.0  # fallback or unscaled -- binary, per the decision to leave #3 as-is
+    else:
+        support_strength = 0.0
+
     vol_ratio = (
         curr["Volume"] / curr["vol_ma20"]
         if curr["vol_ma20"] and not np.isnan(curr["vol_ma20"]) else np.nan
@@ -585,7 +616,14 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     weights = [2.0, 2.0, 1.5, 1.0, 1.0]
     total_weight = sum(weights)
     passed = int(sum(checks))
-    weighted = sum(w for c, w in zip(checks, weights) if c)
+    # check index 2 (near_support) uses support_strength instead of a
+    # flat weight -- a 1-touch level and a 6-touch level both satisfy
+    # the boolean gate the same way, but shouldn't move confidence the
+    # same amount.
+    weighted = sum(
+        (support_strength * w if idx == 2 else w)
+        for idx, (c, w) in enumerate(zip(checks, weights)) if c
+    )
     confidence = round(100 * weighted / total_weight, 1)
 
     notes = []
