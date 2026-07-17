@@ -33,11 +33,41 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/latest_screen.json
-          git diff --staged --quiet || git commit -m "Update screen results [skip ci]"
-          git push
+          # This run's own computed output, saved OUTSIDE the git working
+          # tree before any retry loop touches it. A concurrent run (the
+          # scheduled trigger and a manual one overlapping is a real,
+          # recurring scenario) writes different market data to the same
+          # file path -- that's not a mergeable diff, it's two different
+          # snapshots, and a rebase/merge attempt WILL hit a genuine
+          # content conflict (verified this by simulating the collision
+          # locally before writing this: a plain rebase-retry reliably
+          # failed with "CONFLICT (content)" on exactly this file, so it
+          # doesn't just theoretically apply here). On rejection: reset to
+          # whatever the winning run pushed, then re-apply THIS run's
+          # output on top -- never attempt to reconcile the two.
+          cp docs/latest_screen.json /tmp/this_run_output.json
+          for attempt in 1 2 3 4 5; do
+            cp /tmp/this_run_output.json docs/latest_screen.json
+            git add docs/latest_screen.json
+            if git diff --staged --quiet; then
+              echo "no changes to commit"
+              exit 0
+            fi
+            git commit -q -m "Update screen results [skip ci]"
+            if git push; then
+              echo "pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/5) -- another run committed first. Resetting to latest main and re-applying this run's output, not merging."
+            git fetch origin main
+            git reset -q --hard origin/main
+            sleep $((attempt * 3))
+          done
+          echo "push failed after 5 attempts"
+          exit 1
 
       - name: Upload results as artifact too
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: latest-screen
