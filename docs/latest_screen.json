@@ -1,11 +1,11 @@
 {
-  "run_timestamp": "2026-09-11T22:34:11.521927+05:30",
+  "run_timestamp": "2026-09-15T00:16:18.938912+05:30",
   "note": "Every 'date'/'close' below is the last COMPLETE session as of run_timestamp, never a same-day live price. A flag here is for planning tomorrow's open \u2014 not for acting before today's 3:30 PM close.",
   "all": [
     {
       "ticker": "ETERNAL.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 323.5,
       "trend": "downtrend",
       "trend_r2": 0.66,
@@ -53,13 +53,15 @@
       "checks_total": 5,
       "confidence": 61.3,
       "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
-      "notes": [],
+      "notes": [
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+      ],
       "flag": false
     },
     {
       "ticker": "DLF.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 644.5,
       "trend": "choppy",
       "trend_r2": 0.29,
@@ -109,14 +111,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.29, threshold 0.35) \u2014 direction read is uncertain",
-        "pattern 'hammer_or_hanging_man' detected but doesn't match trend context \u2014 not scored as a signal"
+        "pattern 'hammer_or_hanging_man' detected but doesn't match trend context \u2014 not scored as a signal",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "IEX.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 113.88,
       "trend": "downtrend",
       "trend_r2": 0.93,
@@ -157,14 +160,15 @@
       "confidence": 61.3,
       "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
       "notes": [
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "UTTAMSUGAR.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 279.85,
       "trend": "downtrend",
       "trend_r2": 0.86,
@@ -213,14 +217,15 @@
       "confidence": 57.3,
       "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
       "notes": [
-        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative"
+        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "IDFCFIRSTB.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 86.21,
       "trend": "choppy",
       "trend_r2": 0.19,
@@ -267,14 +272,15 @@
       "notes": [
         "trend fit is weak (R^2=0.19, threshold 0.35) \u2014 direction read is uncertain",
         "pattern 'bearish_harami' detected but doesn't match trend context \u2014 not scored as a signal",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "BANDHANBNK.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 176.52,
       "trend": "choppy",
       "trend_r2": 0.09,
@@ -324,14 +330,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.09, threshold 0.35) \u2014 direction read is uncertain",
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "CENTRALBK.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 30.74,
       "trend": "choppy",
       "trend_r2": 0.03,
@@ -378,14 +385,15 @@
       "notes": [
         "trend fit is weak (R^2=0.03, threshold 0.35) \u2014 direction read is uncertain",
         "pattern 'bearish_harami' detected but doesn't match trend context \u2014 not scored as a signal",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "HDFCBANK.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 708.25,
       "trend": "downtrend",
       "trend_r2": 0.79,
@@ -426,14 +434,15 @@
       "confidence": 84.0,
       "recommendation": "Worth a manual look \u2014 most criteria align",
       "notes": [
-        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative"
+        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": true
     },
     {
       "ticker": "TITAN.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 5009.5,
       "trend": "downtrend",
       "trend_r2": 0.59,
@@ -474,14 +483,15 @@
       "confidence": 34.7,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "MCX.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 3276.0,
       "trend": "choppy",
       "trend_r2": 0.11,
@@ -527,14 +537,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.11, threshold 0.35) \u2014 direction read is uncertain",
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "BSE.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 3384.0,
       "trend": "choppy",
       "trend_r2": 0.03,
@@ -573,7 +584,7 @@
           "touches": 1
         }
       ],
-      "volume_ratio": 0.9,
+      "volume_ratio": 0.91,
       "above_ema20": true,
       "above_sma50": false,
       "rsi": 49.7,
@@ -584,14 +595,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.03, threshold 0.35) \u2014 direction read is uncertain",
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "LT.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 3930.7,
       "trend": "downtrend",
       "trend_r2": 0.84,
@@ -639,16 +651,18 @@
       "checks_total": 5,
       "confidence": 74.7,
       "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [],
+      "notes": [
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+      ],
       "flag": true
     },
     {
       "ticker": "GOLDBEES.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 125.12,
       "trend": "downtrend",
-      "trend_r2": 0.6,
+      "trend_r2": 0.68,
       "pattern": "spinning_top",
       "pattern_matches_trend": false,
       "near_support": true,
@@ -687,21 +701,22 @@
       "volume_ratio": 0.77,
       "above_ema20": false,
       "above_sma50": true,
-      "rsi": 48.06,
+      "rsi": 47.93,
       "rsi_confirms": false,
       "checks_passed": 2,
       "checks_total": 5,
       "confidence": 34.7,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
+        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "SILVERBEES.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 216.72,
       "trend": "downtrend",
       "trend_r2": 0.51,
@@ -740,22 +755,24 @@
           "touches": 2
         }
       ],
-      "volume_ratio": 1.41,
+      "volume_ratio": 1.42,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 45.23,
-      "rsi_confirms": false,
-      "checks_passed": 4,
+      "rsi": 44.93,
+      "rsi_confirms": true,
+      "checks_passed": 5,
       "checks_total": 5,
-      "confidence": 74.7,
+      "confidence": 88.0,
       "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [],
+      "notes": [
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+      ],
       "flag": true
     },
     {
       "ticker": "ADANIENSOL.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 1373.0,
       "trend": "downtrend",
       "trend_r2": 0.63,
@@ -805,14 +822,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
+        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "ADANIENT.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 3060.0,
       "trend": "choppy",
       "trend_r2": 0.04,
@@ -863,14 +881,15 @@
       "notes": [
         "trend fit is weak (R^2=0.04, threshold 0.35) \u2014 direction read is uncertain",
         "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "pattern 'hammer_or_hanging_man' detected but doesn't match trend context \u2014 not scored as a signal"
+        "pattern 'hammer_or_hanging_man' detected but doesn't match trend context \u2014 not scored as a signal",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "ADANIGREEN.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 1281.3,
       "trend": "choppy",
       "trend_r2": 0.05,
@@ -921,14 +940,15 @@
       "notes": [
         "trend fit is weak (R^2=0.05, threshold 0.35) \u2014 direction read is uncertain",
         "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "ADANIPORTS.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 1764.6,
       "trend": "choppy",
       "trend_r2": 0.15,
@@ -978,14 +998,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.15, threshold 0.35) \u2014 direction read is uncertain",
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "ADANIPOWER.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 209.97,
       "trend": "choppy",
       "trend_r2": 0.12,
@@ -1035,14 +1056,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.12, threshold 0.35) \u2014 direction read is uncertain",
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "VOLTAS.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 1165.0,
       "trend": "downtrend",
       "trend_r2": 0.88,
@@ -1088,14 +1110,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "BAJAJHFL.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 84.11,
       "trend": "choppy",
       "trend_r2": 0.21,
@@ -1146,14 +1169,15 @@
       "notes": [
         "trend fit is weak (R^2=0.21, threshold 0.35) \u2014 direction read is uncertain",
         "pattern 'bearish_harami' detected but doesn't match trend context \u2014 not scored as a signal",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "PFC.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 353.45,
       "trend": "choppy",
       "trend_r2": 0.14,
@@ -1202,14 +1226,15 @@
       "confidence": 56.0,
       "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
       "notes": [
-        "trend fit is weak (R^2=0.14, threshold 0.35) \u2014 direction read is uncertain"
+        "trend fit is weak (R^2=0.14, threshold 0.35) \u2014 direction read is uncertain",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "IDEA.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 14.97,
       "trend": "choppy",
       "trend_r2": 0.31,
@@ -1252,14 +1277,15 @@
       "notes": [
         "trend fit is weak (R^2=0.31, threshold 0.35) \u2014 direction read is uncertain",
         "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "PNB.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 116.75,
       "trend": "choppy",
       "trend_r2": 0.02,
@@ -1298,7 +1324,7 @@
           "touches": 3
         }
       ],
-      "volume_ratio": 0.95,
+      "volume_ratio": 0.96,
       "above_ema20": true,
       "above_sma50": true,
       "rsi": 56.32,
@@ -1309,14 +1335,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.02, threshold 0.35) \u2014 direction read is uncertain",
-        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
+        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "IRFC.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 81.09,
       "trend": "downtrend",
       "trend_r2": 0.93,
@@ -1352,14 +1379,15 @@
       "confidence": 100.0,
       "recommendation": "Worth a manual look \u2014 most criteria align",
       "notes": [
-        "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone"
+        "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": true
     },
     {
       "ticker": "TATASTEEL.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 183.0,
       "trend": "choppy",
       "trend_r2": 0.03,
@@ -1409,14 +1437,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.03, threshold 0.35) \u2014 direction read is uncertain",
-        "pattern 'hammer_or_hanging_man' detected but doesn't match trend context \u2014 not scored as a signal"
+        "pattern 'hammer_or_hanging_man' detected but doesn't match trend context \u2014 not scored as a signal",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "ARE&M.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 813.9,
       "trend": "downtrend",
       "trend_r2": 0.94,
@@ -1464,13 +1493,15 @@
       "checks_total": 5,
       "confidence": 74.7,
       "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [],
+      "notes": [
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+      ],
       "flag": true
     },
     {
       "ticker": "RBLBANK.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 412.55,
       "trend": "uptrend",
       "trend_r2": 0.49,
@@ -1507,14 +1538,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
-        "pattern 'piercing_pattern' detected but doesn't match trend context \u2014 not scored as a signal"
+        "pattern 'piercing_pattern' detected but doesn't match trend context \u2014 not scored as a signal",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "JIOFIN.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 229.9,
       "trend": "downtrend",
       "trend_r2": 0.81,
@@ -1563,14 +1595,15 @@
       "confidence": 69.3,
       "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
       "notes": [
-        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
+        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "ITC.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 259.85,
       "trend": "downtrend",
       "trend_r2": 0.51,
@@ -1612,14 +1645,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "TATAPOWER.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 364.65,
       "trend": "choppy",
       "trend_r2": 0.0,
@@ -1669,14 +1703,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.00, threshold 0.35) \u2014 direction read is uncertain",
-        "pattern 'doji' detected but doesn't match trend context \u2014 not scored as a signal"
+        "pattern 'doji' detected but doesn't match trend context \u2014 not scored as a signal",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "TMPV.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 301.1,
       "trend": "downtrend",
       "trend_r2": 0.71,
@@ -1717,14 +1752,15 @@
       "confidence": 40.0,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
+        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "JSWSTEEL.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 1265.0,
       "trend": "choppy",
       "trend_r2": 0.18,
@@ -1774,14 +1810,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.18, threshold 0.35) \u2014 direction read is uncertain",
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "PIDILITIND.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 1566.9,
       "trend": "downtrend",
       "trend_r2": 0.64,
@@ -1830,14 +1867,15 @@
       "confidence": 52.0,
       "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
       "notes": [
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "INDUSINDBK.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 978.2,
       "trend": "choppy",
       "trend_r2": 0.18,
@@ -1887,14 +1925,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.18, threshold 0.35) \u2014 direction read is uncertain",
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "AXISBANK.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 1246.0,
       "trend": "choppy",
       "trend_r2": 0.02,
@@ -1944,14 +1983,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.02, threshold 0.35) \u2014 direction read is uncertain",
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "TATACHEM.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 612.45,
       "trend": "choppy",
       "trend_r2": 0.33,
@@ -1997,14 +2037,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.33, threshold 0.35) \u2014 direction read is uncertain",
-        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
+        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "EXIDEIND.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 412.65,
       "trend": "downtrend",
       "trend_r2": 0.91,
@@ -2054,14 +2095,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "CIPLA.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 1366.0,
       "trend": "downtrend",
       "trend_r2": 0.81,
@@ -2109,13 +2151,15 @@
       "checks_total": 5,
       "confidence": 92.0,
       "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [],
+      "notes": [
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+      ],
       "flag": true
     },
     {
       "ticker": "JUBLFOOD.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 470.25,
       "trend": "downtrend",
       "trend_r2": 0.89,
@@ -2163,13 +2207,15 @@
       "checks_total": 5,
       "confidence": 66.7,
       "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
-      "notes": [],
+      "notes": [
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+      ],
       "flag": false
     },
     {
       "ticker": "ASHOKLEY.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 163.75,
       "trend": "downtrend",
       "trend_r2": 0.62,
@@ -2217,13 +2263,15 @@
       "checks_total": 5,
       "confidence": 80.0,
       "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [],
+      "notes": [
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+      ],
       "flag": true
     },
     {
       "ticker": "APOLLOTYRE.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 417.65,
       "trend": "downtrend",
       "trend_r2": 0.75,
@@ -2272,14 +2320,15 @@
       "confidence": 56.0,
       "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
       "notes": [
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "IREDA.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 111.71,
       "trend": "downtrend",
       "trend_r2": 0.55,
@@ -2325,14 +2374,15 @@
       "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
       "notes": [
         "pattern 'bearish_harami' detected but doesn't match trend context \u2014 not scored as a signal",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "BALRAMCHIN.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 691.4,
       "trend": "choppy",
       "trend_r2": 0.08,
@@ -2379,14 +2429,15 @@
       "notes": [
         "trend fit is weak (R^2=0.08, threshold 0.35) \u2014 direction read is uncertain",
         "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
-        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
+        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "MAXHEALTH.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 1037.7,
       "trend": "choppy",
       "trend_r2": 0.08,
@@ -2436,14 +2487,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.08, threshold 0.35) \u2014 direction read is uncertain",
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "DEEPAKNTR.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 1587.8,
       "trend": "downtrend",
       "trend_r2": 0.53,
@@ -2492,14 +2544,15 @@
       "confidence": 48.0,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "pattern 'bearish_marubozu' detected but doesn't match trend context \u2014 not scored as a signal"
+        "pattern 'bearish_marubozu' detected but doesn't match trend context \u2014 not scored as a signal",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "RELIANCE.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 1257.5,
       "trend": "choppy",
       "trend_r2": 0.13,
@@ -2549,14 +2602,15 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.13, threshold 0.35) \u2014 direction read is uncertain",
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     },
     {
       "ticker": "COALINDIA.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 426.4,
       "trend": "uptrend",
       "trend_r2": 0.75,
@@ -2605,7 +2659,8 @@
       "confidence": 34.7,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "no candlestick pattern on the latest bar"
+        "no candlestick pattern on the latest bar",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": false
     }
@@ -2614,7 +2669,7 @@
     {
       "ticker": "HDFCBANK.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 708.25,
       "trend": "downtrend",
       "trend_r2": 0.79,
@@ -2655,14 +2710,15 @@
       "confidence": 84.0,
       "recommendation": "Worth a manual look \u2014 most criteria align",
       "notes": [
-        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative"
+        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": true
     },
     {
       "ticker": "LT.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 3930.7,
       "trend": "downtrend",
       "trend_r2": 0.84,
@@ -2710,13 +2766,15 @@
       "checks_total": 5,
       "confidence": 74.7,
       "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [],
+      "notes": [
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+      ],
       "flag": true
     },
     {
       "ticker": "SILVERBEES.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 216.72,
       "trend": "downtrend",
       "trend_r2": 0.51,
@@ -2755,22 +2813,24 @@
           "touches": 2
         }
       ],
-      "volume_ratio": 1.41,
+      "volume_ratio": 1.42,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 45.23,
-      "rsi_confirms": false,
-      "checks_passed": 4,
+      "rsi": 44.93,
+      "rsi_confirms": true,
+      "checks_passed": 5,
       "checks_total": 5,
-      "confidence": 74.7,
+      "confidence": 88.0,
       "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [],
+      "notes": [
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+      ],
       "flag": true
     },
     {
       "ticker": "IRFC.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 81.09,
       "trend": "downtrend",
       "trend_r2": 0.93,
@@ -2806,14 +2866,15 @@
       "confidence": 100.0,
       "recommendation": "Worth a manual look \u2014 most criteria align",
       "notes": [
-        "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone"
+        "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
       ],
       "flag": true
     },
     {
       "ticker": "ARE&M.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 813.9,
       "trend": "downtrend",
       "trend_r2": 0.94,
@@ -2861,13 +2922,15 @@
       "checks_total": 5,
       "confidence": 74.7,
       "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [],
+      "notes": [
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+      ],
       "flag": true
     },
     {
       "ticker": "CIPLA.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 1366.0,
       "trend": "downtrend",
       "trend_r2": 0.81,
@@ -2915,13 +2978,15 @@
       "checks_total": 5,
       "confidence": 92.0,
       "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [],
+      "notes": [
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+      ],
       "flag": true
     },
     {
       "ticker": "ASHOKLEY.NS",
       "date": "2026-09-11",
-      "data_stale_days": 0,
+      "data_stale_days": 2,
       "close": 163.75,
       "trend": "downtrend",
       "trend_r2": 0.62,
@@ -2969,7 +3034,9 @@
       "checks_total": 5,
       "confidence": 80.0,
       "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [],
+      "notes": [
+        "data is 2 trading day(s) old, not the most recent close \u2014 yfinance likely hadn't posted the newer session at fetch time. This flag/score is based on stale data, not a same-day snapshot."
+      ],
       "flag": true
     }
   ]
