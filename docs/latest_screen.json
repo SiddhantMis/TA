@@ -1,22 +1,26 @@
 {
-  "run_timestamp": "2026-09-16T23:10:04.140603+05:30",
+  "run_timestamp": "2026-09-17T23:10:44.509769+05:30",
   "note": "Every 'date'/'close' below is the last COMPLETE session as of run_timestamp, never a same-day live price. A flag here is for planning tomorrow's open \u2014 not for acting before today's 3:30 PM close.",
   "all": [
     {
       "ticker": "ETERNAL.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 317.0,
+      "close": 322.35,
       "trend": "downtrend",
       "trend_r2": 0.76,
-      "pattern": "bullish_harami",
-      "pattern_matches_trend": true,
-      "near_support": false,
-      "support_level": 306.98,
+      "pattern": null,
+      "pattern_matches_trend": false,
+      "near_support": true,
+      "support_level": 317.9,
       "support_touches": 2,
-      "resistance_level": 319.7,
+      "resistance_level": 325.0,
       "resistance_touches": 1,
       "support_ladder": [
+        {
+          "level": 317.9,
+          "touches": 2
+        },
         {
           "level": 306.98,
           "touches": 2
@@ -24,17 +28,9 @@
         {
           "level": 299.67,
           "touches": 2
-        },
-        {
-          "level": 295.18,
-          "touches": 2
         }
       ],
       "resistance_ladder": [
-        {
-          "level": 319.7,
-          "touches": 1
-        },
         {
           "level": 325.0,
           "touches": 1
@@ -42,55 +38,55 @@
         {
           "level": 332.9,
           "touches": 3
+        },
+        {
+          "level": 343.9,
+          "touches": 1
         }
       ],
-      "volume_ratio": 0.32,
-      "above_ema20": false,
+      "volume_ratio": 0.79,
+      "above_ema20": true,
       "above_sma50": true,
-      "rsi": 47.28,
+      "rsi": 54.62,
       "rsi_confirms": false,
       "checks_passed": 2,
       "checks_total": 5,
-      "confidence": 53.3,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "confidence": 34.7,
+      "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "no candlestick pattern on the latest bar"
       ],
       "flag": false
     },
     {
       "ticker": "DLF.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 622.8,
+      "close": 640.0,
       "trend": "downtrend",
-      "trend_r2": 0.64,
-      "pattern": "bullish_harami",
+      "trend_r2": 0.7,
+      "pattern": "morning_star",
       "pattern_matches_trend": true,
-      "near_support": false,
-      "support_level": 604.65,
-      "support_touches": 4,
-      "resistance_level": 636.68,
+      "near_support": true,
+      "support_level": 636.14,
+      "support_touches": 5,
+      "resistance_level": 661.99,
       "resistance_touches": 2,
       "support_ladder": [
         {
+          "level": 636.14,
+          "touches": 5
+        },
+        {
+          "level": 623.1,
+          "touches": 3
+        },
+        {
           "level": 604.65,
           "touches": 4
-        },
-        {
-          "level": 589.43,
-          "touches": 1
-        },
-        {
-          "level": 577.6,
-          "touches": 2
         }
       ],
       "resistance_ladder": [
-        {
-          "level": 636.68,
-          "touches": 2
-        },
         {
           "level": 661.99,
           "touches": 2
@@ -98,37 +94,44 @@
         {
           "level": 671.39,
           "touches": 4
+        },
+        {
+          "level": 686.36,
+          "touches": 5
         }
       ],
-      "volume_ratio": 0.66,
+      "volume_ratio": 0.74,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 33.05,
+      "rsi": 42.43,
       "rsi_confirms": true,
-      "checks_passed": 3,
+      "checks_passed": 4,
       "checks_total": 5,
-      "confidence": 66.7,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
-      "notes": [
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
-      ],
-      "flag": false
+      "confidence": 86.7,
+      "recommendation": "Worth a manual look \u2014 most criteria align",
+      "notes": [],
+      "flag": true
     },
     {
       "ticker": "IEX.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 112.0,
+      "close": 113.4,
       "trend": "downtrend",
-      "trend_r2": 0.92,
-      "pattern": "bullish_harami",
+      "trend_r2": 0.93,
+      "pattern": "morning_star",
       "pattern_matches_trend": true,
       "near_support": true,
-      "support_level": 110.35,
-      "support_touches": null,
-      "resistance_level": 125.05,
+      "support_level": 112.87,
+      "support_touches": 2,
+      "resistance_level": 124.88,
       "resistance_touches": null,
-      "support_ladder": [],
+      "support_ladder": [
+        {
+          "level": 112.87,
+          "touches": 2
+        }
+      ],
       "resistance_ladder": [
         {
           "level": 121.85,
@@ -143,36 +146,37 @@
           "touches": 4
         }
       ],
-      "volume_ratio": 0.96,
+      "volume_ratio": 0.62,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 23.55,
+      "rsi": 30.64,
       "rsi_confirms": true,
       "checks_passed": 4,
       "checks_total": 5,
-      "confidence": 86.7,
+      "confidence": 74.7,
       "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [
-        "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
-      ],
+      "notes": [],
       "flag": true
     },
     {
       "ticker": "UTTAMSUGAR.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 250.7,
+      "close": 252.4,
       "trend": "downtrend",
-      "trend_r2": 0.81,
-      "pattern": null,
-      "pattern_matches_trend": false,
+      "trend_r2": 0.8,
+      "pattern": "bullish_harami",
+      "pattern_matches_trend": true,
       "near_support": true,
-      "support_level": 246.65,
-      "support_touches": 5,
-      "resistance_level": 250.76,
-      "resistance_touches": 1,
+      "support_level": 250.99,
+      "support_touches": 2,
+      "resistance_level": 256.31,
+      "resistance_touches": 3,
       "support_ladder": [
+        {
+          "level": 250.99,
+          "touches": 2
+        },
         {
           "level": 246.65,
           "touches": 5
@@ -180,17 +184,9 @@
         {
           "level": 241.43,
           "touches": 2
-        },
-        {
-          "level": 234.41,
-          "touches": 1
         }
       ],
       "resistance_ladder": [
-        {
-          "level": 250.76,
-          "touches": 1
-        },
         {
           "level": 256.31,
           "touches": 3
@@ -198,36 +194,40 @@
         {
           "level": 260.42,
           "touches": 2
+        },
+        {
+          "level": 266.27,
+          "touches": 5
         }
       ],
-      "volume_ratio": 0.46,
+      "volume_ratio": 0.21,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 37.27,
+      "rsi": 38.27,
       "rsi_confirms": true,
-      "checks_passed": 3,
+      "checks_passed": 4,
       "checks_total": 5,
-      "confidence": 60.0,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "confidence": 74.7,
+      "recommendation": "Worth a manual look \u2014 most criteria align",
       "notes": [
-        "no candlestick pattern on the latest bar"
+        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
       ],
-      "flag": false
+      "flag": true
     },
     {
       "ticker": "IDFCFIRSTB.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 85.01,
+      "close": 86.33,
       "trend": "choppy",
-      "trend_r2": 0.29,
+      "trend_r2": 0.13,
       "pattern": null,
       "pattern_matches_trend": false,
-      "near_support": true,
+      "near_support": false,
       "support_level": 83.46,
       "support_touches": 3,
-      "resistance_level": 85.56,
-      "resistance_touches": 4,
+      "resistance_level": 86.76,
+      "resistance_touches": 6,
       "support_ladder": [
         {
           "level": 83.46,
@@ -244,10 +244,6 @@
       ],
       "resistance_ladder": [
         {
-          "level": 85.56,
-          "touches": 4
-        },
-        {
           "level": 86.76,
           "touches": 6
         },
@@ -256,30 +252,30 @@
           "touches": 2
         }
       ],
-      "volume_ratio": 0.93,
-      "above_ema20": false,
+      "volume_ratio": 1.09,
+      "above_ema20": true,
       "above_sma50": true,
-      "rsi": 48.87,
+      "rsi": 54.93,
       "rsi_confirms": true,
       "checks_passed": 2,
       "checks_total": 5,
-      "confidence": 25.3,
+      "confidence": 26.7,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.29, threshold 0.35) \u2014 direction read is uncertain",
+        "trend fit is weak (R^2=0.13, threshold 0.35) \u2014 direction read is uncertain",
         "no candlestick pattern on the latest bar"
       ],
       "flag": false
     },
     {
       "ticker": "BANDHANBNK.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 172.5,
-      "trend": "choppy",
-      "trend_r2": 0.26,
-      "pattern": "bullish_harami",
-      "pattern_matches_trend": true,
+      "close": 171.5,
+      "trend": "uptrend",
+      "trend_r2": 0.5,
+      "pattern": "shooting_star_or_inverted_hammer",
+      "pattern_matches_trend": false,
       "near_support": true,
       "support_level": 170.91,
       "support_touches": 3,
@@ -313,29 +309,28 @@
           "touches": 2
         }
       ],
-      "volume_ratio": 1.0,
-      "above_ema20": true,
+      "volume_ratio": 0.51,
+      "above_ema20": false,
       "above_sma50": false,
-      "rsi": 50.05,
-      "rsi_confirms": true,
-      "checks_passed": 3,
+      "rsi": 48.29,
+      "rsi_confirms": false,
+      "checks_passed": 2,
       "checks_total": 5,
-      "confidence": 52.0,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "confidence": 38.7,
+      "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.26, threshold 0.35) \u2014 direction read is uncertain",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "pattern 'shooting_star_or_inverted_hammer' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
     {
       "ticker": "CENTRALBK.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 30.39,
+      "close": 30.4,
       "trend": "choppy",
-      "trend_r2": 0.05,
-      "pattern": "spinning_top",
+      "trend_r2": 0.03,
+      "pattern": "doji",
       "pattern_matches_trend": false,
       "near_support": true,
       "support_level": 29.89,
@@ -366,47 +361,51 @@
           "touches": 2
         }
       ],
-      "volume_ratio": 1.12,
+      "volume_ratio": 0.73,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 40.5,
+      "rsi": 40.73,
       "rsi_confirms": true,
-      "checks_passed": 3,
+      "checks_passed": 2,
       "checks_total": 5,
-      "confidence": 30.7,
+      "confidence": 17.3,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.05, threshold 0.35) \u2014 direction read is uncertain",
+        "trend fit is weak (R^2=0.03, threshold 0.35) \u2014 direction read is uncertain",
         "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
+        "pattern 'doji' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
     {
       "ticker": "HDFCBANK.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 721.5,
+      "close": 713.0,
       "trend": "choppy",
-      "trend_r2": 0.2,
-      "pattern": "piercing_pattern",
-      "pattern_matches_trend": true,
-      "near_support": true,
-      "support_level": 718.71,
-      "support_touches": 5,
-      "resistance_level": 735.42,
-      "resistance_touches": 3,
+      "trend_r2": 0.0,
+      "pattern": null,
+      "pattern_matches_trend": false,
+      "near_support": false,
+      "support_level": 698.5,
+      "support_touches": 1,
+      "resistance_level": 716.5,
+      "resistance_touches": 1,
       "support_ladder": [
         {
-          "level": 718.71,
-          "touches": 5
+          "level": 698.5,
+          "touches": 1
         },
         {
-          "level": 698.5,
+          "level": 681.9,
           "touches": 1
         }
       ],
       "resistance_ladder": [
+        {
+          "level": 716.5,
+          "touches": 1
+        },
         {
           "level": 735.42,
           "touches": 3
@@ -414,38 +413,35 @@
         {
           "level": 746.36,
           "touches": 1
-        },
-        {
-          "level": 763.54,
-          "touches": 2
         }
       ],
-      "volume_ratio": 0.97,
-      "above_ema20": true,
+      "volume_ratio": 0.75,
+      "above_ema20": false,
       "above_sma50": false,
-      "rsi": 51.65,
+      "rsi": 47.0,
       "rsi_confirms": true,
-      "checks_passed": 3,
+      "checks_passed": 1,
       "checks_total": 5,
-      "confidence": 60.0,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "confidence": 13.3,
+      "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.20, threshold 0.35) \u2014 direction read is uncertain"
+        "trend fit is weak (R^2=0.00, threshold 0.35) \u2014 direction read is uncertain",
+        "no candlestick pattern on the latest bar"
       ],
       "flag": false
     },
     {
       "ticker": "TITAN.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 4908.5,
+      "close": 4841.0,
       "trend": "downtrend",
-      "trend_r2": 0.72,
-      "pattern": "bullish_harami",
-      "pattern_matches_trend": true,
-      "near_support": true,
-      "support_level": 4845.0,
-      "support_touches": null,
+      "trend_r2": 0.77,
+      "pattern": null,
+      "pattern_matches_trend": false,
+      "near_support": false,
+      "support_level": 4604.1,
+      "support_touches": 1,
       "resistance_level": 5186.7,
       "resistance_touches": null,
       "support_ladder": [
@@ -468,35 +464,34 @@
           "touches": 2
         }
       ],
-      "volume_ratio": 0.8,
+      "volume_ratio": 1.05,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 42.11,
+      "rsi": 36.96,
       "rsi_confirms": true,
-      "checks_passed": 4,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 86.7,
-      "recommendation": "Worth a manual look \u2014 most criteria align",
+      "confidence": 53.3,
+      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
       "notes": [
-        "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "no candlestick pattern on the latest bar"
       ],
-      "flag": true
+      "flag": false
     },
     {
       "ticker": "MCX.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 3211.2,
+      "close": 3265.2,
       "trend": "choppy",
-      "trend_r2": 0.13,
-      "pattern": "hammer_or_hanging_man",
-      "pattern_matches_trend": false,
-      "near_support": true,
+      "trend_r2": 0.16,
+      "pattern": "morning_star",
+      "pattern_matches_trend": true,
+      "near_support": false,
       "support_level": 3165.6,
       "support_touches": 1,
-      "resistance_level": 3400.0,
-      "resistance_touches": null,
+      "resistance_level": 3399.0,
+      "resistance_touches": 2,
       "support_ladder": [
         {
           "level": 3165.6,
@@ -521,40 +516,38 @@
           "touches": 1
         }
       ],
-      "volume_ratio": 0.93,
-      "above_ema20": false,
+      "volume_ratio": 0.76,
+      "above_ema20": true,
       "above_sma50": true,
-      "rsi": 52.88,
+      "rsi": 56.22,
       "rsi_confirms": true,
       "checks_passed": 2,
       "checks_total": 5,
-      "confidence": 17.3,
+      "confidence": 40.0,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.13, threshold 0.35) \u2014 direction read is uncertain",
-        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "pattern 'hammer_or_hanging_man' detected but doesn't match trend context \u2014 not scored as a signal"
+        "trend fit is weak (R^2=0.16, threshold 0.35) \u2014 direction read is uncertain"
       ],
       "flag": false
     },
     {
       "ticker": "BSE.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 3240.0,
+      "close": 3259.0,
       "trend": "choppy",
-      "trend_r2": 0.04,
-      "pattern": null,
-      "pattern_matches_trend": false,
+      "trend_r2": 0.0,
+      "pattern": "bullish_harami",
+      "pattern_matches_trend": true,
       "near_support": true,
-      "support_level": 3223.0,
-      "support_touches": 1,
-      "resistance_level": 3474.0,
-      "resistance_touches": null,
+      "support_level": 3208.1,
+      "support_touches": 2,
+      "resistance_level": 3411.0,
+      "resistance_touches": 2,
       "support_ladder": [
         {
-          "level": 3223.0,
-          "touches": 1
+          "level": 3208.1,
+          "touches": 2
         },
         {
           "level": 3131.5,
@@ -579,29 +572,28 @@
           "touches": 1
         }
       ],
-      "volume_ratio": 0.67,
+      "volume_ratio": 0.66,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 41.47,
+      "rsi": 42.87,
       "rsi_confirms": true,
-      "checks_passed": 2,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 17.3,
+      "confidence": 48.0,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.04, threshold 0.35) \u2014 direction read is uncertain",
-        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "no candlestick pattern on the latest bar"
+        "trend fit is weak (R^2=0.00, threshold 0.35) \u2014 direction read is uncertain",
+        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
       ],
       "flag": false
     },
     {
       "ticker": "LT.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 3807.7,
+      "close": 3836.2,
       "trend": "downtrend",
-      "trend_r2": 0.81,
+      "trend_r2": 0.8,
       "pattern": null,
       "pattern_matches_trend": false,
       "near_support": true,
@@ -637,14 +629,14 @@
           "touches": 5
         }
       ],
-      "volume_ratio": 1.54,
+      "volume_ratio": 0.99,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 29.91,
+      "rsi": 34.6,
       "rsi_confirms": true,
-      "checks_passed": 4,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 73.3,
+      "confidence": 60.0,
       "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
       "notes": [
         "no candlestick pattern on the latest bar"
@@ -653,18 +645,18 @@
     },
     {
       "ticker": "GOLDBEES.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 124.91,
+      "close": 124.43,
       "trend": "downtrend",
-      "trend_r2": 0.59,
-      "pattern": null,
-      "pattern_matches_trend": false,
+      "trend_r2": 0.55,
+      "pattern": "bullish_harami",
+      "pattern_matches_trend": true,
       "near_support": true,
       "support_level": 123.6,
       "support_touches": 2,
-      "resistance_level": 126.08,
-      "resistance_touches": 5,
+      "resistance_level": 126.22,
+      "resistance_touches": 6,
       "support_ladder": [
         {
           "level": 123.6,
@@ -681,8 +673,8 @@
       ],
       "resistance_ladder": [
         {
-          "level": 126.08,
-          "touches": 5
+          "level": 126.22,
+          "touches": 6
         },
         {
           "level": 130.42,
@@ -693,28 +685,28 @@
           "touches": 4
         }
       ],
-      "volume_ratio": 0.5,
+      "volume_ratio": 0.79,
       "above_ema20": false,
       "above_sma50": true,
-      "rsi": 47.26,
+      "rsi": 46.38,
       "rsi_confirms": false,
-      "checks_passed": 2,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 34.7,
-      "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
+      "confidence": 61.3,
+      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
       "notes": [
-        "no candlestick pattern on the latest bar"
+        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
       ],
       "flag": false
     },
     {
       "ticker": "SILVERBEES.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 218.46,
+      "close": 216.64,
       "trend": "downtrend",
-      "trend_r2": 0.45,
-      "pattern": null,
+      "trend_r2": 0.46,
+      "pattern": "spinning_top",
       "pattern_matches_trend": false,
       "near_support": true,
       "support_level": 214.57,
@@ -741,42 +733,42 @@
           "touches": 2
         },
         {
-          "level": 227.4,
-          "touches": 1
+          "level": 226.9,
+          "touches": 2
         },
         {
           "level": 233.14,
           "touches": 2
         }
       ],
-      "volume_ratio": 0.67,
+      "volume_ratio": 0.64,
       "above_ema20": false,
-      "above_sma50": true,
-      "rsi": 47.24,
+      "above_sma50": false,
+      "rsi": 45.49,
       "rsi_confirms": false,
       "checks_passed": 2,
       "checks_total": 5,
       "confidence": 34.7,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "no candlestick pattern on the latest bar"
+        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
     {
       "ticker": "ADANIENSOL.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 1349.2,
+      "close": 1386.8,
       "trend": "downtrend",
-      "trend_r2": 0.57,
-      "pattern": "bullish_harami",
+      "trend_r2": 0.51,
+      "pattern": "morning_star",
       "pattern_matches_trend": true,
-      "near_support": true,
+      "near_support": false,
       "support_level": 1348.0,
       "support_touches": 1,
-      "resistance_level": 1365.0,
-      "resistance_touches": 1,
+      "resistance_level": 1442.0,
+      "resistance_touches": 2,
       "support_ladder": [
         {
           "level": 1348.0,
@@ -793,42 +785,39 @@
       ],
       "resistance_ladder": [
         {
-          "level": 1365.0,
-          "touches": 1
-        },
-        {
           "level": 1442.0,
           "touches": 2
         },
         {
           "level": 1463.65,
           "touches": 1
+        },
+        {
+          "level": 1551.0,
+          "touches": 1
         }
       ],
-      "volume_ratio": 0.24,
+      "volume_ratio": 0.31,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 30.86,
+      "rsi": 38.41,
       "rsi_confirms": true,
-      "checks_passed": 4,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 70.7,
-      "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [
-        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
-      ],
-      "flag": true
+      "confidence": 66.7,
+      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "notes": [],
+      "flag": false
     },
     {
       "ticker": "ADANIENT.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 2920.0,
+      "close": 2923.2,
       "trend": "choppy",
-      "trend_r2": 0.01,
-      "pattern": null,
-      "pattern_matches_trend": false,
+      "trend_r2": 0.0,
+      "pattern": "bullish_harami",
+      "pattern_matches_trend": true,
       "near_support": true,
       "support_level": 2886.2,
       "support_touches": 1,
@@ -862,34 +851,34 @@
           "touches": 2
         }
       ],
-      "volume_ratio": 0.36,
+      "volume_ratio": 0.28,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 42.34,
+      "rsi": 42.67,
       "rsi_confirms": true,
-      "checks_passed": 2,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 17.3,
+      "confidence": 44.0,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.01, threshold 0.35) \u2014 direction read is uncertain",
+        "trend fit is weak (R^2=0.00, threshold 0.35) \u2014 direction read is uncertain",
         "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "no candlestick pattern on the latest bar"
+        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
       ],
       "flag": false
     },
     {
       "ticker": "ADANIGREEN.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 1270.2,
+      "close": 1274.2,
       "trend": "choppy",
       "trend_r2": 0.03,
-      "pattern": null,
+      "pattern": "shooting_star_or_inverted_hammer",
       "pattern_matches_trend": false,
       "near_support": false,
-      "support_level": 1209.23,
-      "support_touches": 2,
+      "support_level": 1214.9,
+      "support_touches": null,
       "resistance_level": 1346.8,
       "resistance_touches": null,
       "support_ladder": [
@@ -920,10 +909,10 @@
           "touches": 1
         }
       ],
-      "volume_ratio": 0.44,
+      "volume_ratio": 0.51,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 42.46,
+      "rsi": 43.31,
       "rsi_confirms": true,
       "checks_passed": 1,
       "checks_total": 5,
@@ -931,25 +920,30 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "trend fit is weak (R^2=0.03, threshold 0.35) \u2014 direction read is uncertain",
-        "no candlestick pattern on the latest bar"
+        "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
+        "pattern 'shooting_star_or_inverted_hammer' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
     {
       "ticker": "ADANIPORTS.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 1723.8,
+      "close": 1738.3,
       "trend": "choppy",
-      "trend_r2": 0.32,
-      "pattern": "bullish_harami",
-      "pattern_matches_trend": true,
-      "near_support": false,
-      "support_level": 1673.57,
+      "trend_r2": 0.34,
+      "pattern": null,
+      "pattern_matches_trend": false,
+      "near_support": true,
+      "support_level": 1737.43,
       "support_touches": 2,
       "resistance_level": 1787.46,
       "resistance_touches": 3,
       "support_ladder": [
+        {
+          "level": 1737.43,
+          "touches": 2
+        },
         {
           "level": 1673.57,
           "touches": 2
@@ -957,10 +951,6 @@
         {
           "level": 1645.2,
           "touches": 2
-        },
-        {
-          "level": 1593.1,
-          "touches": 1
         }
       ],
       "resistance_ladder": [
@@ -977,36 +967,40 @@
           "touches": 3
         }
       ],
-      "volume_ratio": 0.44,
+      "volume_ratio": 0.33,
       "above_ema20": true,
-      "above_sma50": false,
-      "rsi": 51.04,
+      "above_sma50": true,
+      "rsi": 53.4,
       "rsi_confirms": true,
       "checks_passed": 2,
       "checks_total": 5,
-      "confidence": 40.0,
+      "confidence": 21.3,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.32, threshold 0.35) \u2014 direction read is uncertain",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "trend fit is weak (R^2=0.34, threshold 0.35) \u2014 direction read is uncertain",
+        "no candlestick pattern on the latest bar"
       ],
       "flag": false
     },
     {
       "ticker": "ADANIPOWER.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 202.34,
+      "close": 205.92,
       "trend": "choppy",
-      "trend_r2": 0.0,
-      "pattern": "bullish_harami",
+      "trend_r2": 0.01,
+      "pattern": "bullish_marubozu",
       "pattern_matches_trend": true,
-      "near_support": false,
-      "support_level": 198.0,
-      "support_touches": 1,
-      "resistance_level": 217.4,
-      "resistance_touches": null,
+      "near_support": true,
+      "support_level": 202.44,
+      "support_touches": 3,
+      "resistance_level": 215.0,
+      "resistance_touches": 3,
       "support_ladder": [
+        {
+          "level": 202.44,
+          "touches": 3
+        },
         {
           "level": 198.0,
           "touches": 1
@@ -1014,10 +1008,6 @@
         {
           "level": 146.71,
           "touches": 1
-        },
-        {
-          "level": 144.2,
-          "touches": 3
         }
       ],
       "resistance_ladder": [
@@ -1034,30 +1024,29 @@
           "touches": 1
         }
       ],
-      "volume_ratio": 0.6,
+      "volume_ratio": 0.44,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 42.8,
+      "rsi": 47.43,
       "rsi_confirms": true,
-      "checks_passed": 2,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 40.0,
-      "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
+      "confidence": 52.0,
+      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
       "notes": [
-        "trend fit is weak (R^2=0.00, threshold 0.35) \u2014 direction read is uncertain",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "trend fit is weak (R^2=0.01, threshold 0.35) \u2014 direction read is uncertain"
       ],
       "flag": false
     },
     {
       "ticker": "VOLTAS.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 1131.0,
+      "close": 1135.0,
       "trend": "downtrend",
-      "trend_r2": 0.71,
-      "pattern": "shooting_star_or_inverted_hammer",
-      "pattern_matches_trend": true,
+      "trend_r2": 0.7,
+      "pattern": "spinning_top",
+      "pattern_matches_trend": false,
       "near_support": true,
       "support_level": 1128.28,
       "support_touches": 2,
@@ -1083,32 +1072,34 @@
           "touches": 4
         }
       ],
-      "volume_ratio": 0.66,
+      "volume_ratio": 0.57,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 31.1,
+      "rsi": 32.59,
       "rsi_confirms": true,
-      "checks_passed": 4,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 74.7,
-      "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [],
-      "flag": true
+      "confidence": 48.0,
+      "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
+      "notes": [
+        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
+      ],
+      "flag": false
     },
     {
       "ticker": "BAJAJHFL.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 82.96,
+      "close": 82.7,
       "trend": "choppy",
-      "trend_r2": 0.02,
-      "pattern": null,
+      "trend_r2": 0.05,
+      "pattern": "shooting_star_or_inverted_hammer",
       "pattern_matches_trend": false,
       "near_support": true,
       "support_level": 82.1,
       "support_touches": 7,
-      "resistance_level": 84.64,
-      "resistance_touches": 2,
+      "resistance_level": 84.93,
+      "resistance_touches": 3,
       "support_ladder": [
         {
           "level": 82.1,
@@ -1125,8 +1116,8 @@
       ],
       "resistance_ladder": [
         {
-          "level": 84.64,
-          "touches": 2
+          "level": 84.93,
+          "touches": 3
         },
         {
           "level": 86.19,
@@ -1137,30 +1128,30 @@
           "touches": 3
         }
       ],
-      "volume_ratio": 0.9,
+      "volume_ratio": 0.6,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 41.05,
+      "rsi": 39.59,
       "rsi_confirms": true,
       "checks_passed": 2,
       "checks_total": 5,
       "confidence": 33.3,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.02, threshold 0.35) \u2014 direction read is uncertain",
-        "no candlestick pattern on the latest bar"
+        "trend fit is weak (R^2=0.05, threshold 0.35) \u2014 direction read is uncertain",
+        "pattern 'shooting_star_or_inverted_hammer' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
     {
       "ticker": "PFC.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 346.0,
+      "close": 344.95,
       "trend": "choppy",
-      "trend_r2": 0.0,
-      "pattern": "bullish_harami",
-      "pattern_matches_trend": true,
+      "trend_r2": 0.01,
+      "pattern": "shooting_star_or_inverted_hammer",
+      "pattern_matches_trend": false,
       "near_support": true,
       "support_level": 342.97,
       "support_touches": 2,
@@ -1194,29 +1185,29 @@
           "touches": 2
         }
       ],
-      "volume_ratio": 0.73,
+      "volume_ratio": 0.78,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 35.56,
-      "rsi_confirms": true,
-      "checks_passed": 3,
+      "rsi": 34.86,
+      "rsi_confirms": false,
+      "checks_passed": 1,
       "checks_total": 5,
-      "confidence": 48.0,
+      "confidence": 8.0,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.00, threshold 0.35) \u2014 direction read is uncertain",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "trend fit is weak (R^2=0.01, threshold 0.35) \u2014 direction read is uncertain",
+        "pattern 'shooting_star_or_inverted_hammer' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
     {
       "ticker": "IDEA.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 14.26,
+      "close": 14.22,
       "trend": "choppy",
-      "trend_r2": 0.06,
-      "pattern": null,
+      "trend_r2": 0.02,
+      "pattern": "shooting_star_or_inverted_hammer",
       "pattern_matches_trend": false,
       "near_support": false,
       "support_level": 13.81,
@@ -1251,39 +1242,39 @@
           "touches": 4
         }
       ],
-      "volume_ratio": 0.76,
+      "volume_ratio": 0.46,
       "above_ema20": false,
       "above_sma50": true,
-      "rsi": 46.84,
+      "rsi": 46.31,
       "rsi_confirms": true,
       "checks_passed": 1,
       "checks_total": 5,
       "confidence": 13.3,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.06, threshold 0.35) \u2014 direction read is uncertain",
-        "no candlestick pattern on the latest bar"
+        "trend fit is weak (R^2=0.02, threshold 0.35) \u2014 direction read is uncertain",
+        "pattern 'shooting_star_or_inverted_hammer' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
     {
       "ticker": "PNB.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 116.8,
+      "close": 116.47,
       "trend": "choppy",
-      "trend_r2": 0.03,
-      "pattern": null,
+      "trend_r2": 0.15,
+      "pattern": "bearish_harami",
       "pattern_matches_trend": false,
       "near_support": true,
-      "support_level": 114.89,
-      "support_touches": 4,
+      "support_level": 114.81,
+      "support_touches": 5,
       "resistance_level": 118.74,
       "resistance_touches": 6,
       "support_ladder": [
         {
-          "level": 114.89,
-          "touches": 4
+          "level": 114.81,
+          "touches": 5
         },
         {
           "level": 112.92,
@@ -1308,34 +1299,35 @@
           "touches": 3
         }
       ],
-      "volume_ratio": 1.53,
+      "volume_ratio": 1.28,
       "above_ema20": true,
       "above_sma50": true,
-      "rsi": 55.2,
+      "rsi": 53.81,
       "rsi_confirms": true,
       "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 42.7,
+      "confidence": 46.7,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.03, threshold 0.35) \u2014 direction read is uncertain",
-        "no candlestick pattern on the latest bar"
+        "trend fit is weak (R^2=0.15, threshold 0.35) \u2014 direction read is uncertain",
+        "pattern 'bearish_harami' detected but doesn't match trend context \u2014 not scored as a signal",
+        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
       ],
       "flag": false
     },
     {
       "ticker": "IRFC.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 78.95,
+      "close": 79.31,
       "trend": "downtrend",
       "trend_r2": 0.9,
-      "pattern": "spinning_top",
-      "pattern_matches_trend": false,
+      "pattern": "bullish_harami",
+      "pattern_matches_trend": true,
       "near_support": true,
       "support_level": 78.16,
       "support_touches": null,
-      "resistance_level": 87.3,
+      "resistance_level": 87.25,
       "resistance_touches": null,
       "support_ladder": [],
       "resistance_ladder": [
@@ -1352,36 +1344,40 @@
           "touches": 3
         }
       ],
-      "volume_ratio": 1.33,
+      "volume_ratio": 0.9,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 19.67,
+      "rsi": 23.16,
       "rsi_confirms": true,
       "checks_passed": 4,
       "checks_total": 5,
-      "confidence": 73.3,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "confidence": 86.7,
+      "recommendation": "Worth a manual look \u2014 most criteria align",
       "notes": [
         "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
-        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
+        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
       ],
-      "flag": false
+      "flag": true
     },
     {
       "ticker": "TATASTEEL.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 183.0,
+      "close": 187.29,
       "trend": "choppy",
-      "trend_r2": 0.13,
-      "pattern": "spinning_top",
-      "pattern_matches_trend": false,
+      "trend_r2": 0.11,
+      "pattern": "morning_star",
+      "pattern_matches_trend": true,
       "near_support": true,
-      "support_level": 181.15,
-      "support_touches": 4,
-      "resistance_level": 183.61,
-      "resistance_touches": 2,
+      "support_level": 183.65,
+      "support_touches": 5,
+      "resistance_level": 187.45,
+      "resistance_touches": 3,
       "support_ladder": [
+        {
+          "level": 183.65,
+          "touches": 5
+        },
         {
           "level": 181.15,
           "touches": 4
@@ -1389,17 +1385,9 @@
         {
           "level": 177.89,
           "touches": 3
-        },
-        {
-          "level": 172.61,
-          "touches": 2
         }
       ],
       "resistance_ladder": [
-        {
-          "level": 183.61,
-          "touches": 2
-        },
         {
           "level": 187.45,
           "touches": 3
@@ -1407,36 +1395,40 @@
         {
           "level": 191.16,
           "touches": 3
+        },
+        {
+          "level": 194.63,
+          "touches": 4
         }
       ],
-      "volume_ratio": 0.99,
-      "above_ema20": false,
-      "above_sma50": false,
-      "rsi": 44.07,
+      "volume_ratio": 0.97,
+      "above_ema20": true,
+      "above_sma50": true,
+      "rsi": 53.28,
       "rsi_confirms": true,
-      "checks_passed": 2,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 29.3,
-      "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
+      "confidence": 60.0,
+      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
       "notes": [
-        "trend fit is weak (R^2=0.13, threshold 0.35) \u2014 direction read is uncertain",
-        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
+        "trend fit is weak (R^2=0.11, threshold 0.35) \u2014 direction read is uncertain",
+        "'bullish_engulfing' also matched on this candle but was suppressed by 3-candle precedence (morning_star) \u2014 check both by hand before deciding which read to trust"
       ],
       "flag": false
     },
     {
       "ticker": "ARE&M.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 791.55,
+      "close": 795.3,
       "trend": "downtrend",
       "trend_r2": 0.97,
-      "pattern": null,
-      "pattern_matches_trend": false,
+      "pattern": "bullish_harami",
+      "pattern_matches_trend": true,
       "near_support": true,
       "support_level": 788.69,
       "support_touches": 3,
-      "resistance_level": 937.8,
+      "resistance_level": 936.5,
       "resistance_touches": null,
       "support_ladder": [
         {
@@ -1466,28 +1458,28 @@
           "touches": 3
         }
       ],
-      "volume_ratio": 1.08,
+      "volume_ratio": 1.55,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 22.04,
+      "rsi": 24.23,
       "rsi_confirms": true,
-      "checks_passed": 4,
+      "checks_passed": 5,
       "checks_total": 5,
-      "confidence": 65.3,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "confidence": 92.0,
+      "recommendation": "Worth a manual look \u2014 most criteria align",
       "notes": [
-        "no candlestick pattern on the latest bar"
+        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
       ],
-      "flag": false
+      "flag": true
     },
     {
       "ticker": "RBLBANK.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 404.0,
+      "close": 404.15,
       "trend": "uptrend",
-      "trend_r2": 0.66,
-      "pattern": "bullish_harami",
+      "trend_r2": 0.57,
+      "pattern": "shooting_star_or_inverted_hammer",
       "pattern_matches_trend": false,
       "near_support": false,
       "support_level": 375.0,
@@ -1514,10 +1506,10 @@
           "touches": 1
         }
       ],
-      "volume_ratio": 0.79,
+      "volume_ratio": 0.67,
       "above_ema20": true,
       "above_sma50": true,
-      "rsi": 57.72,
+      "rsi": 57.83,
       "rsi_confirms": false,
       "checks_passed": 1,
       "checks_total": 5,
@@ -1525,36 +1517,35 @@
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
-        "pattern 'bullish_harami' detected but doesn't match trend context \u2014 not scored as a signal",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "pattern 'shooting_star_or_inverted_hammer' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
     {
       "ticker": "JIOFIN.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 224.84,
+      "close": 229.3,
       "trend": "downtrend",
-      "trend_r2": 0.84,
+      "trend_r2": 0.85,
       "pattern": null,
       "pattern_matches_trend": false,
       "near_support": true,
-      "support_level": 221.62,
-      "support_touches": 2,
-      "resistance_level": 247.25,
-      "resistance_touches": null,
+      "support_level": 225.95,
+      "support_touches": 4,
+      "resistance_level": 236.32,
+      "resistance_touches": 2,
       "support_ladder": [
+        {
+          "level": 225.95,
+          "touches": 4
+        },
         {
           "level": 221.62,
           "touches": 2
         },
         {
           "level": 216.17,
-          "touches": 1
-        },
-        {
-          "level": 212.18,
           "touches": 1
         }
       ],
@@ -1572,14 +1563,14 @@
           "touches": 6
         }
       ],
-      "volume_ratio": 1.15,
+      "volume_ratio": 1.17,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 29.02,
+      "rsi": 38.27,
       "rsi_confirms": true,
       "checks_passed": 4,
       "checks_total": 5,
-      "confidence": 61.3,
+      "confidence": 69.3,
       "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
       "notes": [
         "no candlestick pattern on the latest bar"
@@ -1588,22 +1579,26 @@
     },
     {
       "ticker": "ITC.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 264.15,
-      "trend": "downtrend",
-      "trend_r2": 0.47,
-      "pattern": null,
+      "close": 266.2,
+      "trend": "choppy",
+      "trend_r2": 0.24,
+      "pattern": "spinning_top",
       "pattern_matches_trend": false,
-      "near_support": false,
-      "support_level": 255.5,
+      "near_support": true,
+      "support_level": 265.0,
       "support_touches": 1,
       "resistance_level": 269.0,
       "resistance_touches": 1,
       "support_ladder": [
         {
-          "level": 255.5,
+          "level": 265.0,
           "touches": 1
+        },
+        {
+          "level": 256.6,
+          "touches": 2
         }
       ],
       "resistance_ladder": [
@@ -1620,45 +1615,47 @@
           "touches": 3
         }
       ],
-      "volume_ratio": 1.14,
-      "above_ema20": false,
+      "volume_ratio": 1.06,
+      "above_ema20": true,
       "above_sma50": false,
-      "rsi": 45.46,
-      "rsi_confirms": false,
-      "checks_passed": 2,
+      "rsi": 48.68,
+      "rsi_confirms": true,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 40.0,
+      "confidence": 30.7,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "no candlestick pattern on the latest bar"
+        "trend fit is weak (R^2=0.24, threshold 0.35) \u2014 direction read is uncertain",
+        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
+        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
     {
       "ticker": "TATAPOWER.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 360.4,
+      "close": 369.0,
       "trend": "uptrend",
-      "trend_r2": 0.36,
-      "pattern": null,
+      "trend_r2": 0.39,
+      "pattern": "bullish_engulfing",
       "pattern_matches_trend": false,
       "near_support": true,
-      "support_level": 354.89,
-      "support_touches": 3,
+      "support_level": 365.55,
+      "support_touches": 5,
       "resistance_level": 371.77,
       "resistance_touches": 6,
       "support_ladder": [
+        {
+          "level": 365.55,
+          "touches": 5
+        },
         {
           "level": 354.89,
           "touches": 3
         },
         {
           "level": 346.63,
-          "touches": 2
-        },
-        {
-          "level": 340.28,
           "touches": 2
         }
       ],
@@ -1677,36 +1674,44 @@
         }
       ],
       "volume_ratio": 0.56,
-      "above_ema20": false,
+      "above_ema20": true,
       "above_sma50": false,
-      "rsi": 40.55,
+      "rsi": 51.47,
       "rsi_confirms": false,
       "checks_passed": 2,
       "checks_total": 5,
-      "confidence": 38.7,
+      "confidence": 46.7,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "no candlestick pattern on the latest bar"
+        "pattern 'bullish_engulfing' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
     {
       "ticker": "TMPV.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 301.0,
+      "close": 314.5,
       "trend": "downtrend",
-      "trend_r2": 0.77,
-      "pattern": null,
-      "pattern_matches_trend": false,
-      "near_support": false,
-      "support_level": 291.88,
+      "trend_r2": 0.8,
+      "pattern": "bullish_engulfing",
+      "pattern_matches_trend": true,
+      "near_support": true,
+      "support_level": 310.55,
       "support_touches": 1,
-      "resistance_level": 324.55,
-      "resistance_touches": null,
+      "resistance_level": 319.6,
+      "resistance_touches": 1,
       "support_ladder": [
         {
-          "level": 291.88,
+          "level": 310.55,
+          "touches": 1
+        },
+        {
+          "level": 305.01,
+          "touches": 2
+        },
+        {
+          "level": 296.5,
           "touches": 1
         }
       ],
@@ -1724,29 +1729,29 @@
           "touches": 1
         }
       ],
-      "volume_ratio": 1.51,
-      "above_ema20": false,
+      "volume_ratio": 1.45,
+      "above_ema20": true,
       "above_sma50": false,
-      "rsi": 31.2,
-      "rsi_confirms": true,
-      "checks_passed": 3,
+      "rsi": 50.04,
+      "rsi_confirms": false,
+      "checks_passed": 4,
       "checks_total": 5,
-      "confidence": 53.3,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "confidence": 70.7,
+      "recommendation": "Worth a manual look \u2014 most criteria align",
       "notes": [
-        "no candlestick pattern on the latest bar"
+        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative"
       ],
-      "flag": false
+      "flag": true
     },
     {
       "ticker": "JSWSTEEL.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 1248.9,
+      "close": 1253.4,
       "trend": "downtrend",
-      "trend_r2": 0.73,
-      "pattern": "bullish_harami",
-      "pattern_matches_trend": true,
+      "trend_r2": 0.75,
+      "pattern": "spinning_top",
+      "pattern_matches_trend": false,
       "near_support": true,
       "support_level": 1238.12,
       "support_touches": 5,
@@ -1780,29 +1785,29 @@
           "touches": 5
         }
       ],
-      "volume_ratio": 1.09,
+      "volume_ratio": 0.88,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 39.78,
+      "rsi": 41.17,
       "rsi_confirms": true,
-      "checks_passed": 5,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 100.0,
-      "recommendation": "Worth a manual look \u2014 most criteria align",
+      "confidence": 60.0,
+      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
       "notes": [
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
-      "flag": true
+      "flag": false
     },
     {
       "ticker": "PIDILITIND.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 1543.8,
+      "close": 1551.5,
       "trend": "downtrend",
-      "trend_r2": 0.81,
-      "pattern": "bullish_harami",
-      "pattern_matches_trend": true,
+      "trend_r2": 0.85,
+      "pattern": "spinning_top",
+      "pattern_matches_trend": false,
       "near_support": true,
       "support_level": 1527.64,
       "support_touches": 6,
@@ -1832,37 +1837,37 @@
           "touches": 5
         },
         {
-          "level": 1622.14,
-          "touches": 2
+          "level": 1615.07,
+          "touches": 1
         }
       ],
-      "volume_ratio": 0.93,
+      "volume_ratio": 0.58,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 36.85,
+      "rsi": 38.83,
       "rsi_confirms": true,
-      "checks_passed": 4,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 86.7,
-      "recommendation": "Worth a manual look \u2014 most criteria align",
+      "confidence": 60.0,
+      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
       "notes": [
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
-      "flag": true
+      "flag": false
     },
     {
       "ticker": "INDUSINDBK.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 946.5,
+      "close": 958.2,
       "trend": "downtrend",
-      "trend_r2": 0.37,
-      "pattern": null,
-      "pattern_matches_trend": false,
+      "trend_r2": 0.48,
+      "pattern": "bullish_engulfing",
+      "pattern_matches_trend": true,
       "near_support": true,
       "support_level": 946.02,
       "support_touches": 2,
-      "resistance_level": 947.58,
+      "resistance_level": 960.51,
       "resistance_touches": 4,
       "support_ladder": [
         {
@@ -1880,41 +1885,39 @@
       ],
       "resistance_ladder": [
         {
-          "level": 947.58,
-          "touches": 4
-        },
-        {
           "level": 960.51,
           "touches": 4
         },
         {
           "level": 988.0,
           "touches": 2
+        },
+        {
+          "level": 1012.11,
+          "touches": 2
         }
       ],
-      "volume_ratio": 1.28,
+      "volume_ratio": 2.64,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 33.04,
+      "rsi": 38.26,
       "rsi_confirms": true,
-      "checks_passed": 4,
+      "checks_passed": 5,
       "checks_total": 5,
-      "confidence": 61.3,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
-      "notes": [
-        "no candlestick pattern on the latest bar"
-      ],
-      "flag": false
+      "confidence": 88.0,
+      "recommendation": "Worth a manual look \u2014 most criteria align",
+      "notes": [],
+      "flag": true
     },
     {
       "ticker": "AXISBANK.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 1241.0,
-      "trend": "choppy",
-      "trend_r2": 0.16,
-      "pattern": "bullish_harami",
-      "pattern_matches_trend": true,
+      "close": 1240.0,
+      "trend": "downtrend",
+      "trend_r2": 0.39,
+      "pattern": "bearish_harami",
+      "pattern_matches_trend": false,
       "near_support": true,
       "support_level": 1222.87,
       "support_touches": 5,
@@ -1948,87 +1951,87 @@
           "touches": 5
         }
       ],
-      "volume_ratio": 1.32,
+      "volume_ratio": 0.98,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 47.06,
-      "rsi_confirms": true,
-      "checks_passed": 4,
+      "rsi": 46.77,
+      "rsi_confirms": false,
+      "checks_passed": 2,
       "checks_total": 5,
-      "confidence": 73.3,
-      "recommendation": "Worth a manual look \u2014 most criteria align",
+      "confidence": 46.7,
+      "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.16, threshold 0.35) \u2014 direction read is uncertain",
+        "pattern 'bearish_harami' detected but doesn't match trend context \u2014 not scored as a signal",
         "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
       ],
-      "flag": true
+      "flag": false
     },
     {
       "ticker": "TATACHEM.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 731.8,
+      "close": 779.3,
       "trend": "choppy",
-      "trend_r2": 0.0,
-      "pattern": "shooting_star_or_inverted_hammer",
+      "trend_r2": 0.07,
+      "pattern": null,
       "pattern_matches_trend": false,
       "near_support": true,
-      "support_level": 718.19,
+      "support_level": 768.44,
       "support_touches": 2,
-      "resistance_level": 748.46,
+      "resistance_level": 805.29,
       "resistance_touches": 2,
       "support_ladder": [
         {
-          "level": 718.19,
+          "level": 768.44,
           "touches": 2
         },
         {
-          "level": 694.32,
-          "touches": 2
+          "level": 744.79,
+          "touches": 1
         },
         {
-          "level": 679.56,
-          "touches": 5
+          "level": 733.59,
+          "touches": 6
         }
       ],
       "resistance_ladder": [
         {
-          "level": 748.46,
+          "level": 805.29,
           "touches": 2
         },
         {
-          "level": 762.62,
-          "touches": 6
+          "level": 846.81,
+          "touches": 4
         },
         {
-          "level": 775.83,
-          "touches": 2
+          "level": 884.4,
+          "touches": 1
         }
       ],
-      "volume_ratio": 13.89,
+      "volume_ratio": 5.65,
       "above_ema20": true,
       "above_sma50": true,
-      "rsi": 72.42,
+      "rsi": 78.15,
       "rsi_confirms": false,
       "checks_passed": 2,
       "checks_total": 5,
       "confidence": 21.3,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.00, threshold 0.35) \u2014 direction read is uncertain",
-        "pattern 'shooting_star_or_inverted_hammer' detected but doesn't match trend context \u2014 not scored as a signal"
+        "trend fit is weak (R^2=0.07, threshold 0.35) \u2014 direction read is uncertain",
+        "no candlestick pattern on the latest bar"
       ],
       "flag": false
     },
     {
       "ticker": "EXIDEIND.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 415.5,
+      "close": 418.6,
       "trend": "downtrend",
-      "trend_r2": 0.91,
-      "pattern": "morning_star",
-      "pattern_matches_trend": true,
+      "trend_r2": 0.83,
+      "pattern": "spinning_top",
+      "pattern_matches_trend": false,
       "near_support": true,
       "support_level": 411.88,
       "support_touches": 1,
@@ -2040,8 +2043,8 @@
           "touches": 1
         },
         {
-          "level": 405.67,
-          "touches": 2
+          "level": 407.01,
+          "touches": 3
         },
         {
           "level": 388.49,
@@ -2062,36 +2065,40 @@
           "touches": 3
         }
       ],
-      "volume_ratio": 0.98,
+      "volume_ratio": 0.51,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 38.62,
+      "rsi": 41.34,
       "rsi_confirms": true,
-      "checks_passed": 4,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 70.7,
-      "recommendation": "Worth a manual look \u2014 most criteria align",
+      "confidence": 44.0,
+      "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "'bullish_engulfing' also matched on this candle but was suppressed by 3-candle precedence (morning_star) \u2014 check both by hand before deciding which read to trust"
+        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
-      "flag": true
+      "flag": false
     },
     {
       "ticker": "CIPLA.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 1358.0,
+      "close": 1376.3,
       "trend": "downtrend",
-      "trend_r2": 0.83,
-      "pattern": "bullish_engulfing",
-      "pattern_matches_trend": true,
+      "trend_r2": 0.84,
+      "pattern": null,
+      "pattern_matches_trend": false,
       "near_support": true,
-      "support_level": 1340.54,
-      "support_touches": 3,
-      "resistance_level": 1362.45,
+      "support_level": 1371.95,
+      "support_touches": 6,
+      "resistance_level": 1407.56,
       "resistance_touches": 3,
       "support_ladder": [
+        {
+          "level": 1371.95,
+          "touches": 6
+        },
         {
           "level": 1340.54,
           "touches": 3
@@ -2099,17 +2106,9 @@
         {
           "level": 1302.94,
           "touches": 3
-        },
-        {
-          "level": 1273.6,
-          "touches": 4
         }
       ],
       "resistance_ladder": [
-        {
-          "level": 1362.45,
-          "touches": 3
-        },
         {
           "level": 1407.56,
           "touches": 3
@@ -2117,53 +2116,55 @@
         {
           "level": 1434.16,
           "touches": 4
+        },
+        {
+          "level": 1462.48,
+          "touches": 10
         }
       ],
-      "volume_ratio": 1.15,
+      "volume_ratio": 0.91,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 33.93,
+      "rsi": 41.84,
       "rsi_confirms": true,
-      "checks_passed": 5,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 92.0,
-      "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [],
-      "flag": true
+      "confidence": 60.0,
+      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "notes": [
+        "no candlestick pattern on the latest bar"
+      ],
+      "flag": false
     },
     {
       "ticker": "JUBLFOOD.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 471.0,
+      "close": 480.2,
       "trend": "downtrend",
-      "trend_r2": 0.9,
-      "pattern": "bullish_engulfing",
-      "pattern_matches_trend": true,
-      "near_support": false,
-      "support_level": 461.6,
-      "support_touches": null,
-      "resistance_level": 477.57,
-      "resistance_touches": 2,
+      "trend_r2": 0.88,
+      "pattern": null,
+      "pattern_matches_trend": false,
+      "near_support": true,
+      "support_level": 479.74,
+      "support_touches": 1,
+      "resistance_level": 497.34,
+      "resistance_touches": 1,
       "support_ladder": [
         {
-          "level": 447.08,
+          "level": 479.74,
           "touches": 1
         },
         {
-          "level": 432.12,
-          "touches": 2
+          "level": 471.6,
+          "touches": 1
         },
         {
-          "level": 421.05,
+          "level": 447.08,
           "touches": 1
         }
       ],
       "resistance_ladder": [
-        {
-          "level": 477.57,
-          "touches": 2
-        },
         {
           "level": 497.34,
           "touches": 1
@@ -2171,37 +2172,46 @@
         {
           "level": 524.42,
           "touches": 2
+        },
+        {
+          "level": 532.78,
+          "touches": 2
         }
       ],
-      "volume_ratio": 0.43,
-      "above_ema20": false,
+      "volume_ratio": 0.89,
+      "above_ema20": true,
       "above_sma50": true,
-      "rsi": 44.72,
-      "rsi_confirms": true,
-      "checks_passed": 3,
+      "rsi": 51.08,
+      "rsi_confirms": false,
+      "checks_passed": 2,
       "checks_total": 5,
-      "confidence": 66.7,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "confidence": 30.7,
+      "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone"
+        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
+        "no candlestick pattern on the latest bar"
       ],
       "flag": false
     },
     {
       "ticker": "ASHOKLEY.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 156.5,
+      "close": 158.62,
       "trend": "downtrend",
-      "trend_r2": 0.88,
-      "pattern": "spinning_top",
+      "trend_r2": 0.87,
+      "pattern": null,
       "pattern_matches_trend": false,
       "near_support": true,
-      "support_level": 155.84,
-      "support_touches": 2,
+      "support_level": 158.21,
+      "support_touches": 1,
       "resistance_level": 162.15,
       "resistance_touches": 5,
       "support_ladder": [
+        {
+          "level": 158.21,
+          "touches": 1
+        },
         {
           "level": 155.84,
           "touches": 2
@@ -2209,10 +2219,6 @@
         {
           "level": 153.12,
           "touches": 2
-        },
-        {
-          "level": 150.3,
-          "touches": 1
         }
       ],
       "resistance_ladder": [
@@ -2229,28 +2235,29 @@
           "touches": 3
         }
       ],
-      "volume_ratio": 0.89,
+      "volume_ratio": 0.74,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 29.02,
+      "rsi": 34.33,
       "rsi_confirms": true,
       "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 48.0,
+      "confidence": 44.0,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
+        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
+        "no candlestick pattern on the latest bar"
       ],
       "flag": false
     },
     {
       "ticker": "APOLLOTYRE.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 411.95,
+      "close": 412.15,
       "trend": "downtrend",
       "trend_r2": 0.87,
-      "pattern": "bullish_harami",
+      "pattern": "hammer_or_hanging_man",
       "pattern_matches_trend": true,
       "near_support": true,
       "support_level": 410.7,
@@ -2285,34 +2292,32 @@
           "touches": 3
         }
       ],
-      "volume_ratio": 3.13,
+      "volume_ratio": 1.03,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 37.94,
+      "rsi": 38.13,
       "rsi_confirms": true,
       "checks_passed": 5,
       "checks_total": 5,
       "confidence": 88.0,
       "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
-      ],
+      "notes": [],
       "flag": true
     },
     {
       "ticker": "IREDA.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 108.4,
+      "close": 108.99,
       "trend": "downtrend",
       "trend_r2": 0.78,
-      "pattern": "spinning_top",
+      "pattern": null,
       "pattern_matches_trend": false,
       "near_support": true,
       "support_level": 108.03,
       "support_touches": 2,
-      "resistance_level": 120.34,
-      "resistance_touches": null,
+      "resistance_level": 113.99,
+      "resistance_touches": 1,
       "support_ladder": [
         {
           "level": 108.03,
@@ -2333,33 +2338,33 @@
           "touches": 1
         }
       ],
-      "volume_ratio": 0.8,
+      "volume_ratio": 0.69,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 30.2,
+      "rsi": 33.04,
       "rsi_confirms": true,
       "checks_passed": 3,
       "checks_total": 5,
       "confidence": 48.0,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "pattern 'spinning_top' detected but doesn't match trend context \u2014 not scored as a signal"
+        "no candlestick pattern on the latest bar"
       ],
       "flag": false
     },
     {
       "ticker": "BALRAMCHIN.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 682.6,
+      "close": 675.7,
       "trend": "choppy",
-      "trend_r2": 0.31,
-      "pattern": "hammer_or_hanging_man",
+      "trend_r2": 0.21,
+      "pattern": "bearish_harami",
       "pattern_matches_trend": false,
       "near_support": false,
       "support_level": 636.8,
       "support_touches": null,
-      "resistance_level": 780.95,
+      "resistance_level": 765.0,
       "resistance_touches": null,
       "support_ladder": [
         {
@@ -2386,36 +2391,41 @@
         }
       ],
       "volume_ratio": 0.12,
-      "above_ema20": true,
+      "above_ema20": false,
       "above_sma50": true,
-      "rsi": 52.05,
+      "rsi": 50.32,
       "rsi_confirms": true,
       "checks_passed": 1,
       "checks_total": 5,
       "confidence": 13.3,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.31, threshold 0.35) \u2014 direction read is uncertain",
+        "trend fit is weak (R^2=0.21, threshold 0.35) \u2014 direction read is uncertain",
         "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
-        "pattern 'hammer_or_hanging_man' detected but doesn't match trend context \u2014 not scored as a signal"
+        "pattern 'bearish_harami' detected but doesn't match trend context \u2014 not scored as a signal",
+        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
       ],
       "flag": false
     },
     {
       "ticker": "MAXHEALTH.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 1025.0,
+      "close": 1037.0,
       "trend": "choppy",
-      "trend_r2": 0.16,
-      "pattern": null,
-      "pattern_matches_trend": false,
+      "trend_r2": 0.12,
+      "pattern": "bullish_engulfing",
+      "pattern_matches_trend": true,
       "near_support": true,
-      "support_level": 1005.75,
-      "support_touches": 1,
+      "support_level": 1026.63,
+      "support_touches": 2,
       "resistance_level": 1042.15,
       "resistance_touches": 4,
       "support_ladder": [
+        {
+          "level": 1026.63,
+          "touches": 2
+        },
         {
           "level": 1005.75,
           "touches": 1
@@ -2423,10 +2433,6 @@
         {
           "level": 993.78,
           "touches": 3
-        },
-        {
-          "level": 977.44,
-          "touches": 6
         }
       ],
       "resistance_ladder": [
@@ -2443,37 +2449,39 @@
           "touches": 3
         }
       ],
-      "volume_ratio": 0.83,
+      "volume_ratio": 0.6,
       "above_ema20": true,
       "above_sma50": false,
-      "rsi": 49.55,
+      "rsi": 53.23,
       "rsi_confirms": true,
-      "checks_passed": 2,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 17.3,
+      "confidence": 48.0,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.16, threshold 0.35) \u2014 direction read is uncertain",
-        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "no candlestick pattern on the latest bar"
+        "trend fit is weak (R^2=0.12, threshold 0.35) \u2014 direction read is uncertain"
       ],
       "flag": false
     },
     {
       "ticker": "DEEPAKNTR.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 1590.5,
+      "close": 1604.8,
       "trend": "downtrend",
-      "trend_r2": 0.86,
+      "trend_r2": 0.9,
       "pattern": null,
       "pattern_matches_trend": false,
       "near_support": true,
-      "support_level": 1575.5,
+      "support_level": 1601.68,
       "support_touches": 2,
       "resistance_level": 1619.6,
       "resistance_touches": 1,
       "support_ladder": [
+        {
+          "level": 1601.68,
+          "touches": 2
+        },
         {
           "level": 1575.5,
           "touches": 2
@@ -2481,10 +2489,6 @@
         {
           "level": 1545.44,
           "touches": 2
-        },
-        {
-          "level": 1515.6,
-          "touches": 5
         }
       ],
       "resistance_ladder": [
@@ -2501,15 +2505,15 @@
           "touches": 2
         }
       ],
-      "volume_ratio": 1.31,
+      "volume_ratio": 0.29,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 35.34,
+      "rsi": 38.19,
       "rsi_confirms": true,
-      "checks_passed": 4,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 61.3,
-      "recommendation": "Borderline \u2014 some criteria miss, verify each by hand before acting",
+      "confidence": 48.0,
+      "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
         "no candlestick pattern on the latest bar"
       ],
@@ -2517,13 +2521,13 @@
     },
     {
       "ticker": "RELIANCE.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 1240.0,
-      "trend": "choppy",
-      "trend_r2": 0.33,
-      "pattern": "bullish_harami",
-      "pattern_matches_trend": true,
+      "close": 1243.9,
+      "trend": "downtrend",
+      "trend_r2": 0.44,
+      "pattern": "doji",
+      "pattern_matches_trend": false,
       "near_support": true,
       "support_level": 1228.99,
       "support_touches": 1,
@@ -2557,41 +2561,36 @@
           "touches": 5
         }
       ],
-      "volume_ratio": 0.97,
+      "volume_ratio": 0.74,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 34.21,
-      "rsi_confirms": false,
-      "checks_passed": 2,
+      "rsi": 35.87,
+      "rsi_confirms": true,
+      "checks_passed": 3,
       "checks_total": 5,
-      "confidence": 30.7,
+      "confidence": 44.0,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "trend fit is weak (R^2=0.33, threshold 0.35) \u2014 direction read is uncertain",
         "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "pattern 'doji' detected but doesn't match trend context \u2014 not scored as a signal"
       ],
       "flag": false
     },
     {
       "ticker": "COALINDIA.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 422.25,
+      "close": 418.0,
       "trend": "uptrend",
-      "trend_r2": 0.79,
-      "pattern": "bullish_harami",
+      "trend_r2": 0.73,
+      "pattern": null,
       "pattern_matches_trend": false,
       "near_support": true,
-      "support_level": 421.83,
-      "support_touches": 2,
+      "support_level": 415.87,
+      "support_touches": 6,
       "resistance_level": 423.23,
       "resistance_touches": 4,
       "support_ladder": [
-        {
-          "level": 421.83,
-          "touches": 2
-        },
         {
           "level": 415.87,
           "touches": 6
@@ -2599,6 +2598,10 @@
         {
           "level": 405.38,
           "touches": 1
+        },
+        {
+          "level": 398.48,
+          "touches": 2
         }
       ],
       "resistance_ladder": [
@@ -2615,38 +2618,96 @@
           "touches": 2
         }
       ],
-      "volume_ratio": 0.65,
+      "volume_ratio": 0.31,
       "above_ema20": true,
       "above_sma50": true,
-      "rsi": 58.91,
+      "rsi": 53.77,
       "rsi_confirms": false,
       "checks_passed": 2,
       "checks_total": 5,
-      "confidence": 34.7,
+      "confidence": 46.7,
       "recommendation": "Weak match on this checklist \u2014 likely not worth the manual review",
       "notes": [
-        "pattern 'bullish_harami' detected but doesn't match trend context \u2014 not scored as a signal",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
+        "no candlestick pattern on the latest bar"
       ],
       "flag": false
     }
   ],
   "flagged": [
     {
-      "ticker": "IEX.NS",
-      "date": "2026-09-16",
+      "ticker": "DLF.NS",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 112.0,
+      "close": 640.0,
       "trend": "downtrend",
-      "trend_r2": 0.92,
-      "pattern": "bullish_harami",
+      "trend_r2": 0.7,
+      "pattern": "morning_star",
       "pattern_matches_trend": true,
       "near_support": true,
-      "support_level": 110.35,
-      "support_touches": null,
-      "resistance_level": 125.05,
+      "support_level": 636.14,
+      "support_touches": 5,
+      "resistance_level": 661.99,
+      "resistance_touches": 2,
+      "support_ladder": [
+        {
+          "level": 636.14,
+          "touches": 5
+        },
+        {
+          "level": 623.1,
+          "touches": 3
+        },
+        {
+          "level": 604.65,
+          "touches": 4
+        }
+      ],
+      "resistance_ladder": [
+        {
+          "level": 661.99,
+          "touches": 2
+        },
+        {
+          "level": 671.39,
+          "touches": 4
+        },
+        {
+          "level": 686.36,
+          "touches": 5
+        }
+      ],
+      "volume_ratio": 0.74,
+      "above_ema20": false,
+      "above_sma50": false,
+      "rsi": 42.43,
+      "rsi_confirms": true,
+      "checks_passed": 4,
+      "checks_total": 5,
+      "confidence": 86.7,
+      "recommendation": "Worth a manual look \u2014 most criteria align",
+      "notes": [],
+      "flag": true
+    },
+    {
+      "ticker": "IEX.NS",
+      "date": "2026-09-17",
+      "data_stale_days": 0,
+      "close": 113.4,
+      "trend": "downtrend",
+      "trend_r2": 0.93,
+      "pattern": "morning_star",
+      "pattern_matches_trend": true,
+      "near_support": true,
+      "support_level": 112.87,
+      "support_touches": 2,
+      "resistance_level": 124.88,
       "resistance_touches": null,
-      "support_ladder": [],
+      "support_ladder": [
+        {
+          "level": 112.87,
+          "touches": 2
+        }
+      ],
       "resistance_ladder": [
         {
           "level": 121.85,
@@ -2661,165 +2722,10 @@
           "touches": 4
         }
       ],
-      "volume_ratio": 0.96,
+      "volume_ratio": 0.62,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 23.55,
-      "rsi_confirms": true,
-      "checks_passed": 4,
-      "checks_total": 5,
-      "confidence": 86.7,
-      "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [
-        "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
-      ],
-      "flag": true
-    },
-    {
-      "ticker": "TITAN.NS",
-      "date": "2026-09-16",
-      "data_stale_days": 0,
-      "close": 4908.5,
-      "trend": "downtrend",
-      "trend_r2": 0.72,
-      "pattern": "bullish_harami",
-      "pattern_matches_trend": true,
-      "near_support": true,
-      "support_level": 4845.0,
-      "support_touches": null,
-      "resistance_level": 5186.7,
-      "resistance_touches": null,
-      "support_ladder": [
-        {
-          "level": 4604.1,
-          "touches": 1
-        },
-        {
-          "level": 4524.4,
-          "touches": 1
-        },
-        {
-          "level": 4331.49,
-          "touches": 2
-        }
-      ],
-      "resistance_ladder": [
-        {
-          "level": 5177.35,
-          "touches": 2
-        }
-      ],
-      "volume_ratio": 0.8,
-      "above_ema20": false,
-      "above_sma50": false,
-      "rsi": 42.11,
-      "rsi_confirms": true,
-      "checks_passed": 4,
-      "checks_total": 5,
-      "confidence": 86.7,
-      "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [
-        "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
-      ],
-      "flag": true
-    },
-    {
-      "ticker": "ADANIENSOL.NS",
-      "date": "2026-09-16",
-      "data_stale_days": 0,
-      "close": 1349.2,
-      "trend": "downtrend",
-      "trend_r2": 0.57,
-      "pattern": "bullish_harami",
-      "pattern_matches_trend": true,
-      "near_support": true,
-      "support_level": 1348.0,
-      "support_touches": 1,
-      "resistance_level": 1365.0,
-      "resistance_touches": 1,
-      "support_ladder": [
-        {
-          "level": 1348.0,
-          "touches": 1
-        },
-        {
-          "level": 1308.0,
-          "touches": 1
-        },
-        {
-          "level": 1236.6,
-          "touches": 1
-        }
-      ],
-      "resistance_ladder": [
-        {
-          "level": 1365.0,
-          "touches": 1
-        },
-        {
-          "level": 1442.0,
-          "touches": 2
-        },
-        {
-          "level": 1463.65,
-          "touches": 1
-        }
-      ],
-      "volume_ratio": 0.24,
-      "above_ema20": false,
-      "above_sma50": false,
-      "rsi": 30.86,
-      "rsi_confirms": true,
-      "checks_passed": 4,
-      "checks_total": 5,
-      "confidence": 70.7,
-      "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [
-        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
-      ],
-      "flag": true
-    },
-    {
-      "ticker": "VOLTAS.NS",
-      "date": "2026-09-16",
-      "data_stale_days": 0,
-      "close": 1131.0,
-      "trend": "downtrend",
-      "trend_r2": 0.71,
-      "pattern": "shooting_star_or_inverted_hammer",
-      "pattern_matches_trend": true,
-      "near_support": true,
-      "support_level": 1128.28,
-      "support_touches": 2,
-      "resistance_level": 1245.0,
-      "resistance_touches": null,
-      "support_ladder": [
-        {
-          "level": 1128.28,
-          "touches": 2
-        }
-      ],
-      "resistance_ladder": [
-        {
-          "level": 1253.73,
-          "touches": 2
-        },
-        {
-          "level": 1273.82,
-          "touches": 2
-        },
-        {
-          "level": 1304.89,
-          "touches": 4
-        }
-      ],
-      "volume_ratio": 0.66,
-      "above_ema20": false,
-      "above_sma50": false,
-      "rsi": 31.1,
+      "rsi": 30.64,
       "rsi_confirms": true,
       "checks_passed": 4,
       "checks_total": 5,
@@ -2829,55 +2735,55 @@
       "flag": true
     },
     {
-      "ticker": "JSWSTEEL.NS",
-      "date": "2026-09-16",
+      "ticker": "UTTAMSUGAR.NS",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 1248.9,
+      "close": 252.4,
       "trend": "downtrend",
-      "trend_r2": 0.73,
+      "trend_r2": 0.8,
       "pattern": "bullish_harami",
       "pattern_matches_trend": true,
       "near_support": true,
-      "support_level": 1238.12,
-      "support_touches": 5,
-      "resistance_level": 1257.89,
-      "resistance_touches": 2,
+      "support_level": 250.99,
+      "support_touches": 2,
+      "resistance_level": 256.31,
+      "resistance_touches": 3,
       "support_ladder": [
         {
-          "level": 1238.12,
+          "level": 250.99,
+          "touches": 2
+        },
+        {
+          "level": 246.65,
           "touches": 5
         },
         {
-          "level": 1213.8,
-          "touches": 6
-        },
-        {
-          "level": 1167.3,
-          "touches": 1
+          "level": 241.43,
+          "touches": 2
         }
       ],
       "resistance_ladder": [
         {
-          "level": 1257.89,
+          "level": 256.31,
+          "touches": 3
+        },
+        {
+          "level": 260.42,
           "touches": 2
         },
         {
-          "level": 1282.97,
-          "touches": 4
-        },
-        {
-          "level": 1306.79,
+          "level": 266.27,
           "touches": 5
         }
       ],
-      "volume_ratio": 1.09,
+      "volume_ratio": 0.21,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 39.78,
+      "rsi": 38.27,
       "rsi_confirms": true,
-      "checks_passed": 5,
+      "checks_passed": 4,
       "checks_total": 5,
-      "confidence": 100.0,
+      "confidence": 74.7,
       "recommendation": "Worth a manual look \u2014 most criteria align",
       "notes": [
         "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
@@ -2885,237 +2791,223 @@
       "flag": true
     },
     {
-      "ticker": "PIDILITIND.NS",
-      "date": "2026-09-16",
+      "ticker": "IRFC.NS",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 1543.8,
+      "close": 79.31,
       "trend": "downtrend",
-      "trend_r2": 0.81,
+      "trend_r2": 0.9,
       "pattern": "bullish_harami",
       "pattern_matches_trend": true,
       "near_support": true,
-      "support_level": 1527.64,
-      "support_touches": 6,
-      "resistance_level": 1551.55,
-      "resistance_touches": 7,
-      "support_ladder": [
-        {
-          "level": 1527.64,
-          "touches": 6
-        },
-        {
-          "level": 1492.02,
-          "touches": 3
-        },
-        {
-          "level": 1466.13,
-          "touches": 4
-        }
-      ],
+      "support_level": 78.16,
+      "support_touches": null,
+      "resistance_level": 87.25,
+      "resistance_touches": null,
+      "support_ladder": [],
       "resistance_ladder": [
         {
-          "level": 1551.55,
-          "touches": 7
+          "level": 83.95,
+          "touches": 1
         },
         {
-          "level": 1595.34,
-          "touches": 5
-        },
-        {
-          "level": 1622.14,
+          "level": 90.42,
           "touches": 2
+        },
+        {
+          "level": 101.43,
+          "touches": 3
         }
       ],
-      "volume_ratio": 0.93,
+      "volume_ratio": 0.9,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 36.85,
+      "rsi": 23.16,
       "rsi_confirms": true,
       "checks_passed": 4,
       "checks_total": 5,
       "confidence": 86.7,
       "recommendation": "Worth a manual look \u2014 most criteria align",
       "notes": [
+        "support level is an estimate (rolling low, no confirmed pivot cluster found nearby) \u2014 not a tested zone",
         "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
       ],
       "flag": true
     },
     {
-      "ticker": "AXISBANK.NS",
-      "date": "2026-09-16",
+      "ticker": "ARE&M.NS",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 1241.0,
-      "trend": "choppy",
-      "trend_r2": 0.16,
+      "close": 795.3,
+      "trend": "downtrend",
+      "trend_r2": 0.97,
       "pattern": "bullish_harami",
       "pattern_matches_trend": true,
       "near_support": true,
-      "support_level": 1222.87,
-      "support_touches": 5,
-      "resistance_level": 1252.0,
-      "resistance_touches": 2,
+      "support_level": 788.69,
+      "support_touches": 3,
+      "resistance_level": 936.5,
+      "resistance_touches": null,
       "support_ladder": [
         {
-          "level": 1222.87,
-          "touches": 5
+          "level": 788.69,
+          "touches": 3
         },
         {
-          "level": 1205.33,
-          "touches": 4
+          "level": 754.33,
+          "touches": 1
         },
         {
-          "level": 1177.39,
-          "touches": 2
+          "level": 717.95,
+          "touches": 1
         }
       ],
       "resistance_ladder": [
         {
-          "level": 1252.0,
+          "level": 869.16,
+          "touches": 3
+        },
+        {
+          "level": 906.77,
           "touches": 2
         },
         {
-          "level": 1281.13,
-          "touches": 5
-        },
-        {
-          "level": 1305.93,
-          "touches": 5
+          "level": 925.22,
+          "touches": 3
         }
       ],
-      "volume_ratio": 1.32,
+      "volume_ratio": 1.55,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 47.06,
+      "rsi": 24.23,
       "rsi_confirms": true,
-      "checks_passed": 4,
+      "checks_passed": 5,
       "checks_total": 5,
-      "confidence": 73.3,
+      "confidence": 92.0,
       "recommendation": "Worth a manual look \u2014 most criteria align",
       "notes": [
-        "trend fit is weak (R^2=0.16, threshold 0.35) \u2014 direction read is uncertain",
         "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
       ],
       "flag": true
     },
     {
-      "ticker": "EXIDEIND.NS",
-      "date": "2026-09-16",
+      "ticker": "TMPV.NS",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 415.5,
+      "close": 314.5,
       "trend": "downtrend",
-      "trend_r2": 0.91,
-      "pattern": "morning_star",
+      "trend_r2": 0.8,
+      "pattern": "bullish_engulfing",
       "pattern_matches_trend": true,
       "near_support": true,
-      "support_level": 411.88,
+      "support_level": 310.55,
       "support_touches": 1,
-      "resistance_level": 426.69,
-      "resistance_touches": 3,
+      "resistance_level": 319.6,
+      "resistance_touches": 1,
       "support_ladder": [
         {
-          "level": 411.88,
+          "level": 310.55,
           "touches": 1
         },
         {
-          "level": 405.67,
+          "level": 305.01,
           "touches": 2
         },
         {
-          "level": 388.49,
-          "touches": 2
+          "level": 296.5,
+          "touches": 1
         }
       ],
       "resistance_ladder": [
         {
-          "level": 426.69,
-          "touches": 3
-        },
-        {
-          "level": 431.0,
+          "level": 319.6,
           "touches": 1
         },
         {
-          "level": 455.34,
-          "touches": 3
+          "level": 327.48,
+          "touches": 1
+        },
+        {
+          "level": 344.0,
+          "touches": 1
         }
       ],
-      "volume_ratio": 0.98,
-      "above_ema20": false,
+      "volume_ratio": 1.45,
+      "above_ema20": true,
       "above_sma50": false,
-      "rsi": 38.62,
-      "rsi_confirms": true,
+      "rsi": 50.04,
+      "rsi_confirms": false,
       "checks_passed": 4,
       "checks_total": 5,
       "confidence": 70.7,
       "recommendation": "Worth a manual look \u2014 most criteria align",
       "notes": [
-        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative",
-        "'bullish_engulfing' also matched on this candle but was suppressed by 3-candle precedence (morning_star) \u2014 check both by hand before deciding which read to trust"
+        "support zone based on <2 historical touches \u2014 thin evidence, treat as tentative"
       ],
       "flag": true
     },
     {
-      "ticker": "CIPLA.NS",
-      "date": "2026-09-16",
+      "ticker": "INDUSINDBK.NS",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 1358.0,
+      "close": 958.2,
       "trend": "downtrend",
-      "trend_r2": 0.83,
+      "trend_r2": 0.48,
       "pattern": "bullish_engulfing",
       "pattern_matches_trend": true,
       "near_support": true,
-      "support_level": 1340.54,
-      "support_touches": 3,
-      "resistance_level": 1362.45,
-      "resistance_touches": 3,
+      "support_level": 946.02,
+      "support_touches": 2,
+      "resistance_level": 960.51,
+      "resistance_touches": 4,
       "support_ladder": [
         {
-          "level": 1340.54,
-          "touches": 3
+          "level": 946.02,
+          "touches": 2
         },
         {
-          "level": 1302.94,
-          "touches": 3
+          "level": 928.25,
+          "touches": 2
         },
         {
-          "level": 1273.6,
-          "touches": 4
+          "level": 916.34,
+          "touches": 2
         }
       ],
       "resistance_ladder": [
         {
-          "level": 1362.45,
-          "touches": 3
-        },
-        {
-          "level": 1407.56,
-          "touches": 3
-        },
-        {
-          "level": 1434.16,
+          "level": 960.51,
           "touches": 4
+        },
+        {
+          "level": 988.0,
+          "touches": 2
+        },
+        {
+          "level": 1012.11,
+          "touches": 2
         }
       ],
-      "volume_ratio": 1.15,
+      "volume_ratio": 2.64,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 33.93,
+      "rsi": 38.26,
       "rsi_confirms": true,
       "checks_passed": 5,
       "checks_total": 5,
-      "confidence": 92.0,
+      "confidence": 88.0,
       "recommendation": "Worth a manual look \u2014 most criteria align",
       "notes": [],
       "flag": true
     },
     {
       "ticker": "APOLLOTYRE.NS",
-      "date": "2026-09-16",
+      "date": "2026-09-17",
       "data_stale_days": 0,
-      "close": 411.95,
+      "close": 412.15,
       "trend": "downtrend",
       "trend_r2": 0.87,
-      "pattern": "bullish_harami",
+      "pattern": "hammer_or_hanging_man",
       "pattern_matches_trend": true,
       "near_support": true,
       "support_level": 410.7,
@@ -3150,18 +3042,16 @@
           "touches": 3
         }
       ],
-      "volume_ratio": 3.13,
+      "volume_ratio": 1.03,
       "above_ema20": false,
       "above_sma50": false,
-      "rsi": 37.94,
+      "rsi": 38.13,
       "rsi_confirms": true,
       "checks_passed": 5,
       "checks_total": 5,
       "confidence": 88.0,
       "recommendation": "Worth a manual look \u2014 most criteria align",
-      "notes": [
-        "Harami is a lower-conviction reversal signal than engulfing/piercing \u2014 the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone"
-      ],
+      "notes": [],
       "flag": true
     }
   ]
