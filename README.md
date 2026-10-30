@@ -115,6 +115,31 @@ limitation as before (no route to Yahoo from the build environment).
 Trend/RSI/S-R logic is verified against synthetic OHLC only
 (`test_patterns.py`). Run it for real before trusting any of it.
 
+## Trade plan gate and backtest
+
+`flag` is still the pattern/checklist gate (checks 1-5). On top of it each result
+now carries an auto trade plan (`entry`, `stop`, `target`, `risk_pct`, `rr`,
+`trade_ok`, built by `build_trade_plan`):
+
+- **entry** — buy-stop just above the signal candle's high (needs follow-through,
+  not bought blind at the close)
+- **stop** — under the lower of the candle's low and the support zone
+- **target** — nearest resistance above entry (`TARGET_LADDER_INDEX = 1` uses the next one)
+- **trade_ok** — `rr >= MIN_RR` and stop no wider than `MAX_RISK_PCT`
+
+Only `flag and trade_ok` setups are "flagged" in `latest_screen.json` and Discord;
+setups that pass the pattern gate but fail R:R are listed under `watch` with the
+reason in `notes`. This is checklist section 6 moved into code. `MIN_RR` and
+`MAX_RISK_PCT` are starting values: set them to your sheet's numbers.
+
+`backtest.py` replays the screener over 5 years of daily bars (no lookahead), plays
+each plan forward (buy-stop, stop, target, time stop, gaps, costs) and prints R
+results for: old flag vs R:R gate, each pattern, weak vs strong watchlist breadth,
+and planned-R:R buckets. Run it from Actions -> Backtest -> Run workflow (the
+report lands in the run summary). Tune `MIN_RR` / `TARGET_LADDER_INDEX` from its
+table 4, not by feel. Biases: today's watchlist only (survivorship), daily bars,
+flat cost percentage; fewer than ~30 trades per row is noise.
+
 ## Optional: Supabase persistence
 
 `schema.sql` has a `daily_flags` table for history/trend-over-time

@@ -120,6 +120,15 @@ TREND_MIN_R2 = 0.35              # minimum linear fit quality to call it a trend
 TREND_SLOPE_PCT_THRESHOLD = 0.0015  # min |slope|/mean(close) per bar to not be "choppy"
 YF_SLEEP_SECONDS = 1.5
 
+# --- Trade plan gate (checklist section 6, R:R, moved into code) -------------
+# Starting values, NOT your sheet's numbers: set MIN_RR / MAX_RISK_PCT to match
+# Trade_Evaluation_Sheet.xlsx. backtest.py shows what each setting costs or earns.
+MIN_RR = 2.0                  # reward:risk to the chosen target must be at least this
+MAX_RISK_PCT = 0.08           # skip if entry-to-stop is wider than this fraction of entry
+ENTRY_BUFFER_PCT = 0.001      # buy-stop sits this far above the signal candle's high
+STOP_BUFFER_PCT = 0.005       # stop sits this far under the lower of candle low / support
+TARGET_LADDER_INDEX = 0       # 0 = nearest resistance above entry, 1 = the one after it
+
 
 # ---------------------------------------------------------------------------
 # Indicators — same formulas as TA_Notes.md Ch.12/13
@@ -451,6 +460,45 @@ def get_sr_levels(df: pd.DataFrame, idx: int) -> dict:
 # deliberately NOT here — those need an entry/stop you set by hand.
 # ---------------------------------------------------------------------------
 
+def build_trade_plan(signal_high: float, signal_low: float, support: Optional[float],
+                     resistance_ladder: list) -> dict:
+    """Entry / stop / target from the signal candle and the S/R ladder.
+
+    Entry is a buy-stop just above the signal candle's high: the next session
+    has to take that high out before you are in, so a reversal pattern needs
+    follow-through instead of being bought blind at the close.
+    Stop sits under the lower of the candle's low and the support zone.
+    Target is the TARGET_LADDER_INDEX-th resistance level above entry.
+    trade_ok is the R:R / risk gate; why_not says which part failed.
+    """
+    entry = signal_high * (1 + ENTRY_BUFFER_PCT)
+    stop_base = signal_low if support is None else min(signal_low, support)
+    stop = stop_base * (1 - STOP_BUFFER_PCT)
+    risk = entry - stop
+    risk_pct = risk / entry if entry > 0 else None
+    above = sorted(l["level"] for l in resistance_ladder if l["level"] > entry)
+    target = above[TARGET_LADDER_INDEX] if len(above) > TARGET_LADDER_INDEX else None
+    rr = (target - entry) / risk if (target is not None and risk > 0) else None
+
+    why_not = None
+    if risk <= 0 or risk_pct is None:
+        why_not = "stop is not below entry"
+    elif risk_pct > MAX_RISK_PCT:
+        why_not = f"stop is {risk_pct:.1%} below entry (max {MAX_RISK_PCT:.0%})"
+    elif rr is None:
+        why_not = "no resistance zone above entry in the lookback — set a target by hand"
+    elif rr < MIN_RR:
+        why_not = f"R:R {rr:.1f} to nearest target (need {MIN_RR:.1f})"
+
+    return {
+        "entry": round(entry, 2), "stop": round(stop, 2),
+        "target": round(target, 2) if target is not None else None,
+        "risk_pct": round(risk_pct, 4) if risk_pct is not None else None,
+        "rr": round(rr, 2) if rr is not None else None,
+        "trade_ok": why_not is None, "why_not": why_not,
+    }
+
+
 @dataclass
 class ScreenResult:
     ticker: str
@@ -479,6 +527,14 @@ class ScreenResult:
     recommendation: str
     notes: list[str]
     flag: bool
+    # Trade plan (build_trade_plan). `flag` is still the pattern/checklist gate;
+    # `trade_ok` is the R:R gate. main.py treats flag AND trade_ok as actionable.
+    entry: Optional[float] = None
+    stop: Optional[float] = None
+    target: Optional[float] = None
+    risk_pct: Optional[float] = None
+    rr: Optional[float] = None
+    trade_ok: bool = False
 
 
 def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
@@ -677,6 +733,10 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     else:
         recommendation = "Weak match on this checklist — likely not worth the manual review"
 
+    plan = build_trade_plan(float(curr["High"]), float(curr["Low"]), support, resistance_ladder)
+    if worth_manual_look and not plan["trade_ok"]:
+        notes.append(f"trade plan fails the gate: {plan['why_not']}")
+
     return ScreenResult(
         ticker=ticker,
         date=str(curr.name.date()) if hasattr(curr.name, "date") else str(curr.name),
@@ -704,6 +764,8 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         recommendation=recommendation,
         notes=notes,
         flag=worth_manual_look,
+        entry=plan["entry"], stop=plan["stop"], target=plan["target"],
+        risk_pct=plan["risk_pct"], rr=plan["rr"], trade_ok=plan["trade_ok"],
         # same boolean as the "Worth a manual look" recommendation text
         # above -- computed once, used twice, cannot diverge again.
     )

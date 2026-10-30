@@ -72,7 +72,13 @@ if __name__ == "__main__":
         send_discord_failure(stale_message, run_timestamp=run_ts)
         raise RuntimeError(stale_message)
 
-    flagged = [r for r in results if r["flag"]]
+    # flag = pattern/checklist gate; trade_ok = R:R gate (analyzer.build_trade_plan).
+    # Only setups passing both are "flagged"; the rest are listed as watch-only so
+    # a near-miss is visible instead of silently vanishing.
+    flagged = [r for r in results if r["flag"] and r.get("trade_ok")]
+    watch = [r for r in results if r["flag"] and not r.get("trade_ok")]
+    breadth = (round(sum(1 for r in results if r["above_sma50"]) / len(results), 2)
+               if results else None)
 
     # Write results BEFORE attempting the Discord post. A dead webhook or
     # a network blip shouldn't cost you the actual screening output --
@@ -87,8 +93,10 @@ if __name__ == "__main__":
                      "not for acting before today's 3:30 PM close.",
             "all": results,
             "flagged": flagged,
+            "watch": watch,
+            "breadth_above_sma50": breadth,
         }, f, indent=2, default=str)
 
-    send_discord_alert(flagged, run_timestamp=run_ts)
-    print(f"Screened {len(results)} tickers, {len(flagged)} flagged. Data as of run at {run_ts.isoformat()}.")
+    send_discord_alert(flagged, run_timestamp=run_ts, watch=watch, breadth=breadth)
+    print(f"Screened {len(results)} tickers, {len(flagged)} flagged, {len(watch)} watch-only (failed R:R gate), breadth {breadth}. Data as of run at {run_ts.isoformat()}.")
     print(f"Written to {OUTPUT_PATH} for the Pages site.")
