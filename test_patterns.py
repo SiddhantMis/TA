@@ -611,7 +611,7 @@ def test_build_alert_content_truncates_when_over_limit():
     assert "truncated" in content
     assert "more flagged" in content
     # the footer must survive truncation, not get cut off along with the ticker lines
-    assert "sections 6-9" in content
+    assert "sections 7-9" in content  # footer reworded: R:R (section 6) is now pre-checked in code
 
 
 def test_build_alert_content_empty_flag_list_unaffected():
@@ -693,6 +693,141 @@ def test_enable_settled_daily_candle_disables_the_drop_guard():
         )
     finally:
         analyzer_module._drop_unsettled_today = original  # don't leak this into other tests
+
+
+# ---------------------------------------------------------------------------
+# Trade plan gate + backtest simulator
+# ---------------------------------------------------------------------------
+
+def test_trade_plan_math_and_gate_failure():
+    from analyzer import build_trade_plan
+    # entry = 100 * 1.001; stop = min(96, 95) * 0.995; nearest target 110
+    p = build_trade_plan(100.0, 96.0, 95.0, [{"level": 110.0, "touches": 2}, {"level": 120.0, "touches": 1}])
+    assert abs(p["entry"] - 100.1) < 0.01 and abs(p["stop"] - 94.53) < 0.01, p
+    assert p["target"] == 110.0 and abs(p["rr"] - 1.78) < 0.01, p
+    assert p["trade_ok"] is False and "R:R" in p["why_not"], p
+
+
+def test_trade_plan_passes_with_enough_room():
+    from analyzer import build_trade_plan
+    p = build_trade_plan(100.0, 96.0, 95.0, [{"level": 115.0, "touches": 3}])
+    assert p["trade_ok"] is True and p["why_not"] is None and p["rr"] >= 2.0, p
+
+
+def test_trade_plan_no_resistance_above_entry_fails_with_reason():
+    from analyzer import build_trade_plan
+    p = build_trade_plan(100.0, 96.0, 95.0, [{"level": 99.0, "touches": 2}])
+    assert p["target"] is None and p["rr"] is None and p["trade_ok"] is False
+    assert "no resistance" in p["why_not"]
+
+
+def test_trade_plan_rejects_wide_stop_even_with_great_rr():
+    from analyzer import build_trade_plan
+    p = build_trade_plan(100.0, 80.0, 79.0, [{"level": 160.0, "touches": 2}])
+    assert p["risk_pct"] > 0.08 and p["trade_ok"] is False and "below entry" in p["why_not"], p
+
+
+def test_score_ticker_fills_plan_fields_and_stop_is_below_entry():
+    pad_o, pad_h, pad_l, pad_c, pad_v = _pad_history(520, base=100.0, seed=3)
+    df = pd.DataFrame({"Open": pad_o, "High": pad_h, "Low": pad_l, "Close": pad_c, "Volume": pad_v})
+    r = score_ticker(df, "TEST.NS")
+    assert r is not None and r.entry is not None and r.stop is not None
+    assert r.stop < r.entry and isinstance(r.trade_ok, bool)
+
+
+def test_alert_shows_plan_and_watch_and_breadth_warning():
+    f = _fake_flag("A.NS")
+    f.update({"entry": 101.0, "stop": 95.0, "target": 115.0, "rr": 2.3, "risk_pct": 0.059})
+    content = build_alert_content([f], "(s)", watch=[{"ticker": "W.NS", "rr": 1.2}], breadth=0.1)
+    assert "R:R 2.3" in content and "buy > 101.0" in content
+    assert "W.NS" in content and "10%" in content
+    assert len(content) <= DISCORD_CONTENT_LIMIT
+
+
+def _bars(rows):
+    import numpy as np
+    a = np.array(rows, dtype=float)
+    return a[:, 0], a[:, 1], a[:, 2], a[:, 3]   # O, H, L, C
+
+
+def test_sim_target_hit_pays_about_the_planned_rr():
+    from backtest import simulate
+    # signal bar 0; bar 1 triggers entry 100 and closes; bar 2 tags target 110. risk = 100-95 = 5
+    O, H, L, C = _bars([[99, 99.5, 97, 99], [99.5, 101, 99, 100.5], [101, 111, 100, 110]])
+    s = simulate(O, H, L, C, 0, entry=100, stop=95, target=110, cost_pct=0)
+    assert s["outcome"] == "target" and abs(s["R"] - 2.0) < 1e-9, s
+
+
+def test_sim_same_bar_stop_and_target_resolves_to_stop():
+    from backtest import simulate
+    O, H, L, C = _bars([[99, 99.5, 97, 99], [99.5, 101, 99, 100.5], [101, 112, 94, 100]])
+    s = simulate(O, H, L, C, 0, entry=100, stop=95, target=110, cost_pct=0)
+    assert s["outcome"] == "stop" and abs(s["R"] + 1.0) < 1e-9, s
+
+
+def test_sim_gap_through_stop_exits_at_open_worse_than_minus_one_r():
+    from backtest import simulate
+    O, H, L, C = _bars([[99, 99.5, 97, 99], [99.5, 101, 99, 100.5], [92, 93, 90, 91]])
+    s = simulate(O, H, L, C, 0, entry=100, stop=95, target=110, cost_pct=0)
+    assert s["outcome"] == "stop" and s["R"] < -1.0, s
+
+
+def test_sim_gap_up_fills_at_open_not_at_entry():
+    from backtest import simulate
+    # opens at 103 (above the 100 buy-stop): fill = 103, risk = 103-95 = 8, exit at target 110 -> +0.875R
+    O, H, L, C = _bars([[99, 99.5, 97, 99], [103, 104, 102, 103.5], [104, 111, 103, 110]])
+    s = simulate(O, H, L, C, 0, entry=100, stop=95, target=110, cost_pct=0)
+    assert abs(s["R"] - 0.875) < 1e-9, s
+
+
+def test_sim_never_triggers_and_invalidation_are_not_trades():
+    from backtest import simulate
+    import math
+    O, H, L, C = _bars([[99, 99.5, 97, 99]] + [[98, 99, 97, 98]] * 4)
+    s = simulate(O, H, L, C, 0, entry=100, stop=95, target=110, trigger_days=3)
+    assert s["outcome"] == "no_trigger" and math.isnan(s["R"])
+    O, H, L, C = _bars([[99, 99.5, 97, 99], [97, 98, 94, 95]] + [[95, 96, 94, 95]] * 3)
+    s = simulate(O, H, L, C, 0, entry=100, stop=95, target=110)
+    assert s["outcome"] == "invalidated" and math.isnan(s["R"])
+
+
+def test_sim_time_stop_exits_at_close_and_costs_reduce_r():
+    from backtest import simulate
+    rows = [[99, 99.5, 97, 99], [99.5, 101, 99, 100]] + [[100, 101, 99, 100.5]] * 6
+    O, H, L, C = _bars(rows)
+    s0 = simulate(O, H, L, C, 0, entry=100, stop=95, target=110, max_hold=3, cost_pct=0)
+    s1 = simulate(O, H, L, C, 0, entry=100, stop=95, target=110, max_hold=3, cost_pct=0.25)
+    assert s0["outcome"] == "time" and s0["bars"] == 3
+    assert s1["R"] < s0["R"]
+
+
+def test_run_backtest_pipeline_runs_end_to_end_with_a_stubbed_scorer():
+    import numpy as np
+    import analyzer as A
+    import backtest as B
+    rng = np.random.default_rng(5)
+    n = 700
+    close = 100 + np.cumsum(rng.normal(0, 1.2, n))
+    open_ = close + rng.normal(0, 0.4, n)
+    df = pd.DataFrame({"Open": open_, "High": np.maximum(open_, close) + abs(rng.normal(0, .6, n)) + .1,
+                       "Low": np.minimum(open_, close) - abs(rng.normal(0, .6, n)) - .1,
+                       "Close": close, "Volume": 1_000_000}, index=pd.bdate_range("2022-01-03", periods=n))
+    real = A.score_ticker
+    class Stub:
+        flag, trade_ok, pattern, trend, confidence, risk_pct = True, True, "stub", "downtrend", 80.0, 0.04
+    def fake(window, t):
+        r = Stub(); last = window.iloc[-1]
+        r.entry, r.stop, r.target, r.rr = last.High * 1.001, last.Low * .995, last.High * 1.06, 2.0
+        return r
+    A.score_ticker = fake
+    try:
+        t = B.run_backtest({"X.NS": df, "Y.NS": df * 1.1}, max_hold=10)
+        assert len(t) > 0 and {"R", "breadth", "outcome"} <= set(t.columns)
+        class Args: years, max_hold, trigger_days, cost_pct = 5, 10, 3, 0.25
+        text = B.report(t, Args)
+        assert "Does the R:R gate help?" in text and "By watchlist breadth" in text
+    finally:
+        A.score_ticker = real
 
 
 if __name__ == "__main__":

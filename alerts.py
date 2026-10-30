@@ -12,23 +12,37 @@ import urllib.request
 DISCORD_CONTENT_LIMIT = 2000
 
 
-def build_alert_content(flagged: list[dict], session_note: str) -> str:
+def build_alert_content(flagged: list[dict], session_note: str,
+                        watch: list[dict] | None = None, breadth: float | None = None) -> str:
     """Pure function, no network -- separated specifically so the
     truncation logic can be unit-tested without a webhook, a mock
     server, or letting a test actually hit Discord."""
+    watch_line = ""
+    if watch:
+        watch_line = "\nWatch only (pattern OK, trade plan failed the R:R gate): " + ", ".join(
+            f"{w['ticker']} (R:R {w.get('rr')})" for w in watch)
+    breadth_line = ""
+    if breadth is not None and breadth < 0.25:
+        breadth_line = (f"\n⚠ Only {breadth:.0%} of the watchlist is above its 50-day average — "
+                        "reversal setups are riskier in broad weakness (see backtest by-breadth table).")
     if not flagged:
-        return f"EOD screen: nothing worth a manual look today (this is a pre-filter, not a verdict). {session_note}"
+        return (f"EOD screen: nothing worth a manual look today (this is a pre-filter, not a verdict). "
+                f"{session_note}{breadth_line}{watch_line}")
 
-    lines = [f"**EOD screen — {len(flagged)} worth a manual look** {session_note}"]
+    lines = [f"**EOD screen — {len(flagged)} worth a manual look** {session_note}{breadth_line}"]
     for r in flagged:
+        plan = ""
+        if r.get("entry") is not None and r.get("risk_pct") is not None:
+            plan = (f"buy > {r['entry']} stop {r['stop']} target {r['target']} "
+                    f"R:R {r['rr']} (risk {r['risk_pct']:.1%}) | ")
         lines.append(
-            f"`{r['ticker']}` @ {r['close']} — {r['pattern']} | "
+            f"`{r['ticker']}` @ {r['close']} — {r['pattern']} | {plan}"
             f"trend: {r['trend']} | vol: {r['volume_ratio']}x | "
             f"support: {r['support_level']} ({r['support_touches']} touches) | "
             f"{r['checks_passed']}/{r['checks_total']} checks, confidence {r['confidence']}% | "
             f"{r['recommendation']}"
         )
-    footer = "\n_Pre-filter output — sections 6-9 (R:R, sizing, stop) still need to be done by hand._"
+    footer = watch_line + "\n_Pre-filter output — R:R is pre-checked against the auto plan; sizing and time stop (sections 7-9) are still by hand._"
     content = "\n".join(lines) + footer
 
     # Discord's hard content limit is 2000 chars. At 48 tickers this
@@ -53,7 +67,8 @@ def build_alert_content(flagged: list[dict], session_note: str) -> str:
     return content
 
 
-def send_discord_alert(flagged: list[dict], webhook_url: str | None = None, run_timestamp=None) -> None:
+def send_discord_alert(flagged: list[dict], webhook_url: str | None = None, run_timestamp=None,
+                       watch: list[dict] | None = None, breadth: float | None = None) -> None:
     webhook_url = webhook_url or os.environ.get("DISCORD_WEBHOOK_URL")
     if not webhook_url:
         print("[alerts] DISCORD_WEBHOOK_URL not set, skipping alert")
@@ -61,7 +76,7 @@ def send_discord_alert(flagged: list[dict], webhook_url: str | None = None, run_
 
     ts_str = run_timestamp.strftime("%Y-%m-%d %H:%M IST") if run_timestamp else "unknown time"
     session_note = f"(last COMPLETE session as of {ts_str} — for planning tomorrow's open, not today's close)"
-    content = build_alert_content(flagged, session_note)
+    content = build_alert_content(flagged, session_note, watch=watch, breadth=breadth)
 
     payload = json.dumps({"content": content}).encode()
     # Discord's endpoint sits behind Cloudflare, which has been known to
