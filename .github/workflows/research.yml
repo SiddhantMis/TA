@@ -20,15 +20,21 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install -r requirements.txt
+      - uses: actions/cache@v4
+        with:
+          path: data_cache
+          key: frames-v1-${{ github.run_id }}
+          restore-keys: |
+            frames-v1-
       - run: python test_patterns.py
-      - name: Run portfolio test
-        run: python portfolio.py --years 10 --oos-frac 0.35 --cost-pct 0.30 --n-hold 20 --universes liquid500
+      - name: Run pattern lab
+        run: python pattern_lab.py --years 10 --liquid-top 200 --oos-frac 0.35 --cost-pct 0.30
       - name: Show report in the run summary
-        run: cat results/portfolio_report_liquid500.md >> "$GITHUB_STEP_SUMMARY"
+        run: cat results/pattern_lab_report.md >> "$GITHUB_STEP_SUMMARY"
       - name: Commit results back to the branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add results/
-          git commit -m "Portfolio results [skip ci]" || echo "nothing to commit"
+          git commit -m "Pattern lab results [skip ci]" || echo "nothing to commit"
           git push

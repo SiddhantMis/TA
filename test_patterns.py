@@ -1069,6 +1069,151 @@ def test_portfolio_constituent_urls_and_liquid_smoke():
     assert "point-in-time top 4" in text and "-- verdicts" in text and not rets.empty
 
 
+# ---------------------------------------------------------------------------
+# swings.py / geo_patterns.py / pattern_lab.py
+# ---------------------------------------------------------------------------
+
+def _wp(wps, per=10, warm=0):
+    """OHLC arrays from straight legs between waypoints (optionally preceded by flat warm-up bars)."""
+    import numpy as np
+    C = np.array([wps[0]] + [x for a, b in zip(wps[:-1], wps[1:]) for x in np.linspace(a, b, per + 1)[1:]], float)
+    if warm:
+        C = np.concatenate([np.full(warm, C[0]), C])
+    O = np.concatenate([[C[0]], C[:-1]])
+    return O, np.maximum(O, C) + 0.3, np.minimum(O, C) - 0.3, C
+
+
+def _events(wps, per=10, warm=0):
+    import geo_patterns as G
+    return G.detect_all(*_wp(wps, per, warm))
+
+
+def test_zigzag_swings_and_causality():
+    import swings as S
+    O, H, L, C = _wp([100, 130, 100, 130, 100], 10)
+    atr = S.atr_series(H, L, C)
+    sw = S.zigzag(H, L, atr, 3.0)
+    assert [x.kind for x in sw] == [-1, 1, -1, 1] or [x.kind for x in sw] == [1, -1, 1], sw
+    assert all(x.conf > x.idx for x in sw)                              # a swing is known only after the reversal
+    cut = 30
+    part = S.zigzag(H[:cut], L[:cut], atr[:cut], 3.0)
+    full_known = [x for x in sw if x.conf < cut]
+    assert part == full_known                                           # truncating the data changes nothing it knew
+
+
+def test_zigzag_handles_a_huge_first_bar():
+    import numpy as np
+    import swings as S
+    H = np.array([10, 10.2, 30, 29, 28, 27, 26, 25, 20, 15, 14, 13, 12, 11, 10, 9, 8, 12, 16, 20, 24.])
+    atr = np.full(len(H), 1.0); atr[:3] = np.nan
+    S.zigzag(H, H - 0.5, atr, 3.0)                                      # used to raise on an empty segment
+
+
+def test_double_bottom_and_top_found_and_bad_second_low_rejected():
+    ev = _events([100, 130, 100, 120, 100.5, 125])
+    db = [e for e in ev if e["name"] == "double_bottom"]
+    assert len(db) == 1 and db[0]["dir"] == 1 and 139 < db[0]["target"] < 142 and db[0]["stop"] < 100
+    assert not [e for e in _events([100, 130, 100, 120, 108, 125]) if e["name"] == "double_bottom"]
+    dt = [e for e in _events([100, 70, 100, 80, 99.5, 75]) if e["name"] == "double_top"]
+    assert len(dt) == 1 and dt[0]["dir"] == -1 and 58 < dt[0]["target"] < 61
+
+
+def test_head_and_shoulders_and_inverse():
+    hs = [e for e in _events([100, 120, 110, 130, 110, 120, 100]) if e["name"] == "head_shoulders"]
+    assert len(hs) == 1 and hs[0]["dir"] == -1 and abs(hs[0]["target"] - 90) < 2 and hs[0]["stop"] > 119
+    ih = [e for e in _events([100, 80, 90, 70, 90, 80, 100]) if e["name"] == "inverse_head_shoulders"]
+    assert len(ih) == 1 and ih[0]["dir"] == 1 and abs(ih[0]["target"] - 110) < 2
+    assert not [e for e in _events([100, 120, 110, 121, 110, 120, 100]) if e["name"] == "head_shoulders"]   # head barely higher than the shoulders
+
+
+def test_triangles_rectangle_found():
+    names = lambda ev, d: {e["name"] for e in ev if e["dir"] == d}
+    assert "ascending_triangle" in names(_events([100, 120, 105, 120, 110, 120, 115, 128], 8), 1)
+    assert "descending_triangle" in names(_events([100, 80, 95, 80, 90, 80, 85, 72], 8), -1)
+    assert "rectangle" in names(_events([100, 120, 100, 120, 100, 120, 100, 128], 10), 1)
+    assert "symmetrical_triangle" in names(_events([90, 130, 100, 124, 106, 119, 110, 115, 112, 128], 9, warm=20), 1)
+
+
+def test_flags_found_and_steady_trend_is_not_a_flag():
+    import numpy as np
+    import geo_patterns as G
+    def build(parts):
+        C = np.concatenate(parts); O = np.concatenate([[C[0]], C[:-1]])
+        return O, np.maximum(O, C) + 0.3, np.minimum(O, C) - 0.3, C
+    bull = G.detect_all(*build([np.full(40, 100.0), np.linspace(100, 130, 16), np.linspace(130, 125, 9)[1:], [127, 129, 131, 135, 138]]))
+    assert [e["name"] for e in bull] == ["bull_flag"] and 159 < bull[0]["target"] < 161
+    bear = G.detect_all(*build([np.full(40, 130.0), np.linspace(130, 100, 16), np.linspace(100, 105, 9)[1:], [103, 101, 99, 95, 92]]))
+    assert [e["name"] for e in bear] == ["bear_flag"]
+    steady = np.linspace(100, 160, 60)
+    assert G.detect_all(*build([steady])) == []
+    v_bounce = G.detect_all(*_wp([100, 130, 100, 120, 100.5, 125]))      # a V-shaped bounce is not a bear flag
+    assert not [e for e in v_bounce if e["name"] == "bear_flag"]
+
+
+def test_pattern_detection_has_no_lookahead():
+    import numpy as np
+    import geo_patterns as G
+    rng = np.random.default_rng(1); n = 1500
+    C = np.abs(100 + np.cumsum(rng.normal(0, 1.6, n))) + 30
+    O = np.concatenate([[C[0]], C[:-1]])
+    H = np.maximum(O, C) + abs(rng.normal(0, .5, n)); L = np.minimum(O, C) - abs(rng.normal(0, .5, n))
+    key = lambda e: (e["name"], e["t"], e["dir"], round(float(e["key"]), 6))
+    full = G.detect_all(O, H, L, C)
+    assert len(full) > 20
+    for T in (500, 800, 1100, 1400):
+        part = G.detect_all(O[:T], H[:T], L[:T], C[:T])
+        assert {key(e) for e in full if e["t"] <= T - 1} == {key(e) for e in part}, T
+
+
+def test_lab_trade_simulator():
+    import math
+    import numpy as np
+    import pattern_lab as L
+    O = np.array([100, 100, 101, 105, 109.]); Hh = O + 1; Ll = O - 1; C = O.copy()
+    # long: entry open[1]=100, stop 95 (risk 5), target 110 -> reached on the last bar's high
+    r = L.sim_event(O, Hh, Ll, C, 0, 1, 95, 110, cost_pct=0)
+    assert abs(r - 2.0) < 1e-9, r
+    # same bar touches both stop and target -> stop
+    Hh2, Ll2 = Hh.copy(), Ll.copy(); Hh2[2], Ll2[2] = 112, 94
+    assert abs(L.sim_event(O, Hh2, Ll2, C, 0, 1, 95, 110, cost_pct=0) + 1.0) < 1e-9
+    # short mirror: entry 100, stop 105, target 90; opens gap down through the target on bar 3
+    O3 = np.array([100, 100, 99, 88, 87.]); r = L.sim_event(O3, O3 + 1, O3 - 1, O3, 0, -1, 105, 90, cost_pct=0)
+    assert abs(r - 2.4) < 1e-9, r                                       # exit at the 88 open: (100-88)/5
+    # a favourable gap through the target exits at the open, not at the target
+    Og = np.array([100, 100, 101, 105, 112.]); assert abs(L.sim_event(Og, Og + 1, Og - 1, Og, 0, 1, 95, 110, cost_pct=0) - 2.4) < 1e-9
+    # entry already beyond the stop -> no trade
+    assert math.isnan(L.sim_event(np.array([100, 90., 90, 90]), np.full(4, 91.), np.full(4, 89.), np.full(4, 90.), 0, 1, 95, 110))
+
+
+def test_lab_month_ci_and_verdict():
+    import numpy as np
+    import pandas as pd
+    import pattern_lab as L
+    dates = pd.date_range("2018-01-01", periods=400, freq="7D")
+    lo, hi = L.month_ci(np.full(400, 0.02), dates)
+    assert abs(lo - 0.02) < 1e-12 and abs(hi - 0.02) < 1e-12
+    good = {"n": 100, "ex20": 0.02, "lo": 0.004, "avgR": 0.2}
+    assert L.verdict({"n": 200, "ex20": 0.01, "lo": 0, "avgR": 0.1}, good, 300) == "VALIDATED"
+    assert "includes 0" in L.verdict({"n": 200, "ex20": 0.01}, dict(good, lo=-0.001), 300)
+    assert "OOS mean <= 0" in L.verdict({"n": 200, "ex20": 0.01}, dict(good, ex20=-0.01), 300)
+    assert "events" in L.verdict({"n": 20, "ex20": 0.01}, good, 100)
+
+
+def test_lab_end_to_end_on_random_stocks_validates_nothing():
+    import numpy as np
+    import pandas as pd
+    import pattern_lab as L
+    def mk(seed, n=1400):
+        rng = np.random.default_rng(seed); c = np.abs(100 + np.cumsum(rng.normal(0.04, 1.6, n))) + 40
+        o = np.concatenate([[c[0]], c[:-1]]) * (1 + rng.normal(0, .004, n))
+        return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + abs(rng.normal(0, .5, n)),
+                             "Low": np.minimum(o, c) - abs(rng.normal(0, .5, n)), "Close": c,
+                             "Volume": rng.integers(5e5, 3e6, n)}, index=pd.bdate_range("2019-01-01", periods=n))
+    ev, text = L.run_lab({f"S{i}": mk(i) for i in range(30)}, liquid_top=20)
+    assert len(ev) > 300 and "-- verdicts" in text
+    assert "VALIDATED" not in text, "the lab found 'edge' in pure noise: the harness is biased"
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0
