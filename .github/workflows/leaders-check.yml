@@ -5,6 +5,7 @@ name: Leaders check
 on:
   push:
     branches: [tool-v1]
+    paths: ['leaders.py', '.github/workflows/leaders-check.yml']
   workflow_dispatch:
 
 permissions:

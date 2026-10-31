@@ -1,0 +1,38 @@
+name: Leader setups research
+
+# Runs when the research code changes. Commits the report back to the branch (the CSV stays untracked).
+on:
+  push:
+    branches: [tool-v1]
+    paths: ['leader_setups.py', 'research.py', '.github/workflows/leader-setups.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - uses: actions/cache@v4
+        with:
+          path: data_cache
+          key: frames-v2-${{ github.run_id }}
+          restore-keys: |
+            frames-v2-
+      - run: python test_patterns.py
+      - name: Run leader setups research
+        run: python leader_setups.py --years 10 --oos-frac 0.35 --cost-pct 0.30
+      - name: Commit report back to the branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f results/leader_setups_report.md
+          git commit -m "Leader setups report [skip ci]" || echo "nothing to commit"
+          git push

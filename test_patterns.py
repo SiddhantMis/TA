@@ -1455,6 +1455,37 @@ def test_leaders_scan_stops_at_the_time_limit_and_says_so():
     assert out["counts"]["load_coverage_pct"] == 0.0
 
 
+def test_leader_mask_is_point_in_time_and_respects_the_rules():
+    import numpy as np
+    import leader_setups as LS
+    idx = pd.bdate_range("2019-01-01", periods=700)
+    def fr(daily, vol, crash=False):
+        c = 100.0 * np.cumprod(np.full(700, 1.0 + daily))
+        if crash:
+            c[-60:] = c[-61] * np.cumprod(np.full(60, 0.985))
+        return pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": float(vol)}, index=idx)
+    frames = {"FAST": fr(0.003, 5e6), "MID": fr(0.002, 4e6), "ILLIQ": fr(0.005, 1e3), "CRASH": fr(0.004, 2e6, crash=True)}
+    lead, liquid = LS.leader_mask(frames, liquid_top=3, lead_n=1)
+    last = lead.iloc[-1]
+    assert last["FAST"] and not last["MID"] and not last["ILLIQ"] and not last["CRASH"]      # only the top-1 liquid, trending name
+    cut = 500
+    part, _ = LS.leader_mask({t: f.iloc[:cut] for t, f in frames.items()}, liquid_top=3, lead_n=1)
+    assert part.iloc[-1].tolist() == lead.iloc[cut - 1].tolist()                                # no look-ahead
+
+
+def test_leader_setups_end_to_end_runs_and_reports_verdicts():
+    import numpy as np
+    import leader_setups as LS
+    def mk(seed, n=1300):
+        rng = np.random.default_rng(seed); c = np.abs(100 + np.cumsum(rng.normal(0.08, 1.5, n))) + 40
+        o = np.concatenate([[c[0]], c[:-1]]) * (1 + rng.normal(0, .004, n))
+        return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + abs(rng.normal(0, .5, n)), "Low": np.minimum(o, c) - abs(rng.normal(0, .5, n)),
+                             "Close": c, "Volume": rng.integers(5e5, 3e6, n)}, index=pd.bdate_range("2019-01-01", periods=n))
+    frames = {f"S{i}": mk(i) for i in range(14)}
+    tr, text = LS.run_setups(frames, mk(99)["Close"], lead_n=4, liquid_top=10)
+    assert "-- verdicts" in text and "ctrl_leader" in text and "ctrl_other" in text and not tr.empty
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0
