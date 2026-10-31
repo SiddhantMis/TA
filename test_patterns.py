@@ -1367,6 +1367,80 @@ def test_lab_end_to_end_on_random_stocks_validates_nothing():
     assert "VALIDATED" not in text, "the lab found 'edge' in pure noise: the harness is biased"
 
 
+# ---------------------------------------------------------------------------
+# leaders.py: wide-universe momentum leaders
+# ---------------------------------------------------------------------------
+
+def _lead_frame(daily, vol, n=400, cut_last=0, path=None):
+    import numpy as np
+    idx = pd.bdate_range(end="2026-10-30", periods=n)
+    c = 100.0 * np.cumprod(np.full(n, 1.0 + daily)) if path is None else np.asarray(path, float)
+    df = pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": float(vol)}, index=idx)
+    return df.iloc[:n - cut_last] if cut_last else df
+
+
+def _lead_universe():
+    import numpy as np
+    n = 400
+    crash = 100.0 * np.cumprod(np.concatenate([np.full(340, 1.004), np.full(60, 0.985)]))
+    return {"FAST": _lead_frame(0.003, 5e6), "MID": _lead_frame(0.002, 4e6), "FLAT": _lead_frame(0.0006, 3e6),
+            "ILLIQ": _lead_frame(0.005, 1e3), "CRASH": _lead_frame(0, 2e6, path=crash),
+            "STALE": _lead_frame(0.004, 5e6, cut_last=2)}, _lead_frame(0.0004, 1e6)
+
+
+def test_leaders_select_rules_liquidity_trend_and_freshness():
+    import leaders as LD
+    frames, bench = _lead_universe()
+    rows = [{"ticker": t, **LD.leader_metrics(df, bench)} for t, df in frames.items()]
+    by = {r["ticker"]: r for r in rows}
+    assert by["CRASH"]["above_sma200"] is False and by["STALE"]["relative_strength_status"] != "ok"
+    leaders, counts = LD.select_leaders(rows, liquid_top=4, board=10)
+    assert [r["ticker"] for r in leaders] == ["FAST", "MID", "FLAT"], [r["ticker"] for r in leaders]
+    assert [r["leader_rank"] for r in leaders] == [1, 2, 3]
+    assert counts == {"universe": 6, "rankable": 5, "liquid": 4, "above_200dma": 3}, counts   # ILLIQ cut by liquidity, CRASH by trend, STALE by freshness
+    assert len(LD.select_leaders(rows, liquid_top=4, board=2)[0]) == 2
+
+
+def test_leaders_ranking_matches_the_tested_12_1_definition():
+    import leaders as LD
+    frames, bench = _lead_universe()
+    m = LD.leader_metrics(frames["FAST"], bench)
+    c, b = frames["FAST"]["Close"], bench["Close"]
+    expect = (c.iloc[-22] / c.iloc[-253] - 1) - (b.iloc[-22] / b.iloc[-253] - 1)     # 252 back to 21 back
+    assert abs(m["relative_strength_12_1_pct"] - round(expect * 100, 2)) < 1e-6
+
+
+def test_leaders_run_isolates_bad_symbols_and_reports_coverage():
+    import analyzer as A
+    import leaders as LD
+    frames, bench = _lead_universe()
+    real = A.fetch_ticker
+    def fake(t):
+        if t == "BOOM.NS":
+            raise RuntimeError("yahoo said no")
+        return None if t == "EMPTY.NS" else frames[t.replace(".NS", "")]
+    A.fetch_ticker = fake
+    try:
+        out = LD.run_leaders(["FAST.NS", "MID.NS", "FLAT.NS", "ILLIQ.NS", "CRASH.NS", "BOOM.NS", "EMPTY.NS"],
+                             benchmark_df=bench, liquid_top=4, board=5, sleep=0)
+    finally:
+        A.fetch_ticker = real
+    assert [r["ticker"] for r in out["leaders"]] == ["FAST.NS", "MID.NS", "FLAT.NS"]
+    assert out["counts"]["failed_to_load"] == 2 and out["counts"]["universe"] == 5 and out["as_of"] == "2026-10-30"
+    assert set(out["failed_tickers"]) == {"BOOM.NS", "EMPTY.NS"} and "evidence" in out
+
+
+def test_alert_shows_wide_leaders_and_degrades_gracefully():
+    from alerts import build_alert_content, DISCORD_CONTENT_LIMIT
+    wl = {"counts": {"liquid": 200, "above_200dma": 80}, "leaders": [
+        {"leader_rank": 1, "ticker": "ABC.NS", "relative_strength_12_1_pct": 55.0, "relative_strength_6m_pct": 20.0,
+         "pct_below_52w_high": 3.2, "structure": {"support_level": 410.0, "support_touches": 3, "resistance_ladder": [{"level": 470.0}]}}]}
+    text = build_alert_content([], "(s)", wide_leaders=wl)
+    assert "ABC" in text and "S 410 (3x)" in text and "R 470" in text and "not an entry signal" in text
+    assert "unavailable today" in build_alert_content([], "(s)", wide_leaders={"error": "boom"})
+    assert len(build_alert_content([], "(s)", wide_leaders=wl)) <= DISCORD_CONTENT_LIMIT
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

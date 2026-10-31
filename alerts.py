@@ -16,7 +16,8 @@ def build_alert_content(flagged: list[dict], session_note: str,
                         watch: list[dict] | None = None, breadth: float | None = None,
                         leaders: list[dict] | None = None,
                         benchmark: str = "NIFTYBEES.NS",
-                        scan_coverage: dict | None = None) -> str:
+                        scan_coverage: dict | None = None,
+                        wide_leaders: dict | None = None) -> str:
     """Pure function, no network -- separated specifically so the
     truncation logic can be unit-tested without a webhook, a mock
     server, or letting a test actually hit Discord."""
@@ -64,6 +65,25 @@ def build_alert_content(flagged: list[dict], session_note: str,
             )
         else:
             leader_block = f"\n\n_Momentum ranking unavailable: no valid 12-1 data versus {benchmark}._"
+    if wide_leaders:
+        if wide_leaders.get("error"):
+            leader_block += f"\n_Wide-universe leaders unavailable today: {str(wide_leaders['error'])[:120]}_"
+        elif wide_leaders.get("leaders"):
+            rows = []
+            for r in wide_leaders["leaders"][:8]:
+                st = r.get("structure") or {}
+                lv = ""
+                if st.get("support_level") is not None:
+                    lv += f" | S {st['support_level']:.0f} ({st.get('support_touches') or 0}x)"
+                res = st.get("resistance_ladder") or []
+                if res:
+                    lv += f" R {res[0]['level']:.0f}"
+                rows.append(f"#{r['leader_rank']} `{r['ticker'].replace('.NS', '')}` RS {r['relative_strength_12_1_pct']:+.0f}pp"
+                            f" | 6m {r.get('relative_strength_6m_pct') or 0:+.0f} | {r.get('pct_below_52w_high')}% off high{lv}")
+            c = wide_leaders.get("counts", {})
+            leader_block = (f"\n\n**Momentum leaders** (liquid Nifty 500 top {c.get('liquid')}, above 200-DMA, "
+                            f"{c.get('above_200dma')} qualify; RS = 12-1 vs {benchmark}):\n" + "\n".join(rows)
+                            + "\n_Backtested ranking, not an entry signal; see results/portfolio_report_liquid500.md._")
     if not flagged:
         content = (f"EOD screen: nothing worth a manual look from the legacy reversal checklist today "
                    f"(this is a pre-filter, not a verdict). {session_note}{coverage_line}{breadth_line}{watch_line}"
@@ -112,7 +132,8 @@ def send_discord_alert(flagged: list[dict], webhook_url: str | None = None, run_
                        watch: list[dict] | None = None, breadth: float | None = None,
                        leaders: list[dict] | None = None,
                        benchmark: str = "NIFTYBEES.NS",
-                       scan_coverage: dict | None = None) -> None:
+                       scan_coverage: dict | None = None,
+                       wide_leaders: dict | None = None) -> None:
     webhook_url = webhook_url or os.environ.get("DISCORD_WEBHOOK_URL")
     if not webhook_url:
         print("[alerts] DISCORD_WEBHOOK_URL not set, skipping alert")
@@ -122,7 +143,7 @@ def send_discord_alert(flagged: list[dict], webhook_url: str | None = None, run_
     session_note = f"(last COMPLETE session as of {ts_str} — for planning tomorrow's open, not today's close)"
     content = build_alert_content(flagged, session_note, watch=watch, breadth=breadth,
                                   leaders=leaders, benchmark=benchmark,
-                                  scan_coverage=scan_coverage)
+                                  scan_coverage=scan_coverage, wide_leaders=wide_leaders)
 
     payload = json.dumps({"content": content}).encode()
     # Discord's endpoint sits behind Cloudflare, which has been known to

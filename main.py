@@ -1,10 +1,12 @@
 import json
 import os
+import sys
 from datetime import date, datetime, time as dt_time
 
 import analyzer as analyzer_module
 from analyzer import WATCHLIST, IST, RS_BENCHMARK, RS_LEADER_BOARD_SIZE, run_screen
 from alerts import send_discord_alert, send_discord_failure
+import leaders as wide
 
 OUTPUT_PATH = "docs/latest_screen.json"
 EOD_CUTOFF = dt_time(19, 0)
@@ -98,6 +100,15 @@ if __name__ == "__main__":
         key=lambda r: (r.get("leader_rank") or float("inf"), r["ticker"]),
     )[:RS_LEADER_BOARD_SIZE]
     scan_coverage = summarize_scan_coverage(WATCHLIST, results)
+    # Wide-universe leaders (the evidence-backed part). A failure here must never cost the legacy
+    # screen's output, so it is isolated and reported inside the JSON/alert instead of raising.
+    wide_leaders = None
+    if os.environ.get("SKIP_WIDE_LEADERS") != "1":
+        try:
+            wide_leaders = wide.run_leaders()
+        except Exception as e:
+            print(f"[warning] wide leaders failed: {e}", file=sys.stderr)
+            wide_leaders = {"error": str(e)}
     breadth = (round(sum(1 for r in results if r["above_sma50"]) / len(results), 2)
                if results else None)
 
@@ -140,6 +151,7 @@ if __name__ == "__main__":
                 ],
             },
             "momentum_leaders": momentum_leaders,
+            "wide_leaders": wide_leaders,
             "flagged": flagged,
             "watch": watch,
             "breadth_above_sma50": breadth,
@@ -147,7 +159,7 @@ if __name__ == "__main__":
 
     send_discord_alert(flagged, run_timestamp=run_ts, watch=watch, breadth=breadth,
                        leaders=momentum_leaders, benchmark=RS_BENCHMARK,
-                       scan_coverage=scan_coverage)
+                       scan_coverage=scan_coverage, wide_leaders=wide_leaders)
     print(f"Screened {scan_coverage['scored']}/{scan_coverage['requested']} watchlist instruments, "
           f"{len(momentum_leaders)} equity momentum leaders, "
           f"{len(flagged)} flagged, {len(watch)} watch-only (failed R:R gate), "
