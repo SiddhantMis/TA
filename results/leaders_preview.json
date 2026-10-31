@@ -9,6 +9,7 @@
   "liquid": 200,
   "above_200dma": 80,
   "failed_to_load": 23,
+  "partial_scan_time_limit": false,
   "load_coverage_pct": 95.4
  },
  "failed_tickers": [
