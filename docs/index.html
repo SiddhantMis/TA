@@ -71,6 +71,11 @@
         const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({
           '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
         }[c]));
+        const scanCoverage = data.scan_coverage || {};
+        const missingTickers = scanCoverage.missing_tickers || [];
+        const coverageWarning = missingTickers.length
+          ? `<p class="note err">Partial scan: ${scanCoverage.scored}/${scanCoverage.requested} configured instruments scored. Missing: ${missingTickers.map(esc).join(', ')}.</p>`
+          : '';
 
         // touches is null exactly when a level came from the rolling
         // min/max fallback, not a real pivot cluster -- a real cluster
@@ -93,32 +98,36 @@
         const momentum = data.momentum || {};
         const leadersHtml = momentum.available && leaders.length
           ? `<h2>Momentum leaders</h2>
-             <p class="section-note">Ranked by adjusted 12-1 return excess versus ${esc(momentum.benchmark || 'the benchmark')} within this watchlist. The latest 21 sessions are skipped. This is descriptive context, not a validated buy signal.</p>
+             <p class="section-note">Equities in the configured watchlist, ranked by adjusted 12-1 return excess versus ${esc(momentum.benchmark || 'the benchmark')}. The separate 1-month excess shows whether recent strength is accelerating or fading; 6-month excess is longer-term context. Horizons are not blended into the rank. Commodity ETFs are excluded. All names use the same benchmark session dates; stale closes and names with less than 95% 12-month price coverage are omitted. This is descriptive context, not a validated buy signal.</p>
              <div class="table-wrap"><table>
-               <thead><tr><th>Rank</th><th>Ticker</th><th>RS as of</th><th>12-1 return</th><th>12-1 excess</th><th>6m excess</th><th>Above 50-day MA</th><th>Trend</th><th>Pattern</th></tr></thead>
+               <thead><tr><th>Rank</th><th>Ticker</th><th>Type</th><th>RS as of</th><th>12-1 return</th><th>12-1 excess</th><th>1m excess</th><th>6m excess</th><th>12m coverage</th><th>Above 50-day MA</th><th>Trend</th><th>Pattern</th></tr></thead>
                <tbody>${leaders.map(r => `<tr>
                  <td>${r.leader_rank ?? '—'} <span style="color:#7a8194">(${r.leader_percentile ?? '—'}th pct.)</span></td>
                  <td><strong>${esc(r.ticker)}</strong></td>
+                 <td>${esc(r.instrument_type || 'equity')}</td>
                  <td>${esc(r.relative_strength_date || '—')}</td>
                  <td>${r.momentum_12_1_pct == null ? '—' : `${r.momentum_12_1_pct > 0 ? '+' : ''}${r.momentum_12_1_pct}%`}</td>
                  <td>${fmtPp(r.relative_strength_12_1_pct)}</td>
+                 <td>${fmtPp(r.relative_strength_1m_pct)}</td>
                  <td>${fmtPp(r.relative_strength_6m_pct)}</td>
+                 <td>${r.relative_strength_12m_coverage_pct == null ? '—' : `${r.relative_strength_12m_coverage_pct}%`}</td>
                  <td>${r.above_sma50 ? 'Yes' : 'No'}</td>
                  <td>${esc(r.trend)}</td><td>${esc(r.pattern) || '—'}</td>
                </tr>`).join('')}</tbody>
              </table></div>`
-          : `<h2>Momentum leaders</h2><p class="section-note">${momentum.available === false ? `Ranking unavailable versus ${esc(momentum.benchmark || 'the benchmark')}.` : 'No leaderboard data in this run.'} This ranking is descriptive, not a validated buy signal.</p>`;
+          : `<h2>Momentum leaders</h2><p class="section-note">${momentum.available === false ? esc(momentum.unavailable_reason || `No eligible equity data versus ${momentum.benchmark || 'the benchmark'}.`) : 'No leaderboard data in this run.'} This ranking is descriptive, not a validated buy signal.</p>`;
 
         const html = `
+          ${coverageWarning}
           ${leadersHtml}
           <h2>Chart checklist details</h2>
           <p class="section-note">The existing confidence and flag fields describe the reversal checklist. They are separate from the momentum ranking above.</p>
           <div class="table-wrap"><table>
             <thead>
               <tr>
-                <th>RS rank</th><th>Ticker</th><th>Date</th><th>Close</th><th>Trend</th>
+                <th>RS rank</th><th>Ticker</th><th>Type</th><th>Date</th><th>Close</th><th>Trend</th>
                 <th>Pattern</th><th>Support</th><th>Resistance</th>
-                <th>12-1 excess</th><th>6m excess</th><th>Vol×</th><th>RSI</th><th>Checks</th><th>Confidence</th>
+                <th>12-1 excess</th><th>1m excess</th><th>6m excess</th><th>Vol×</th><th>RSI</th><th>Checks</th><th>Confidence</th>
                 <th>Read</th><th>Notes</th>
               </tr>
             </thead>
@@ -127,6 +136,7 @@
                 <tr class="${r.flag ? 'flagged' : ''}">
                   <td>${r.leader_rank ?? '—'}</td>
                   <td><strong>${esc(r.ticker)}</strong></td>
+                  <td>${esc(r.instrument_type || 'equity')}</td>
                   <td>${esc(r.date)}${r.data_stale_days != null && r.data_stale_days > 1 ? ` <span class="err">(${r.data_stale_days}d stale)</span>` : ''}</td>
                   <td>${r.close}</td>
                   <td>${esc(r.trend)}${r.trend_r2 != null ? ` (R²=${r.trend_r2})` : ''}</td>
@@ -134,6 +144,7 @@
                   <td>${fmtLevel(r.support_level, r.support_touches)}${fmtLadder(r.support_ladder, r.support_level)}</td>
                   <td>${fmtLevel(r.resistance_level, r.resistance_touches)}${fmtLadder(r.resistance_ladder, r.resistance_level)}</td>
                   <td>${fmtPp(r.relative_strength_12_1_pct)}</td>
+                  <td>${fmtPp(r.relative_strength_1m_pct)}</td>
                   <td>${fmtPp(r.relative_strength_6m_pct)}</td>
                   <td>${r.volume_ratio ?? '—'}</td>
                   <td>${r.rsi ?? '—'}</td>

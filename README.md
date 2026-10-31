@@ -11,18 +11,23 @@ plan and the validation gates for future features.
 ## What's actually been verified vs. what hasn't
 
 **Verified locally:**
-Offline suite (`test_patterns.py`) — 93/93 passing, covering
+Offline suite (`test_patterns.py`) — 97/97 passing, covering
 single-candle (Marubozu, Doji, Spinning Top, Hammer/Hanging Man,
 Shooting Star/Inverted Hammer), two-candle (Engulfing, Piercing, Dark
 Cloud Cover, Harami), and three-candle (Morning Star, Evening Star)
-patterns, plus trend regression, pivot S/R, RSI, relative-strength windows,
-watchlist ranking, and Discord formatting.
+patterns, plus trend regression, pivot S/R, RSI, fixed-calendar relative-
+strength windows, stale/coverage gates, instrument classification, watchlist
+ranking, and Discord formatting.
 
 **Live data check (2026-10-31):** `run_screen()` fetched and scored all 48
-watchlist tickers and ranked 48/48 against NIFTYBEES.NS, with common data
-through 2026-10-30. This did not exercise Discord delivery, GitHub Actions
-publishing, or the scheduled workflow. Run the manual trigger below before
-trusting production scheduling.
+watchlist instruments. All 46 equities passed the relative-strength data
+gates and were ranked against NIFTYBEES.NS; both commodity ETFs were kept in
+the scan output but excluded from the equity ranking. All ranked data used the
+2026-10-30 close and had 100% 12-month coverage. This did not exercise Discord
+delivery, GitHub Actions publishing, or the scheduled workflow. Run the
+manual trigger below before trusting production scheduling.
+If a later run misses tickers, `scan_coverage` records them in the JSON and
+the dashboard and Discord alert show a partial-scan warning.
 
 ## First-time setup
 
@@ -42,24 +47,28 @@ trusting production scheduling.
    ticker — that's where yfinance issues would show up first.
 
 4. Once a manual run succeeds cleanly, the cron (`.github/workflows/eod-scan.yml`)
-   runs automatically weekdays at 4:00 PM IST.
+   runs automatically weekdays at 7:00 PM IST.
 
 ## Editing the watchlist
 
-Edit `WATCHLIST` at the top of `analyzer.py`. No other changes needed to
-add tickers. Scaling past ~30-40 names hasn't been tested — yfinance
-rate-limits, and `YF_SLEEP_SECONDS` in `analyzer.py` may need raising if
-you see repeated `[error]` lines when scaling up.
+Edit `WATCHLIST` at the top of `analyzer.py`. Unlisted symbols default to
+equity; add non-equity funds to `INSTRUMENT_TYPE_BY_TICKER` so they do not
+enter the equity leaderboard. A full 48-name scan succeeded once, but repeat
+reliability and larger universes still need monitoring because yfinance may
+rate-limit; raise `YF_SLEEP_SECONDS` if logs show repeated `[error]` lines.
 
 ## Momentum leaderboard
 
-The daily screen now reports a separate momentum leaderboard, ranked by each
-stock's adjusted 12-1 return excess versus `NIFTYBEES.NS`. The 12-1 window uses
-the close 252 sessions back as its start and the close 21 sessions back as its
-end, so it skips the latest month. The screen also reports 6-month excess
-return as context. Returns use dates shared by the stock and benchmark, and
-the percentile rank is only within the configured watchlist; it is not a
-Nifty 200 or Nifty 500 rank.
+The daily screen now reports a separate equity momentum leaderboard, ranked
+by adjusted 12-1 return excess versus `NIFTYBEES.NS`. Every ticker uses the
+same benchmark session dates; the window starts 252 sessions back and ends 21
+sessions back, skipping the latest month. Separate 1-month and 6-month excess
+returns show short-term change and the longer-term backdrop without changing
+the rank. A stock is ranked only if its latest close matches
+the benchmark date and it has at least 95% coverage across the 12-month input
+window. Commodity ETFs stay visible in the full chart table but are excluded
+from the equity rank. Ranks are only within the configured watchlist, not a
+Nifty 200 or Nifty 500 universe.
 
 This ranking is descriptive, not a buy signal. The pre-registered momentum
 research on the `experiments` branch did not validate the tested entries in
@@ -137,10 +146,12 @@ This mirrors sections 1-5 of the manual checklist. Sections 6 (risk:reward),
 those need a real entry and stop price, which only make sense once you've
 looked at the flagged chart yourself.
 
-**None of the above has run against live data yet** — same sandbox
-limitation as before (no route to Yahoo from the build environment).
-Trend/RSI/S-R logic is verified against synthetic OHLC only
-(`test_patterns.py`). Run it for real before trusting any of it.
+The screener fetched and scored all 48 watchlist instruments once on
+2026-10-31, with equity momentum data through 2026-10-30. This confirms that
+the live fetch path worked for that run; it does not establish repeatable
+feed reliability or predictive value. Pattern and indicator logic is covered
+by offline synthetic tests. Discord delivery, scheduled publishing, and a
+multi-week production run have not been verified.
 
 ## Trade plan gate and backtest
 

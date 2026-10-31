@@ -33,9 +33,12 @@ a claim of a profitable edge.
   notification. Live data-fetch reliability still needs a manual Actions run.
 
 The first product change is a relative-strength leaderboard against
-`NIFTYBEES.NS`, separate from the old reversal checklist. It reports a 12-1
-adjusted-return comparison and a 6-month excess-return context field. The rank
-is only within the configured watchlist. It is not a validated entry filter.
+`NIFTYBEES.NS`, separate from the old reversal checklist. It ranks the 12-1
+adjusted-return comparison and reports separate 1-month and 6-month excess
+returns as swing context. All tickers use the benchmark's session dates; stale closes and less than 95%
+coverage are withheld, and commodity ETFs stay outside the equity ranking.
+The rank is only within the configured watchlist. It is not a validated entry
+filter.
 
 ## What established screeners make useful
 

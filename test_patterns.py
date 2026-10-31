@@ -12,7 +12,7 @@ agrees with those manual calls, not just synthetic examples.
 import sys
 import numpy as np
 import pandas as pd
-from main import check_total_failure, check_stale_after_cutoff, enable_settled_daily_candle
+from main import check_total_failure, check_stale_after_cutoff, enable_settled_daily_candle, summarize_scan_coverage
 import analyzer as analyzer_module
 from alerts import build_alert_content, DISCORD_CONTENT_LIMIT
 from datetime import date, datetime, time as dt_time
@@ -29,7 +29,7 @@ def row(o, h, l, c):
     return pd.Series({"Open": o, "High": h, "Low": l, "Close": c})
 
 
-def test_relative_strength_uses_common_dates_and_exact_12_1_windows():
+def test_relative_strength_uses_benchmark_session_calendar_and_exact_12_1_windows():
     dates = pd.bdate_range("2020-01-01", periods=300)
     stock_close = 100 * 1.002 ** np.arange(len(dates))
     market_close = 100 * 1.001 ** np.arange(len(dates))
@@ -40,14 +40,54 @@ def test_relative_strength_uses_common_dates_and_exact_12_1_windows():
     start, end = len(dates) - 253, len(dates) - 22
     expected_stock = stock_close[end] / stock_close[start] - 1
     expected_market = market_close[end] / market_close[start] - 1
+    expected_1m = (stock_close[-1] / stock_close[-22] - 1) - (market_close[-1] / market_close[-22] - 1)
     expected_6m = (stock_close[-1] / stock_close[-127] - 1) - (market_close[-1] / market_close[-127] - 1)
 
     assert result["momentum_12_1_pct"] == round(expected_stock * 100, 2)
     assert result["benchmark_momentum_12_1_pct"] == round(expected_market * 100, 2)
     assert result["relative_strength_12_1_pct"] == round((expected_stock - expected_market) * 100, 2)
+    assert result["relative_strength_1m_pct"] == round(expected_1m * 100, 2)
     assert result["relative_strength_6m_pct"] == round(expected_6m * 100, 2)
     assert result["momentum_12_1_end_date"] == dates[end].date().isoformat()
     assert result["relative_strength_date"] == dates[-1].date().isoformat()
+    assert result["relative_strength_benchmark_date"] == dates[-1].date().isoformat()
+    assert result["relative_strength_12m_coverage_pct"] == 100.0
+    assert result["relative_strength_status"] == "ok"
+
+
+def test_relative_strength_keeps_fixed_endpoints_when_a_session_is_missing():
+    dates = pd.bdate_range("2020-01-01", periods=300)
+    stock_close = 100 * 1.002 ** np.arange(len(dates))
+    market_close = 100 * 1.001 ** np.arange(len(dates))
+    stock = pd.DataFrame({"Close": stock_close}, index=dates).drop(dates[50])
+    benchmark = pd.DataFrame({"Close": market_close}, index=dates)
+
+    result = analyzer_module.relative_strength_metrics(stock, benchmark)
+    start, end = len(dates) - 253, len(dates) - 22
+    expected = (
+        (stock_close[end] / stock_close[start] - 1)
+        - (market_close[end] / market_close[start] - 1)
+    ) * 100
+
+    assert result["relative_strength_12_1_pct"] == round(expected, 2)
+    assert result["momentum_12_1_end_date"] == dates[end].date().isoformat()
+    assert result["relative_strength_12m_coverage_pct"] == round(252 / 253 * 100, 1)
+
+
+def test_relative_strength_rejects_stale_stock_and_low_coverage():
+    dates = pd.bdate_range("2020-01-01", periods=300)
+    benchmark = pd.DataFrame({"Close": np.linspace(100, 130, len(dates))}, index=dates)
+    stock = pd.DataFrame({"Close": np.linspace(100, 140, len(dates))}, index=dates)
+
+    stale = analyzer_module.relative_strength_metrics(stock.iloc[:-1], benchmark)
+    assert stale["relative_strength_status"] == "stale_stock_close"
+    assert stale["relative_strength_stale_sessions"] == 1
+    assert stale["relative_strength_12_1_pct"] is None
+
+    sparse_stock = stock.drop(dates[-253:-233])
+    sparse = analyzer_module.relative_strength_metrics(sparse_stock, benchmark)
+    assert sparse["relative_strength_status"] == "insufficient_price_coverage"
+    assert sparse["relative_strength_12_1_pct"] is None
 
 
 def test_relative_strength_reports_short_history_and_disjoint_dates():
@@ -55,6 +95,7 @@ def test_relative_strength_reports_short_history_and_disjoint_dates():
     stock = pd.DataFrame({"Close": np.linspace(100, 130, len(dates))}, index=dates)
     benchmark = pd.DataFrame({"Close": np.linspace(100, 115, len(dates))}, index=dates)
     short = analyzer_module.relative_strength_metrics(stock, benchmark)
+    assert short["relative_strength_1m_pct"] is not None
     assert short["relative_strength_6m_pct"] is not None
     assert short["relative_strength_12_1_pct"] is None
     assert short["momentum_12_1_end_date"] is None
@@ -73,6 +114,8 @@ def test_relative_strength_ranks_are_watchlist_relative_and_ties_share_rank():
         {"ticker": "B.NS", "relative_strength_12_1_pct": 5.0},
         {"ticker": "C.NS", "relative_strength_12_1_pct": -2.0},
         {"ticker": "D.NS", "relative_strength_12_1_pct": None},
+        {"ticker": "SILVERBEES.NS", "relative_strength_12_1_pct": 80.0},
+        {"ticker": "NAN.NS", "relative_strength_12_1_pct": float("nan")},
     ]
     ranked = analyzer_module.rank_relative_strength(results)
     assert [r["ticker"] for r in ranked] == ["A.NS", "B.NS", "C.NS"]
@@ -81,7 +124,13 @@ def test_relative_strength_ranks_are_watchlist_relative_and_ties_share_rank():
     assert results[2]["leader_rank"] == 3
     assert results[2]["leader_percentile"] == 0.0
     assert results[3].get("leader_rank") is None
+    assert results[4].get("leader_rank") is None
+    assert results[5].get("leader_rank") is None
     assert all(r["leader_universe_size"] == 3 for r in ranked)
+
+    results[2]["relative_strength_12_1_pct"] = None
+    analyzer_module.rank_relative_strength(results)
+    assert results[2]["leader_rank"] is None  # prior rank is cleared when input becomes invalid
 
 
 def _pad_history(n, base=300.0, seed=0):
@@ -680,11 +729,12 @@ def test_build_alert_content_shows_momentum_leaders_without_reversal_flags():
     leaders = [{
         "ticker": "MCX.NS", "leader_rank": 1,
         "relative_strength_12_1_pct": 87.43,
+        "relative_strength_1m_pct": 3.21,
         "relative_strength_6m_pct": 11.44,
     }]
     content = build_alert_content([], "(test session)", leaders=leaders)
     assert "MCX.NS" in content
-    assert "+87.4 pp" in content and "+11.4 pp" in content
+    assert "+87.4 pp" in content and "+3.2 pp (1m)" in content and "+11.4 pp" in content
     assert "not a validated entry signal" in content
     assert len(content) <= DISCORD_CONTENT_LIMIT
 
@@ -700,6 +750,16 @@ def test_build_alert_content_keeps_momentum_leaders_inside_discord_limit():
     assert len(content) <= DISCORD_CONTENT_LIMIT, len(content)
     assert "LEADER0.NS" in content
     assert "truncated" in content
+
+
+def test_build_alert_content_warns_when_scan_is_partial():
+    coverage = {
+        "requested": 4, "scored": 3, "coverage_pct": 75.0,
+        "missing_tickers": ["MISSING.NS"],
+    }
+    content = build_alert_content([], "(test session)", scan_coverage=coverage)
+    assert "Partial scan: 3/4 instruments scored" in content
+    assert "MISSING.NS" in content
 
 
 def test_check_total_failure_fires_when_everything_fails():
@@ -725,6 +785,17 @@ def test_check_total_failure_silent_on_empty_watchlist():
     # empty input, not a failure -- must not fire.
     msg = check_total_failure([], [])
     assert msg is None, msg
+
+
+def test_summarize_scan_coverage_lists_missing_configured_symbols():
+    result = summarize_scan_coverage(
+        ["A.NS", "B.NS", "C.NS", "A.NS"],
+        [{"ticker": "A.NS"}, {"ticker": "C.NS"}, {"ticker": "OUTSIDE.NS"}],
+    )
+    assert result == {
+        "requested": 3, "scored": 2, "coverage_pct": 66.7,
+        "missing_tickers": ["B.NS"],
+    }
 
 
 IST = ZoneInfo("Asia/Kolkata")

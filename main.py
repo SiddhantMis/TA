@@ -10,6 +10,22 @@ OUTPUT_PATH = "docs/latest_screen.json"
 EOD_CUTOFF = dt_time(19, 0)
 
 
+def summarize_scan_coverage(watchlist: list[str], results: list[dict]) -> dict:
+    """Report configured symbols that did not produce a screen result."""
+    expected = list(dict.fromkeys(watchlist))
+    expected_set = set(expected)
+    scored = {r.get("ticker") for r in results if r.get("ticker") in expected_set}
+    missing = [ticker for ticker in expected if ticker not in scored]
+    requested = len(expected)
+    scored_count = requested - len(missing)
+    return {
+        "requested": requested,
+        "scored": scored_count,
+        "coverage_pct": round(100 * scored_count / requested, 1) if requested else None,
+        "missing_tickers": missing,
+    }
+
+
 def enable_settled_daily_candle() -> None:
     """After the EOD cutoff, keep today's completed daily bar if Yahoo has it."""
 
@@ -78,9 +94,10 @@ if __name__ == "__main__":
     flagged = [r for r in results if r["flag"] and r.get("trade_ok")]
     watch = [r for r in results if r["flag"] and not r.get("trade_ok")]
     momentum_leaders = sorted(
-        (r for r in results if r.get("relative_strength_12_1_pct") is not None),
+        (r for r in results if r.get("leader_rank") is not None),
         key=lambda r: (r.get("leader_rank") or float("inf"), r["ticker"]),
     )[:RS_LEADER_BOARD_SIZE]
+    scan_coverage = summarize_scan_coverage(WATCHLIST, results)
     breadth = (round(sum(1 for r in results if r["above_sma50"]) / len(results), 2)
                if results else None)
 
@@ -95,14 +112,32 @@ if __name__ == "__main__":
             "note": "Every 'date'/'close' below is the last COMPLETE session as of run_timestamp, "
                      "never a same-day live price. The momentum leaderboard ranks 12-1 adjusted "
                      "returns relative to NIFTYBEES within this fixed watchlist; it is descriptive "
-                     "and is not a validated buy signal. 'flagged' remains the legacy reversal "
+                     "and is not a validated buy signal. It ranks equities only; commodity ETFs "
+                     "are excluded. 'flagged' remains the legacy reversal "
                      "checklist and is also for manual review only.",
             "all": results,
+            "scan_coverage": scan_coverage,
             "momentum": {
                 "benchmark": RS_BENCHMARK,
                 "available": bool(momentum_leaders),
-                "definition": "12-1 adjusted return excess versus benchmark; latest 21 sessions skipped",
+                "definition": (
+                    "12-1 adjusted return excess versus benchmark on benchmark sessions; "
+                    "latest 21 sessions skipped. 1m and 6m excess are separate context fields; "
+                    "stale and <95% coverage rows excluded"
+                ),
+                "universe": "equities in the configured watchlist; commodity ETFs excluded",
                 "leader_universe_size": sum(1 for r in results if r.get("leader_rank") is not None),
+                "status_counts": {
+                    status: sum(1 for r in results if r.get("relative_strength_status") == status)
+                    for status in sorted({r.get("relative_strength_status", "unavailable") for r in results})
+                },
+                "unavailable_reason": (
+                    None if momentum_leaders else
+                    "No equity rows passed benchmark, freshness, history, and coverage checks. See per-ticker status."
+                ),
+                "excluded_non_equity_tickers": [
+                    r["ticker"] for r in results if r.get("instrument_type") != "equity"
+                ],
             },
             "momentum_leaders": momentum_leaders,
             "flagged": flagged,
@@ -111,8 +146,10 @@ if __name__ == "__main__":
         }, f, indent=2, default=str)
 
     send_discord_alert(flagged, run_timestamp=run_ts, watch=watch, breadth=breadth,
-                       leaders=momentum_leaders, benchmark=RS_BENCHMARK)
-    print(f"Screened {len(results)} tickers, {len(momentum_leaders)} momentum leaders, "
+                       leaders=momentum_leaders, benchmark=RS_BENCHMARK,
+                       scan_coverage=scan_coverage)
+    print(f"Screened {scan_coverage['scored']}/{scan_coverage['requested']} watchlist instruments, "
+          f"{len(momentum_leaders)} equity momentum leaders, "
           f"{len(flagged)} flagged, {len(watch)} watch-only (failed R:R gate), "
           f"breadth {breadth}. Data as of run at {run_ts.isoformat()}.")
     print(f"Written to {OUTPUT_PATH} for the Pages site.")

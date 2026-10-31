@@ -9,22 +9,24 @@ sections 1-5) to flag candidates worth a manual look.
 IMPORTANT — what has and hasn't been verified:
 Pattern-detection and analysis math are covered by the offline suite in
 test_patterns.py. On 2026-10-31, run_screen() completed a live local scan
-of the 48-name watchlist with 48/48 ranked against NIFTYBEES.NS. Discord
-delivery, GitHub Actions publishing, and the scheduled workflow were not
-exercised in that run; use a manual workflow run before trusting the
+of 48 watchlist instruments: 48 were scored and all 46 equities were ranked
+against NIFTYBEES.NS; the two commodity ETFs were kept out of the equity rank.
+All ranked prices were current through 2026-10-30 and passed the coverage gate.
+Discord delivery, GitHub Actions publishing, and the scheduled workflow were
+not exercised in that run; use a manual workflow run before trusting the
 production schedule.
 
 What this does NOT do: decide entries, set stops, or size positions.
 Sections 6-9 of the checklist (risk:reward, position size, time stop)
 are trade-specific and still need to be done by hand once a ticker is
-flagged. This narrows 100+ tickers to a handful worth that manual work
-— it doesn't replace it.
+flagged. This narrows the configured watchlist to candidates worth manual
+review; it doesn't replace that review.
 
 Scoring produces a `confidence` (0-100) and `recommendation` string per
 ticker, not a bare pass/fail — see README "What flagged means" for the
 5 weighted checks and known limits (long-only by construction, check-5
-still correlated with check-1, S/R and trend logic untested on live
-data as of this commit).
+still correlated with check-1, S/R and trend logic have not been chart-audited
+for every live result or shown to predict returns).
 """
 
 from __future__ import annotations
@@ -48,10 +50,9 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
-# Config — edit WATCHLIST to grow/shrink coverage. No other code changes
-# needed to scale from 10 tickers to 100+. Watch YF_SLEEP_SECONDS if you
-# do scale up — yfinance rate-limits, this hasn't been stress-tested past
-# a small list.
+# Config — edit WATCHLIST to grow or shrink coverage. Assign non-equity
+# instruments explicitly in INSTRUMENT_TYPE_BY_TICKER. The 48-name list was
+# scanned once; larger universes and repeated-run rate limits are untested.
 # ---------------------------------------------------------------------------
 
 WATCHLIST = [
@@ -82,8 +83,17 @@ LOOKBACK_PERIOD = "2y"          # yfinance's own vocabulary (1d/5d/1mo/.../2y/5y
 RS_BENCHMARK = "NIFTYBEES.NS"   # adjusted total-return proxy for the Nifty 50
 RS_12M_LOOKBACK_BARS = 252     # 12 months of daily sessions
 RS_SKIP_RECENT_BARS = 21       # skip the latest month for 12-1 momentum
+RS_1M_LOOKBACK_BARS = 21
 RS_6M_LOOKBACK_BARS = 126
 RS_LEADER_BOARD_SIZE = 10
+RS_MIN_12M_SESSION_COVERAGE = 0.95
+
+# Commodity funds can remain in the user's chart watchlist, but their returns
+# are a different asset class from the equity candidates this board ranks.
+INSTRUMENT_TYPE_BY_TICKER = {
+    "GOLDBEES.NS": "commodity_etf",
+    "SILVERBEES.NS": "commodity_etf",
+}
 SR_WINDOW = 20                  # legacy rolling min/max — kept only as a fallback
 SR_LOOKBACK = 480                # ~2 years of trading days for pivot-based S/R.
                                  # TREND_WINDOW below is deliberately NOT changed —
@@ -170,64 +180,156 @@ def compute_indicators(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def relative_strength_metrics(df: pd.DataFrame, benchmark_df: Optional[pd.DataFrame]) -> dict:
-    """Return raw 12-1 momentum and relative returns versus a benchmark.
+def _adjusted_close_series(df: Optional[pd.DataFrame]) -> pd.Series:
+    """Return a clean, date-normalized positive adjusted-close series."""
+    if df is None or df.empty or "Close" not in df:
+        return pd.Series(dtype=float)
+    try:
+        index = pd.DatetimeIndex(pd.to_datetime(df.index))
+        if index.tz is not None:
+            index = index.tz_localize(None)
+        index = index.normalize()
+        values = pd.to_numeric(df["Close"], errors="coerce").to_numpy(dtype=float)
+    except (TypeError, ValueError):
+        return pd.Series(dtype=float)
+    if len(values) != len(index):
+        return pd.Series(dtype=float)
+    close = pd.Series(values, index=index)
+    close = close.loc[~close.index.isna()]
+    close = close.replace([np.inf, -np.inf], np.nan).dropna()
+    close = close[~close.index.duplicated(keep="last")].sort_index()
+    return close[close > 0]
 
-    Returns are calculated on dates shared by the stock and benchmark, using
-    adjusted closes from fetch_ticker(). The 12-1 window ends 21 sessions before
-    the latest common session; the 6-month window ends at the latest common
-    session. These are ranking/context fields, not entry signals.
+
+def relative_strength_metrics(df: pd.DataFrame, benchmark_df: Optional[pd.DataFrame]) -> dict:
+    """Return 12-1 and 6-month relative returns on the benchmark's session calendar.
+
+    Window endpoints are selected from the benchmark calendar so every ticker
+    uses the same dates. A stock with no close on the latest benchmark session,
+    missing either 12-1 endpoint, or less than 95% session coverage is left out
+    of the leaderboard instead of being ranked on a stale or shifted window.
+    These are ranking/context fields, not entry signals.
     """
     empty = {
         "momentum_12_1_pct": None,
         "benchmark_momentum_12_1_pct": None,
         "relative_strength_12_1_pct": None,
+        "relative_strength_1m_pct": None,
         "relative_strength_6m_pct": None,
         "relative_strength_date": None,
+        "relative_strength_benchmark_date": None,
         "momentum_12_1_end_date": None,
+        "relative_strength_12m_coverage_pct": None,
+        "relative_strength_stale_sessions": None,
+        "relative_strength_status": "unavailable",
     }
-    if benchmark_df is None or df.empty or benchmark_df.empty:
+    if benchmark_df is None or benchmark_df.empty:
+        empty["relative_strength_status"] = "benchmark_unavailable"
         return empty
-    if "Close" not in df or "Close" not in benchmark_df:
+    stock = _adjusted_close_series(df)
+    benchmark = _adjusted_close_series(benchmark_df)
+    if stock.empty:
+        empty["relative_strength_status"] = "stock_data_unavailable"
+        return empty
+    if benchmark.empty:
+        empty["relative_strength_status"] = "benchmark_data_unavailable"
         return empty
 
-    aligned = pd.concat(
-        [df["Close"].rename("stock"), benchmark_df["Close"].rename("benchmark")],
-        axis=1,
-        join="inner",
-    ).dropna()
-    if aligned.empty:
-        return empty
-    stock = aligned["stock"].astype(float)
-    benchmark = aligned["benchmark"].astype(float)
+    calendar = benchmark.index
+    benchmark_asof = calendar[-1]
     metrics = dict(empty)
-    metrics["relative_strength_date"] = str(aligned.index[-1].date()) if hasattr(aligned.index[-1], "date") else str(aligned.index[-1])
-    if len(aligned) > RS_6M_LOOKBACK_BARS:
-        stock_6m = stock.iloc[-1] / stock.iloc[-(RS_6M_LOOKBACK_BARS + 1)] - 1
-        benchmark_6m = benchmark.iloc[-1] / benchmark.iloc[-(RS_6M_LOOKBACK_BARS + 1)] - 1
-        metrics["relative_strength_6m_pct"] = round(float((stock_6m - benchmark_6m) * 100), 2)
-
-    required_12m = RS_12M_LOOKBACK_BARS + 1
-    if len(aligned) < required_12m:
+    metrics["relative_strength_benchmark_date"] = benchmark_asof.date().isoformat()
+    stock = stock.loc[stock.index <= benchmark_asof]
+    if stock.empty:
+        metrics["relative_strength_status"] = "no_stock_data_on_benchmark_calendar"
         return metrics
 
-    start = -(RS_12M_LOOKBACK_BARS + 1)
-    end = -(RS_SKIP_RECENT_BARS + 1)
-    stock_12_1 = stock.iloc[end] / stock.iloc[start] - 1
-    benchmark_12_1 = benchmark.iloc[end] / benchmark.iloc[start] - 1
+    common_sessions = stock.index.intersection(calendar)
+    if common_sessions.empty:
+        metrics["relative_strength_status"] = "no_common_benchmark_sessions"
+        return metrics
+    latest_common_date = common_sessions[-1]
+    metrics["relative_strength_date"] = latest_common_date.date().isoformat()
+    last_session_position = calendar.get_loc(latest_common_date)
+    stale_sessions = len(calendar) - 1 - last_session_position
+    metrics["relative_strength_stale_sessions"] = int(stale_sessions)
+    if latest_common_date != benchmark_asof or stock.index[-1] != benchmark_asof:
+        metrics["relative_strength_status"] = "stale_stock_close"
+        return metrics
+
+    stock_on_calendar = stock.reindex(calendar)
+    if len(calendar) >= RS_1M_LOOKBACK_BARS + 1:
+        one_month_start = calendar[-(RS_1M_LOOKBACK_BARS + 1)]
+        if pd.notna(stock_on_calendar.loc[one_month_start]):
+            stock_1m = stock_on_calendar.loc[benchmark_asof] / stock_on_calendar.loc[one_month_start] - 1
+            benchmark_1m = benchmark.loc[benchmark_asof] / benchmark.loc[one_month_start] - 1
+            metrics["relative_strength_1m_pct"] = round(float((stock_1m - benchmark_1m) * 100), 2)
+
+    if len(calendar) >= RS_6M_LOOKBACK_BARS + 1:
+        six_month_start = calendar[-(RS_6M_LOOKBACK_BARS + 1)]
+        if pd.notna(stock_on_calendar.loc[six_month_start]):
+            stock_6m = stock_on_calendar.loc[benchmark_asof] / stock_on_calendar.loc[six_month_start] - 1
+            benchmark_6m = benchmark.loc[benchmark_asof] / benchmark.loc[six_month_start] - 1
+            metrics["relative_strength_6m_pct"] = round(float((stock_6m - benchmark_6m) * 100), 2)
+
+    required_12m = RS_12M_LOOKBACK_BARS + 1
+    if len(calendar) < required_12m:
+        metrics["relative_strength_status"] = "insufficient_benchmark_history"
+        return metrics
+
+    twelve_month_sessions = calendar[-required_12m:]
+    coverage = float(stock_on_calendar.loc[twelve_month_sessions].notna().mean())
+    metrics["relative_strength_12m_coverage_pct"] = round(coverage * 100, 1)
+    if coverage < RS_MIN_12M_SESSION_COVERAGE:
+        metrics["relative_strength_status"] = "insufficient_price_coverage"
+        return metrics
+
+    start_date = calendar[-required_12m]
+    end_date = calendar[-(RS_SKIP_RECENT_BARS + 1)]
+    stock_start = stock_on_calendar.loc[start_date]
+    stock_end = stock_on_calendar.loc[end_date]
+    if pd.isna(stock_start) or pd.isna(stock_end):
+        metrics["relative_strength_status"] = "missing_12_1_endpoint_close"
+        return metrics
+
+    stock_12_1 = stock_end / stock_start - 1
+    benchmark_12_1 = benchmark.loc[end_date] / benchmark.loc[start_date] - 1
     relative_12_1 = stock_12_1 - benchmark_12_1
     metrics.update({
         "momentum_12_1_pct": round(float(stock_12_1 * 100), 2),
         "benchmark_momentum_12_1_pct": round(float(benchmark_12_1 * 100), 2),
         "relative_strength_12_1_pct": round(float(relative_12_1 * 100), 2),
-        "momentum_12_1_end_date": str(aligned.index[end].date()) if hasattr(aligned.index[end], "date") else str(aligned.index[end]),
+        "momentum_12_1_end_date": end_date.date().isoformat(),
+        "relative_strength_status": "ok",
     })
     return metrics
 
 
+def instrument_type_for_ticker(ticker: str) -> str:
+    """Return the configured instrument type; unlisted watchlist symbols are equities."""
+    return INSTRUMENT_TYPE_BY_TICKER.get(str(ticker or "").upper(), "equity")
+
+
 def rank_relative_strength(results: list[dict]) -> list[dict]:
-    """Add watchlist-relative rank fields and return available leaders in rank order."""
-    eligible = [r for r in results if r.get("relative_strength_12_1_pct") is not None]
+    """Rank eligible equities against the configured watchlist and return leaders."""
+    for result in results:
+        result["leader_rank"] = None
+        result["leader_percentile"] = None
+        result["leader_universe_size"] = None
+
+    eligible = []
+    for result in results:
+        value = result.get("relative_strength_12_1_pct")
+        try:
+            valid_value = value is not None and np.isfinite(float(value))
+        except (TypeError, ValueError):
+            valid_value = False
+        if (
+            valid_value
+            and result.get("relative_strength_status", "ok") == "ok"
+            and result.get("instrument_type", instrument_type_for_ticker(result.get("ticker", ""))) == "equity"
+        ):
+            eligible.append(result)
     if not eligible:
         return []
 
@@ -615,13 +717,19 @@ class ScreenResult:
     risk_pct: Optional[float] = None
     rr: Optional[float] = None
     trade_ok: bool = False
+    instrument_type: str = "equity"
     relative_strength_benchmark: Optional[str] = None
     relative_strength_date: Optional[str] = None
+    relative_strength_benchmark_date: Optional[str] = None
     momentum_12_1_end_date: Optional[str] = None
     momentum_12_1_pct: Optional[float] = None
     benchmark_momentum_12_1_pct: Optional[float] = None
     relative_strength_12_1_pct: Optional[float] = None
+    relative_strength_1m_pct: Optional[float] = None
     relative_strength_6m_pct: Optional[float] = None
+    relative_strength_12m_coverage_pct: Optional[float] = None
+    relative_strength_stale_sessions: Optional[int] = None
+    relative_strength_status: str = "unavailable"
     leader_rank: Optional[int] = None
     leader_percentile: Optional[float] = None
     leader_universe_size: Optional[int] = None
@@ -776,7 +884,9 @@ def score_ticker(df: pd.DataFrame, ticker: str,
 
     notes = []
     if rs["relative_strength_12_1_pct"] is None:
-        notes.append("12-1 relative strength unavailable (benchmark missing or fewer than 253 common sessions)")
+        notes.append(f"12-1 relative strength unavailable ({rs['relative_strength_status']})")
+    if instrument_type_for_ticker(ticker) != "equity":
+        notes.append(f"excluded from the equity momentum leaderboard ({instrument_type_for_ticker(ticker)})")
     if trend == "choppy" and tmetrics is not None:
         notes.append(f"trend fit is weak (R^2={tmetrics['r2']:.2f}, threshold {TREND_MIN_R2}) — direction read is uncertain")
     if used_fallback_support:
@@ -860,13 +970,19 @@ def score_ticker(df: pd.DataFrame, ticker: str,
         flag=worth_manual_look,
         entry=plan["entry"], stop=plan["stop"], target=plan["target"],
         risk_pct=plan["risk_pct"], rr=plan["rr"], trade_ok=plan["trade_ok"],
+        instrument_type=instrument_type_for_ticker(ticker),
         relative_strength_benchmark=RS_BENCHMARK if rs["relative_strength_12_1_pct"] is not None else None,
         relative_strength_date=rs["relative_strength_date"],
+        relative_strength_benchmark_date=rs["relative_strength_benchmark_date"],
         momentum_12_1_end_date=rs["momentum_12_1_end_date"],
         momentum_12_1_pct=rs["momentum_12_1_pct"],
         benchmark_momentum_12_1_pct=rs["benchmark_momentum_12_1_pct"],
         relative_strength_12_1_pct=rs["relative_strength_12_1_pct"],
+        relative_strength_1m_pct=rs["relative_strength_1m_pct"],
         relative_strength_6m_pct=rs["relative_strength_6m_pct"],
+        relative_strength_12m_coverage_pct=rs["relative_strength_12m_coverage_pct"],
+        relative_strength_stale_sessions=rs["relative_strength_stale_sessions"],
+        relative_strength_status=rs["relative_strength_status"],
         # same boolean as the "Worth a manual look" recommendation text
         # above -- computed once, used twice, cannot diverge again.
     )
