@@ -1,0 +1,34 @@
+name: Research
+
+# Runs on every push to the experiments branch (and by hand). Results are committed
+# back to the same branch under results/ so they can be read without downloading artifacts.
+on:
+  push:
+    branches: [experiments]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: python test_patterns.py
+      - name: Run research
+        run: python research.py --years 10 --oos-frac 0.35 --cost-pct 0.30
+      - name: Show report in the run summary
+        run: cat results/research_report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Commit results back to the branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add results/
+          git commit -m "Research results [skip ci]" || echo "nothing to commit"
+          git push

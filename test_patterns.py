@@ -830,6 +830,105 @@ def test_run_backtest_pipeline_runs_end_to_end_with_a_stubbed_scorer():
         A.score_ticker = real
 
 
+# ---------------------------------------------------------------------------
+# research.py: trade simulator, no-lookahead, bootstrap, end-to-end smoke
+# ---------------------------------------------------------------------------
+
+def _trade_frame(rows, sig_at=2):
+    """rows: (O,H,L,C) per bar; ATR fixed at 1; one signal on bar `sig_at`."""
+    idx = pd.bdate_range("2024-01-01", periods=len(rows))
+    d = pd.DataFrame(rows, columns=["Open", "High", "Low", "Close"], index=idx)
+    d["atr"] = 1.0
+    sig = pd.Series(False, index=idx); sig.iloc[sig_at] = True
+    return d, sig
+
+
+_PAD = [(100, 100, 100, 100)] * 3
+
+
+def test_research_trail_locks_in_profit():
+    import research as R
+    d, sig = _trade_frame(_PAD + [(100, 101, 99.5, 101), (101, 105, 100.5, 104),
+                                   (104, 111, 103.5, 110), (110, 110.5, 106, 108), (108, 108, 107, 107)])
+    t = R.run_trades(d, sig, "x", "T", cost_pct=0, start=0)
+    # fill 100, risk 2; trail = highest close 110 - 3 = 107 -> exit 107 -> +3.5R
+    assert len(t) == 1 and abs(t[0]["R"] - 3.5) < 1e-9 and t[0]["why"] == "stop", t
+
+
+def test_research_gap_through_stop_exits_at_open():
+    import research as R
+    d, sig = _trade_frame(_PAD + [(100, 101, 99.5, 100), (95, 96, 94, 95)] + [(95, 95, 95, 95)] * 3)
+    t = R.run_trades(d, sig, "x", "T", cost_pct=0, start=0)
+    assert len(t) == 1 and abs(t[0]["R"] + 2.5) < 1e-9, t
+
+
+def test_research_entry_bar_can_stop_out():
+    import research as R
+    d, sig = _trade_frame(_PAD + [(100, 100, 97, 99)] + [(99, 99, 99, 99)] * 3)
+    t = R.run_trades(d, sig, "x", "T", cost_pct=0, start=0)
+    assert len(t) == 1 and abs(t[0]["R"] + 1.0) < 1e-9, t
+
+
+def test_research_time_stop_and_cost_in_r():
+    import research as R
+    flat = [(100, 100.5, 99.5, 100)] * 8
+    d, sig = _trade_frame(_PAD + flat)
+    t0 = R.run_trades(d, sig, "x", "T", cost_pct=0, start=0, max_hold=3)
+    t1 = R.run_trades(d, sig, "x", "T", cost_pct=0.5, start=0, max_hold=3)
+    assert t0[0]["why"] == "time" and abs(t0[0]["R"]) < 1e-9
+    assert abs(t1[0]["R"] + 0.25) < 1e-9     # 0.5% of 100 = 0.5 price units = 0.25R at 2 ATR risk
+
+
+def test_research_trade_still_open_at_end_of_data_is_dropped():
+    import research as R
+    d, sig = _trade_frame(_PAD + [(100, 100.5, 99.5, 100)] * 3)
+    assert R.run_trades(d, sig, "x", "T", cost_pct=0, start=0, max_hold=60) == []
+
+
+def test_research_signals_have_no_lookahead():
+    import numpy as np
+    import research as R
+    def mk(seed, n=700):
+        rng = np.random.default_rng(seed)
+        c = np.abs(100 + np.cumsum(rng.normal(0.05, 1.5, n))) + 20
+        o = c + rng.normal(0, .5, n)
+        return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + abs(rng.normal(0, .6, n)) + .1,
+                             "Low": np.minimum(o, c) - abs(rng.normal(0, .6, n)) - .1, "Close": c,
+                             "Volume": rng.integers(8e5, 2e6, n)}, index=pd.bdate_range("2021-01-04", periods=n))
+    frames = {"A": mk(1), "B": mk(2)}
+    bench = mk(3)["Close"]
+    full = R.build_universe(frames, bench)
+    for cut in (450, 560, 650):
+        part = R.build_universe({t: f.iloc[:cut] for t, f in frames.items()}, bench.iloc[:cut])
+        for t in frames:
+            sf, sp = R.signals(full[t]), R.signals(part[t])
+            for k in sf:
+                assert bool(sf[k].iloc[cut - 1]) == bool(sp[k].iloc[cut - 1]), (t, k, cut)
+
+
+def test_research_month_bootstrap_constant_series():
+    import research as R
+    dates = pd.date_range("2022-01-15", periods=24, freq="MS")
+    df = pd.DataFrame({"signal_date": dates, "R": 1.0})
+    lo, hi = R.month_boot(df)
+    assert lo == 1.0 and hi == 1.0
+
+
+def test_research_end_to_end_smoke():
+    import numpy as np
+    import research as R
+    def mk(seed, n=900):
+        rng = np.random.default_rng(seed)
+        c = np.abs(100 + np.cumsum(rng.normal(0.08, 1.5, n))) + 20
+        o = c + rng.normal(0, .5, n)
+        return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + abs(rng.normal(0, .6, n)) + .1,
+                             "Low": np.minimum(o, c) - abs(rng.normal(0, .6, n)) - .1, "Close": c,
+                             "Volume": rng.integers(8e5, 2e6, n)}, index=pd.bdate_range("2021-01-04", periods=n))
+    tr, text = R.run_research({"A": mk(1), "B": mk(2), "C": mk(4)}, mk(3)["Close"])
+    assert {"R", "variant", "period"} <= set(tr.columns)
+    assert "-- verdicts" in text and "ctrl_uptrend" in text
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0
