@@ -929,6 +929,109 @@ def test_research_end_to_end_smoke():
     assert "-- verdicts" in text and "ctrl_uptrend" in text
 
 
+# ---------------------------------------------------------------------------
+# portfolio.py: universe parsing, portfolio mechanics, no-lookahead, metrics, verdict
+# ---------------------------------------------------------------------------
+
+def _panel(n=700):
+    import numpy as np
+    idx = pd.bdate_range("2020-01-01", periods=n)
+    t = np.arange(n)
+    C = pd.DataFrame({"A": 100 * 1.0015 ** t, "B": 100 + np.sin(t / 7.0), "C": 100 * 0.999 ** t}, index=idx)
+    O = C.shift(1).fillna(C.iloc[0])
+    return O, C
+
+
+def test_portfolio_parse_constituents():
+    import portfolio as P
+    txt = ("Company Name,Industry,Symbol,Series,ISIN Code\n"
+           "Adani Enterprises Ltd.,Metals,ADANIENT,EQ,INE423A01024\n"
+           "Mahindra & Mahindra Ltd.,Auto,M&M ,EQ,INE101A01026\n")
+    assert P.parse_constituents(txt) == ["ADANIENT.NS", "M&M.NS"]
+    assert P.parse_constituents("") == [] and P.parse_constituents("a,b\n1,2\n") == []
+
+
+def test_portfolio_picks_the_leader_and_charges_cost_only_on_turnover():
+    import numpy as np
+    import portfolio as P
+    O, C = _panel()
+    ind = P.indicators(C)
+    mc = pd.Series(100 * 1.001 ** np.arange(len(C)), index=C.index)
+    rets, info = P.simulate(O, C, ind, mc, mc.rolling(200).mean(), O["A"], ("mom12_1",), n_hold=1, cost_pct=0.30)
+    ex = [p for p in P.first_days_of_month(C.index) if p >= 253]
+    a, b = ex[0], ex[1]
+    exp1 = O["A"].iloc[b] / O["A"].iloc[a] - 1
+    assert abs(rets["mom12_1"].iloc[0] - (exp1 - 0.30 / 200)) < 1e-12      # entry costs half the round trip
+    a, b = ex[1], ex[2]
+    exp2 = O["A"].iloc[b] / O["A"].iloc[a] - 1
+    assert abs(rets["mom12_1"].iloc[1] - exp2) < 1e-12                      # same holding: no turnover, no cost
+    assert (info["held"] == 1).all()
+
+
+def test_portfolio_market_filter_goes_to_cash():
+    import numpy as np
+    import portfolio as P
+    O, C = _panel()
+    ind = P.indicators(C)
+    mc = pd.Series(100 * 0.999 ** np.arange(len(C)), index=C.index)         # Nifty falling below its 200-day avg
+    rets, info = P.simulate(O, C, ind, mc, mc.rolling(200).mean(), O["A"], ("mom12_1+mkt",), n_hold=1)
+    assert (info["held"] == 0).all() and (rets["mom12_1+mkt"] == 0).all()
+
+
+def test_portfolio_selection_has_no_lookahead():
+    import numpy as np
+    import portfolio as P
+    rng = np.random.default_rng(3)
+    idx = pd.bdate_range("2019-01-01", periods=800)
+    C = pd.DataFrame({f"S{i}": np.abs(100 + np.cumsum(rng.normal(0.05, 1.4, 800))) + 20 for i in range(6)}, index=idx)
+    ind = P.indicators(C)
+    for cut in (500, 640):
+        ind_t = P.indicators(C.iloc[:cut])
+        for v in P.VARIANTS:
+            assert P.select(C, ind, cut - 1, v, True, 3) == P.select(C.iloc[:cut], ind_t, cut - 1, v, True, 3), (v, cut)
+
+
+def test_portfolio_metrics_and_bootstrap():
+    import numpy as np
+    import portfolio as P
+    m = P.metrics(pd.Series([0.10, -0.20, 0.05, 0.0, 0.0, 0.0]))
+    assert abs(m["maxdd"] + 0.20) < 1e-12
+    m = P.metrics(pd.Series([0.01] * 24))
+    assert abs(m["cagr"] - (1.01 ** 12 - 1)) < 1e-9 and abs(m["maxdd"]) < 1e-12
+    lo, hi = P.block_boot_mean(np.full(36, 0.01))
+    assert abs(lo - 0.12) < 1e-12 and abs(hi - 0.12) < 1e-12
+    assert P.after_tax_cagr({"gain": 1.0, "months": 12}, 0.20) < 1.0        # taxed gain compounds less
+
+
+def test_portfolio_verdict_rule():
+    import portfolio as P
+    def mm(c, dd=-0.10): return {"cagr": c, "vol": .15, "sharpe": 1.0, "maxdd": dd, "months": 36, "gain": 1.0}
+    good = {("v", "IS"): mm(.20), ("v", "OOS"): mm(.18), ("nifty50", "IS"): mm(.12), ("nifty50", "OOS"): mm(.10),
+            ("ew_universe", "IS"): mm(.14), ("ew_universe", "OOS"): mm(.12)}
+    assert P.verdict("v", good, (0.02, 0.10)) == "CANDIDATE"
+    assert "includes 0" in P.verdict("v", good, (-0.01, 0.10))
+    bad = dict(good); bad[("v", "OOS")] = mm(.11)
+    assert "OOS CAGR <= ew_universe" in P.verdict("v", bad, (0.02, 0.10))
+    deep = dict(good); deep[("v", "OOS")] = mm(.18, dd=-0.30)
+    assert "drawdown" in P.verdict("v", deep, (0.02, 0.10))
+
+
+def test_portfolio_end_to_end_smoke():
+    import numpy as np
+    import portfolio as P
+    def mk(seed, n=1200):
+        rng = np.random.default_rng(seed)
+        c = np.abs(100 + np.cumsum(rng.normal(0.06, 1.5, n))) + 20
+        o = c + rng.normal(0, .5, n)
+        return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + 1, "Low": np.minimum(o, c) - 1, "Close": c,
+                             "Volume": 1e6}, index=pd.bdate_range("2019-01-01", periods=n))
+    frames = {f"S{i}": mk(10 + i) for i in range(8)}
+    bench = mk(99)
+    rets, text = P.run_portfolio(frames, bench["Close"], bench["Open"], "smoke", n_hold=3)
+    assert {"mom12_1", "mom6+mkt", "nifty50", "ew_universe"} <= set(rets.columns)
+    assert "-- verdicts" in text and "calendar-year" in text
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

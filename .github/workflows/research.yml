@@ -21,14 +21,14 @@ jobs:
           python-version: '3.11'
       - run: pip install -r requirements.txt
       - run: python test_patterns.py
-      - name: Run research
-        run: python research.py --years 10 --oos-frac 0.35 --cost-pct 0.30
+      - name: Run portfolio test
+        run: python portfolio.py --years 10 --oos-frac 0.35 --cost-pct 0.30 --n-hold 20
       - name: Show report in the run summary
-        run: cat results/research_report.md >> "$GITHUB_STEP_SUMMARY"
+        run: cat results/portfolio_report.md >> "$GITHUB_STEP_SUMMARY"
       - name: Commit results back to the branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add results/
-          git commit -m "Research results [skip ci]" || echo "nothing to commit"
+          git commit -m "Portfolio results [skip ci]" || echo "nothing to commit"
           git push
