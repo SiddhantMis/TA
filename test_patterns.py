@@ -1003,6 +1003,393 @@ def test_geo_pattern_detection_integration():
 
 
 
+
+
+# ---------------------------------------------------------------------------
+# research.py: trade simulator, no-lookahead, bootstrap, end-to-end smoke
+# ---------------------------------------------------------------------------
+
+def _trade_frame(rows, sig_at=2):
+    """rows: (O,H,L,C) per bar; ATR fixed at 1; one signal on bar `sig_at`."""
+    idx = pd.bdate_range("2024-01-01", periods=len(rows))
+    d = pd.DataFrame(rows, columns=["Open", "High", "Low", "Close"], index=idx)
+    d["atr"] = 1.0
+    sig = pd.Series(False, index=idx); sig.iloc[sig_at] = True
+    return d, sig
+
+
+_PAD = [(100, 100, 100, 100)] * 3
+
+
+def test_research_trail_locks_in_profit():
+    import research as R
+    d, sig = _trade_frame(_PAD + [(100, 101, 99.5, 101), (101, 105, 100.5, 104),
+                                   (104, 111, 103.5, 110), (110, 110.5, 106, 108), (108, 108, 107, 107)])
+    t = R.run_trades(d, sig, "x", "T", cost_pct=0, start=0)
+    # fill 100, risk 2; trail = highest close 110 - 3 = 107 -> exit 107 -> +3.5R
+    assert len(t) == 1 and abs(t[0]["R"] - 3.5) < 1e-9 and t[0]["why"] == "stop", t
+
+
+def test_research_gap_through_stop_exits_at_open():
+    import research as R
+    d, sig = _trade_frame(_PAD + [(100, 101, 99.5, 100), (95, 96, 94, 95)] + [(95, 95, 95, 95)] * 3)
+    t = R.run_trades(d, sig, "x", "T", cost_pct=0, start=0)
+    assert len(t) == 1 and abs(t[0]["R"] + 2.5) < 1e-9, t
+
+
+def test_research_entry_bar_can_stop_out():
+    import research as R
+    d, sig = _trade_frame(_PAD + [(100, 100, 97, 99)] + [(99, 99, 99, 99)] * 3)
+    t = R.run_trades(d, sig, "x", "T", cost_pct=0, start=0)
+    assert len(t) == 1 and abs(t[0]["R"] + 1.0) < 1e-9, t
+
+
+def test_research_time_stop_and_cost_in_r():
+    import research as R
+    flat = [(100, 100.5, 99.5, 100)] * 8
+    d, sig = _trade_frame(_PAD + flat)
+    t0 = R.run_trades(d, sig, "x", "T", cost_pct=0, start=0, max_hold=3)
+    t1 = R.run_trades(d, sig, "x", "T", cost_pct=0.5, start=0, max_hold=3)
+    assert t0[0]["why"] == "time" and abs(t0[0]["R"]) < 1e-9
+    assert abs(t1[0]["R"] + 0.25) < 1e-9     # 0.5% of 100 = 0.5 price units = 0.25R at 2 ATR risk
+
+
+def test_research_trade_still_open_at_end_of_data_is_dropped():
+    import research as R
+    d, sig = _trade_frame(_PAD + [(100, 100.5, 99.5, 100)] * 3)
+    assert R.run_trades(d, sig, "x", "T", cost_pct=0, start=0, max_hold=60) == []
+
+
+def test_research_signals_have_no_lookahead():
+    import numpy as np
+    import research as R
+    def mk(seed, n=700):
+        rng = np.random.default_rng(seed)
+        c = np.abs(100 + np.cumsum(rng.normal(0.05, 1.5, n))) + 20
+        o = c + rng.normal(0, .5, n)
+        return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + abs(rng.normal(0, .6, n)) + .1,
+                             "Low": np.minimum(o, c) - abs(rng.normal(0, .6, n)) - .1, "Close": c,
+                             "Volume": rng.integers(8e5, 2e6, n)}, index=pd.bdate_range("2021-01-04", periods=n))
+    frames = {"A": mk(1), "B": mk(2)}
+    bench = mk(3)["Close"]
+    full = R.build_universe(frames, bench)
+    for cut in (450, 560, 650):
+        part = R.build_universe({t: f.iloc[:cut] for t, f in frames.items()}, bench.iloc[:cut])
+        for t in frames:
+            sf, sp = R.signals(full[t]), R.signals(part[t])
+            for k in sf:
+                assert bool(sf[k].iloc[cut - 1]) == bool(sp[k].iloc[cut - 1]), (t, k, cut)
+
+
+def test_research_month_bootstrap_constant_series():
+    import research as R
+    dates = pd.date_range("2022-01-15", periods=24, freq="MS")
+    df = pd.DataFrame({"signal_date": dates, "R": 1.0})
+    lo, hi = R.month_boot(df)
+    assert lo == 1.0 and hi == 1.0
+
+
+def test_research_end_to_end_smoke():
+    import numpy as np
+    import research as R
+    def mk(seed, n=900):
+        rng = np.random.default_rng(seed)
+        c = np.abs(100 + np.cumsum(rng.normal(0.08, 1.5, n))) + 20
+        o = c + rng.normal(0, .5, n)
+        return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + abs(rng.normal(0, .6, n)) + .1,
+                             "Low": np.minimum(o, c) - abs(rng.normal(0, .6, n)) - .1, "Close": c,
+                             "Volume": rng.integers(8e5, 2e6, n)}, index=pd.bdate_range("2021-01-04", periods=n))
+    tr, text = R.run_research({"A": mk(1), "B": mk(2), "C": mk(4)}, mk(3)["Close"])
+    assert {"R", "variant", "period"} <= set(tr.columns)
+    assert "-- verdicts" in text and "ctrl_uptrend" in text
+
+
+# ---------------------------------------------------------------------------
+# portfolio.py: universe parsing, portfolio mechanics, no-lookahead, metrics, verdict
+# ---------------------------------------------------------------------------
+
+def _panel(n=700):
+    import numpy as np
+    idx = pd.bdate_range("2020-01-01", periods=n)
+    t = np.arange(n)
+    C = pd.DataFrame({"A": 100 * 1.0015 ** t, "B": 100 + np.sin(t / 7.0), "C": 100 * 0.999 ** t}, index=idx)
+    O = C.shift(1).fillna(C.iloc[0])
+    return O, C
+
+
+def test_portfolio_parse_constituents():
+    import portfolio as P
+    txt = ("Company Name,Industry,Symbol,Series,ISIN Code\n"
+           "Adani Enterprises Ltd.,Metals,ADANIENT,EQ,INE423A01024\n"
+           "Mahindra & Mahindra Ltd.,Auto,M&M ,EQ,INE101A01026\n")
+    assert P.parse_constituents(txt) == ["ADANIENT.NS", "M&M.NS"]
+    assert P.parse_constituents("") == [] and P.parse_constituents("a,b\n1,2\n") == []
+
+
+def test_portfolio_picks_the_leader_and_charges_cost_only_on_turnover():
+    import numpy as np
+    import portfolio as P
+    O, C = _panel()
+    ind = P.indicators(C)
+    mc = pd.Series(100 * 1.001 ** np.arange(len(C)), index=C.index)
+    rets, info = P.simulate(O, C, ind, mc, mc.rolling(200).mean(), O["A"], ("mom12_1",), n_hold=1, cost_pct=0.30)
+    ex = [p for p in P.first_days_of_month(C.index) if p >= 253]
+    a, b = ex[0], ex[1]
+    exp1 = O["A"].iloc[b] / O["A"].iloc[a] - 1
+    assert abs(rets["mom12_1"].iloc[0] - (exp1 - 0.30 / 200)) < 1e-12      # entry costs half the round trip
+    a, b = ex[1], ex[2]
+    exp2 = O["A"].iloc[b] / O["A"].iloc[a] - 1
+    assert abs(rets["mom12_1"].iloc[1] - exp2) < 1e-12                      # same holding: no turnover, no cost
+    assert (info["held"] == 1).all()
+
+
+def test_portfolio_market_filter_goes_to_cash():
+    import numpy as np
+    import portfolio as P
+    O, C = _panel()
+    ind = P.indicators(C)
+    mc = pd.Series(100 * 0.999 ** np.arange(len(C)), index=C.index)         # Nifty falling below its 200-day avg
+    rets, info = P.simulate(O, C, ind, mc, mc.rolling(200).mean(), O["A"], ("mom12_1+mkt",), n_hold=1)
+    assert (info["held"] == 0).all() and (rets["mom12_1+mkt"] == 0).all()
+
+
+def test_portfolio_selection_has_no_lookahead():
+    import numpy as np
+    import portfolio as P
+    rng = np.random.default_rng(3)
+    idx = pd.bdate_range("2019-01-01", periods=800)
+    C = pd.DataFrame({f"S{i}": np.abs(100 + np.cumsum(rng.normal(0.05, 1.4, 800))) + 20 for i in range(6)}, index=idx)
+    ind = P.indicators(C)
+    for cut in (500, 640):
+        ind_t = P.indicators(C.iloc[:cut])
+        for v in P.VARIANTS:
+            assert P.select(C, ind, cut - 1, v, True, 3) == P.select(C.iloc[:cut], ind_t, cut - 1, v, True, 3), (v, cut)
+
+
+def test_portfolio_metrics_and_bootstrap():
+    import numpy as np
+    import portfolio as P
+    m = P.metrics(pd.Series([0.10, -0.20, 0.05, 0.0, 0.0, 0.0]))
+    assert abs(m["maxdd"] + 0.20) < 1e-12
+    m = P.metrics(pd.Series([0.01] * 24))
+    assert abs(m["cagr"] - (1.01 ** 12 - 1)) < 1e-9 and abs(m["maxdd"]) < 1e-12
+    lo, hi = P.block_boot_mean(np.full(36, 0.01))
+    assert abs(lo - 0.12) < 1e-12 and abs(hi - 0.12) < 1e-12
+    assert P.after_tax_cagr({"gain": 1.0, "months": 12}, 0.20) < 1.0        # taxed gain compounds less
+
+
+def test_portfolio_verdict_rule():
+    import portfolio as P
+    def mm(c, dd=-0.10): return {"cagr": c, "vol": .15, "sharpe": 1.0, "maxdd": dd, "months": 36, "gain": 1.0}
+    good = {("v", "IS"): mm(.20), ("v", "OOS"): mm(.18), ("nifty50", "IS"): mm(.12), ("nifty50", "OOS"): mm(.10),
+            ("ew_universe", "IS"): mm(.14), ("ew_universe", "OOS"): mm(.12)}
+    assert P.verdict("v", good, (0.02, 0.10)) == "CANDIDATE"
+    assert "includes 0" in P.verdict("v", good, (-0.01, 0.10))
+    bad = dict(good); bad[("v", "OOS")] = mm(.11)
+    assert "OOS CAGR <= ew_universe" in P.verdict("v", bad, (0.02, 0.10))
+    deep = dict(good); deep[("v", "OOS")] = mm(.18, dd=-0.30)
+    assert "drawdown" in P.verdict("v", deep, (0.02, 0.10))
+
+
+def test_portfolio_end_to_end_smoke():
+    import numpy as np
+    import portfolio as P
+    def mk(seed, n=1200):
+        rng = np.random.default_rng(seed)
+        c = np.abs(100 + np.cumsum(rng.normal(0.06, 1.5, n))) + 20
+        o = c + rng.normal(0, .5, n)
+        return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + 1, "Low": np.minimum(o, c) - 1, "Close": c,
+                             "Volume": 1e6}, index=pd.bdate_range("2019-01-01", periods=n))
+    frames = {f"S{i}": mk(10 + i) for i in range(8)}
+    bench = mk(99)
+    rets, text = P.run_portfolio(frames, bench["Close"], bench["Open"], "smoke", n_hold=3)
+    assert {"mom12_1", "mom6+mkt", "nifty50", "ew_universe"} <= set(rets.columns)
+    assert "-- verdicts" in text and "calendar-year" in text
+
+
+def test_portfolio_liquidity_filter_is_point_in_time():
+    import numpy as np
+    import portfolio as P
+    rng = np.random.default_rng(5)
+    idx = pd.bdate_range("2019-01-01", periods=700)
+    C = pd.DataFrame({f"S{i}": 150 + np.cumsum(rng.normal(0.05, 1, 700)) for i in range(5)}, index=idx)
+    V = pd.DataFrame({f"S{i}": 1e6 * (i + 1) for i in range(5)}, index=idx)      # S0 least liquid
+    ind = P.indicators(C, V, liquid_top=3)
+    assert ind["liquid"].iloc[-1].tolist() == [False, False, True, True, True]
+    assert not bool(ind["valid"].iloc[-1]["S0"])
+    cut = 500
+    V2 = V.copy(); V2.iloc[cut:, 0] *= 1000                                       # S0 becomes huge AFTER the cut
+    a = P.indicators(C, V, 3)["liquid"].iloc[cut - 1]
+    b = P.indicators(C, V2, 3)["liquid"].iloc[cut - 1]
+    assert a.tolist() == b.tolist()                                                # no peeking at future liquidity
+    assert P.indicators(C.iloc[:cut], V.iloc[:cut], 3)["liquid"].iloc[cut - 1].tolist() == a.tolist()
+
+
+def test_portfolio_constituent_urls_and_liquid_smoke():
+    import numpy as np
+    import portfolio as P
+    urls = P.constituent_urls("nifty500")
+    assert len(urls) == 3 and all("ind_nifty500list.csv" in u for u in urls)
+    def mk(seed, n=1200):
+        rng = np.random.default_rng(seed)
+        c = np.abs(100 + np.cumsum(rng.normal(0.06, 1.5, n))) + 20
+        o = c + rng.normal(0, .5, n)
+        return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + 1, "Low": np.minimum(o, c) - 1, "Close": c,
+                             "Volume": 1e6}, index=pd.bdate_range("2019-01-01", periods=n))
+    frames = {}
+    for i in range(8):
+        f = mk(30 + i); f["Volume"] = 1e6 * (i + 1); frames[f"S{i}"] = f
+    bench = mk(98)
+    rets, text = P.run_portfolio(frames, bench["Close"], bench["Open"], "liq", n_hold=3, liquid_top=4)
+    assert "point-in-time top 4" in text and "-- verdicts" in text and not rets.empty
+
+
+# ---------------------------------------------------------------------------
+# swings.py / geo_patterns.py / pattern_lab.py
+# ---------------------------------------------------------------------------
+
+def _wp(wps, per=10, warm=0):
+    """OHLC arrays from straight legs between waypoints (optionally preceded by flat warm-up bars)."""
+    import numpy as np
+    C = np.array([wps[0]] + [x for a, b in zip(wps[:-1], wps[1:]) for x in np.linspace(a, b, per + 1)[1:]], float)
+    if warm:
+        C = np.concatenate([np.full(warm, C[0]), C])
+    O = np.concatenate([[C[0]], C[:-1]])
+    return O, np.maximum(O, C) + 0.3, np.minimum(O, C) - 0.3, C
+
+
+def _events(wps, per=10, warm=0):
+    import geo_patterns as G
+    return G.detect_all(*_wp(wps, per, warm))
+
+
+def test_zigzag_swings_and_causality():
+    import swings as S
+    O, H, L, C = _wp([100, 130, 100, 130, 100], 10)
+    atr = S.atr_series(H, L, C)
+    sw = S.zigzag(H, L, atr, 3.0)
+    assert [x.kind for x in sw] == [-1, 1, -1, 1] or [x.kind for x in sw] == [1, -1, 1], sw
+    assert all(x.conf > x.idx for x in sw)                              # a swing is known only after the reversal
+    cut = 30
+    part = S.zigzag(H[:cut], L[:cut], atr[:cut], 3.0)
+    full_known = [x for x in sw if x.conf < cut]
+    assert part == full_known                                           # truncating the data changes nothing it knew
+
+
+def test_zigzag_handles_a_huge_first_bar():
+    import numpy as np
+    import swings as S
+    H = np.array([10, 10.2, 30, 29, 28, 27, 26, 25, 20, 15, 14, 13, 12, 11, 10, 9, 8, 12, 16, 20, 24.])
+    atr = np.full(len(H), 1.0); atr[:3] = np.nan
+    S.zigzag(H, H - 0.5, atr, 3.0)                                      # used to raise on an empty segment
+
+
+def test_double_bottom_and_top_found_and_bad_second_low_rejected():
+    ev = _events([100, 130, 100, 120, 100.5, 125])
+    db = [e for e in ev if e["name"] == "double_bottom"]
+    assert len(db) == 1 and db[0]["dir"] == 1 and 139 < db[0]["target"] < 142 and db[0]["stop"] < 100
+    assert not [e for e in _events([100, 130, 100, 120, 108, 125]) if e["name"] == "double_bottom"]
+    dt = [e for e in _events([100, 70, 100, 80, 99.5, 75]) if e["name"] == "double_top"]
+    assert len(dt) == 1 and dt[0]["dir"] == -1 and 58 < dt[0]["target"] < 61
+
+
+def test_head_and_shoulders_and_inverse():
+    hs = [e for e in _events([100, 120, 110, 130, 110, 120, 100]) if e["name"] == "head_shoulders"]
+    assert len(hs) == 1 and hs[0]["dir"] == -1 and abs(hs[0]["target"] - 90) < 2 and hs[0]["stop"] > 119
+    ih = [e for e in _events([100, 80, 90, 70, 90, 80, 100]) if e["name"] == "inverse_head_shoulders"]
+    assert len(ih) == 1 and ih[0]["dir"] == 1 and abs(ih[0]["target"] - 110) < 2
+    assert not [e for e in _events([100, 120, 110, 121, 110, 120, 100]) if e["name"] == "head_shoulders"]   # head barely higher than the shoulders
+
+
+def test_triangles_rectangle_found():
+    names = lambda ev, d: {e["name"] for e in ev if e["dir"] == d}
+    assert "ascending_triangle" in names(_events([100, 120, 105, 120, 110, 120, 115, 128], 8), 1)
+    assert "descending_triangle" in names(_events([100, 80, 95, 80, 90, 80, 85, 72], 8), -1)
+    assert "rectangle" in names(_events([100, 120, 100, 120, 100, 120, 100, 128], 10), 1)
+    assert "symmetrical_triangle" in names(_events([90, 130, 100, 124, 106, 119, 110, 115, 112, 128], 9, warm=20), 1)
+
+
+def test_flags_found_and_steady_trend_is_not_a_flag():
+    import numpy as np
+    import geo_patterns as G
+    def build(parts):
+        C = np.concatenate(parts); O = np.concatenate([[C[0]], C[:-1]])
+        return O, np.maximum(O, C) + 0.3, np.minimum(O, C) - 0.3, C
+    bull = G.detect_all(*build([np.full(40, 100.0), np.linspace(100, 130, 16), np.linspace(130, 125, 9)[1:], [127, 129, 131, 135, 138]]))
+    assert [e["name"] for e in bull] == ["bull_flag"] and 159 < bull[0]["target"] < 161
+    bear = G.detect_all(*build([np.full(40, 130.0), np.linspace(130, 100, 16), np.linspace(100, 105, 9)[1:], [103, 101, 99, 95, 92]]))
+    assert [e["name"] for e in bear] == ["bear_flag"]
+    steady = np.linspace(100, 160, 60)
+    assert G.detect_all(*build([steady])) == []
+    v_bounce = G.detect_all(*_wp([100, 130, 100, 120, 100.5, 125]))      # a V-shaped bounce is not a bear flag
+    assert not [e for e in v_bounce if e["name"] == "bear_flag"]
+
+
+def test_pattern_detection_has_no_lookahead():
+    import numpy as np
+    import geo_patterns as G
+    rng = np.random.default_rng(1); n = 1500
+    C = np.abs(100 + np.cumsum(rng.normal(0, 1.6, n))) + 30
+    O = np.concatenate([[C[0]], C[:-1]])
+    H = np.maximum(O, C) + abs(rng.normal(0, .5, n)); L = np.minimum(O, C) - abs(rng.normal(0, .5, n))
+    key = lambda e: (e["name"], e["t"], e["dir"], round(float(e["key"]), 6))
+    full = G.detect_all(O, H, L, C)
+    assert len(full) > 20
+    for T in (500, 800, 1100, 1400):
+        part = G.detect_all(O[:T], H[:T], L[:T], C[:T])
+        assert {key(e) for e in full if e["t"] <= T - 1} == {key(e) for e in part}, T
+
+
+def test_lab_trade_simulator():
+    import math
+    import numpy as np
+    import pattern_lab as L
+    O = np.array([100, 100, 101, 105, 109.]); Hh = O + 1; Ll = O - 1; C = O.copy()
+    # long: entry open[1]=100, stop 95 (risk 5), target 110 -> reached on the last bar's high
+    r = L.sim_event(O, Hh, Ll, C, 0, 1, 95, 110, cost_pct=0)
+    assert abs(r - 2.0) < 1e-9, r
+    # same bar touches both stop and target -> stop
+    Hh2, Ll2 = Hh.copy(), Ll.copy(); Hh2[2], Ll2[2] = 112, 94
+    assert abs(L.sim_event(O, Hh2, Ll2, C, 0, 1, 95, 110, cost_pct=0) + 1.0) < 1e-9
+    # short mirror: entry 100, stop 105, target 90; opens gap down through the target on bar 3
+    O3 = np.array([100, 100, 99, 88, 87.]); r = L.sim_event(O3, O3 + 1, O3 - 1, O3, 0, -1, 105, 90, cost_pct=0)
+    assert abs(r - 2.4) < 1e-9, r                                       # exit at the 88 open: (100-88)/5
+    # a favourable gap through the target exits at the open, not at the target
+    Og = np.array([100, 100, 101, 105, 112.]); assert abs(L.sim_event(Og, Og + 1, Og - 1, Og, 0, 1, 95, 110, cost_pct=0) - 2.4) < 1e-9
+    # entry already beyond the stop -> no trade
+    assert math.isnan(L.sim_event(np.array([100, 90., 90, 90]), np.full(4, 91.), np.full(4, 89.), np.full(4, 90.), 0, 1, 95, 110))
+
+
+def test_lab_month_ci_and_verdict():
+    import numpy as np
+    import pandas as pd
+    import pattern_lab as L
+    dates = pd.date_range("2018-01-01", periods=400, freq="7D")
+    lo, hi = L.month_ci(np.full(400, 0.02), dates)
+    assert abs(lo - 0.02) < 1e-12 and abs(hi - 0.02) < 1e-12
+    good = {"n": 100, "ex20": 0.02, "lo": 0.004, "avgR": 0.2}
+    assert L.verdict({"n": 200, "ex20": 0.01, "lo": 0, "avgR": 0.1}, good, 300) == "VALIDATED"
+    assert "includes 0" in L.verdict({"n": 200, "ex20": 0.01}, dict(good, lo=-0.001), 300)
+    assert "OOS mean <= 0" in L.verdict({"n": 200, "ex20": 0.01}, dict(good, ex20=-0.01), 300)
+    assert "events" in L.verdict({"n": 20, "ex20": 0.01}, good, 100)
+
+
+def test_lab_end_to_end_on_random_stocks_validates_nothing():
+    import numpy as np
+    import pandas as pd
+    import pattern_lab as L
+    def mk(seed, n=1400):
+        rng = np.random.default_rng(seed); c = np.abs(100 + np.cumsum(rng.normal(0.04, 1.6, n))) + 40
+        o = np.concatenate([[c[0]], c[:-1]]) * (1 + rng.normal(0, .004, n))
+        return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + abs(rng.normal(0, .5, n)),
+                             "Low": np.minimum(o, c) - abs(rng.normal(0, .5, n)), "Close": c,
+                             "Volume": rng.integers(5e5, 3e6, n)}, index=pd.bdate_range("2019-01-01", periods=n))
+    ev, text = L.run_lab({f"S{i}": mk(i) for i in range(30)}, liquid_top=20)
+    assert len(ev) > 300 and "-- verdicts" in text
+    assert "VALIDATED" not in text, "the lab found 'edge' in pure noise: the harness is biased"
+
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0
