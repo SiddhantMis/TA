@@ -13,23 +13,50 @@ DISCORD_CONTENT_LIMIT = 2000
 
 
 def build_alert_content(flagged: list[dict], session_note: str,
-                        watch: list[dict] | None = None, breadth: float | None = None) -> str:
+                        watch: list[dict] | None = None, breadth: float | None = None,
+                        leaders: list[dict] | None = None,
+                        benchmark: str = "NIFTYBEES.NS") -> str:
     """Pure function, no network -- separated specifically so the
     truncation logic can be unit-tested without a webhook, a mock
     server, or letting a test actually hit Discord."""
     watch_line = ""
     if watch:
+        shown_watch = watch[:10]
         watch_line = "\nWatch only (pattern OK, trade plan failed the R:R gate): " + ", ".join(
-            f"{w['ticker']} (R:R {w.get('rr')})" for w in watch)
+            f"{w['ticker']} (R:R {w.get('rr')})" for w in shown_watch)
+        if len(watch) > len(shown_watch):
+            watch_line += f", +{len(watch) - len(shown_watch)} more on the Pages site"
     breadth_line = ""
     if breadth is not None and breadth < 0.25:
         breadth_line = (f"\n⚠ Only {breadth:.0%} of the watchlist is above its 50-day average — "
                         "reversal setups are riskier in broad weakness (see backtest by-breadth table).")
-    if not flagged:
-        return (f"EOD screen: nothing worth a manual look today (this is a pre-filter, not a verdict). "
-                f"{session_note}{breadth_line}{watch_line}")
 
-    lines = [f"**EOD screen — {len(flagged)} worth a manual look** {session_note}{breadth_line}"]
+    leader_block = ""
+    if leaders is not None:
+        if leaders:
+            leader_rows = []
+            for r in leaders[:5]:
+                rs12 = r.get("relative_strength_12_1_pct")
+                rs6 = r.get("relative_strength_6m_pct")
+                rank = r.get("leader_rank")
+                detail = f"#{rank} `{r['ticker']}` {rs12:+.1f} pp vs {benchmark} (12-1)"
+                if rs6 is not None:
+                    detail += f", {rs6:+.1f} pp (6m)"
+                leader_rows.append(detail)
+            leader_block = (
+                f"\n\n**Momentum leaders — relative return vs {benchmark}:**\n"
+                + "\n".join(leader_rows)
+                + "\n_Rank is watchlist-relative context, not a validated entry signal._"
+            )
+        else:
+            leader_block = f"\n\n_Momentum ranking unavailable: no valid 12-1 data versus {benchmark}._"
+    if not flagged:
+        content = (f"EOD screen: nothing worth a manual look from the legacy reversal checklist today "
+                   f"(this is a pre-filter, not a verdict). {session_note}{breadth_line}{watch_line}"
+                   f"{leader_block}")
+        return content[:DISCORD_CONTENT_LIMIT - 1] + "…" if len(content) > DISCORD_CONTENT_LIMIT else content
+
+    lines = [f"**EOD screen — {len(flagged)} worth a manual look** {session_note}{breadth_line}{leader_block}"]
     for r in flagged:
         plan = ""
         if r.get("entry") is not None and r.get("risk_pct") is not None:
@@ -68,7 +95,9 @@ def build_alert_content(flagged: list[dict], session_note: str,
 
 
 def send_discord_alert(flagged: list[dict], webhook_url: str | None = None, run_timestamp=None,
-                       watch: list[dict] | None = None, breadth: float | None = None) -> None:
+                       watch: list[dict] | None = None, breadth: float | None = None,
+                       leaders: list[dict] | None = None,
+                       benchmark: str = "NIFTYBEES.NS") -> None:
     webhook_url = webhook_url or os.environ.get("DISCORD_WEBHOOK_URL")
     if not webhook_url:
         print("[alerts] DISCORD_WEBHOOK_URL not set, skipping alert")
@@ -76,7 +105,8 @@ def send_discord_alert(flagged: list[dict], webhook_url: str | None = None, run_
 
     ts_str = run_timestamp.strftime("%Y-%m-%d %H:%M IST") if run_timestamp else "unknown time"
     session_note = f"(last COMPLETE session as of {ts_str} — for planning tomorrow's open, not today's close)"
-    content = build_alert_content(flagged, session_note, watch=watch, breadth=breadth)
+    content = build_alert_content(flagged, session_note, watch=watch, breadth=breadth,
+                                  leaders=leaders, benchmark=benchmark)
 
     payload = json.dumps({"content": content}).encode()
     # Discord's endpoint sits behind Cloudflare, which has been known to

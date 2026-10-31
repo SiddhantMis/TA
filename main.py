@@ -3,7 +3,7 @@ import os
 from datetime import date, datetime, time as dt_time
 
 import analyzer as analyzer_module
-from analyzer import WATCHLIST, IST, run_screen
+from analyzer import WATCHLIST, IST, RS_BENCHMARK, RS_LEADER_BOARD_SIZE, run_screen
 from alerts import send_discord_alert, send_discord_failure
 
 OUTPUT_PATH = "docs/latest_screen.json"
@@ -77,6 +77,10 @@ if __name__ == "__main__":
     # a near-miss is visible instead of silently vanishing.
     flagged = [r for r in results if r["flag"] and r.get("trade_ok")]
     watch = [r for r in results if r["flag"] and not r.get("trade_ok")]
+    momentum_leaders = sorted(
+        (r for r in results if r.get("relative_strength_12_1_pct") is not None),
+        key=lambda r: (r.get("leader_rank") or float("inf"), r["ticker"]),
+    )[:RS_LEADER_BOARD_SIZE]
     breadth = (round(sum(1 for r in results if r["above_sma50"]) / len(results), 2)
                if results else None)
 
@@ -89,14 +93,26 @@ if __name__ == "__main__":
         json.dump({
             "run_timestamp": run_ts.isoformat(),
             "note": "Every 'date'/'close' below is the last COMPLETE session as of run_timestamp, "
-                     "never a same-day live price. A flag here is for planning tomorrow's open — "
-                     "not for acting before today's 3:30 PM close.",
+                     "never a same-day live price. The momentum leaderboard ranks 12-1 adjusted "
+                     "returns relative to NIFTYBEES within this fixed watchlist; it is descriptive "
+                     "and is not a validated buy signal. 'flagged' remains the legacy reversal "
+                     "checklist and is also for manual review only.",
             "all": results,
+            "momentum": {
+                "benchmark": RS_BENCHMARK,
+                "available": bool(momentum_leaders),
+                "definition": "12-1 adjusted return excess versus benchmark; latest 21 sessions skipped",
+                "leader_universe_size": sum(1 for r in results if r.get("leader_rank") is not None),
+            },
+            "momentum_leaders": momentum_leaders,
             "flagged": flagged,
             "watch": watch,
             "breadth_above_sma50": breadth,
         }, f, indent=2, default=str)
 
-    send_discord_alert(flagged, run_timestamp=run_ts, watch=watch, breadth=breadth)
-    print(f"Screened {len(results)} tickers, {len(flagged)} flagged, {len(watch)} watch-only (failed R:R gate), breadth {breadth}. Data as of run at {run_ts.isoformat()}.")
+    send_discord_alert(flagged, run_timestamp=run_ts, watch=watch, breadth=breadth,
+                       leaders=momentum_leaders, benchmark=RS_BENCHMARK)
+    print(f"Screened {len(results)} tickers, {len(momentum_leaders)} momentum leaders, "
+          f"{len(flagged)} flagged, {len(watch)} watch-only (failed R:R gate), "
+          f"breadth {breadth}. Data as of run at {run_ts.isoformat()}.")
     print(f"Written to {OUTPUT_PATH} for the Pages site.")

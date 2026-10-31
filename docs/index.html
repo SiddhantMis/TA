@@ -8,6 +8,8 @@
   h1 { font-size: 20px; margin-bottom: 4px; }
   .meta { color: #9aa0aa; font-size: 13px; margin-bottom: 20px; }
   .note { background: #1c2030; border-left: 3px solid #5b8def; padding: 10px 14px; font-size: 13px; margin-bottom: 20px; color: #cfd4de; }
+  .section-note { color: #9aa0aa; font-size: 12px; margin: 4px 0 12px; }
+  .table-wrap { overflow-x: auto; margin-bottom: 28px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #262b3a; vertical-align: top; }
   th { color: #9aa0aa; font-weight: 600; position: sticky; top: 0; background: #0f1117; }
@@ -46,7 +48,12 @@
           : 'Run timestamp unavailable';
         noteEl.textContent = data.note || '';
 
-        const rows = (data.all || []).slice().sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+        const rows = (data.all || []).slice().sort((a, b) => {
+          if (a.leader_rank != null || b.leader_rank != null) {
+            return (a.leader_rank ?? Infinity) - (b.leader_rank ?? Infinity);
+          }
+          return (b.confidence || 0) - (a.confidence || 0);
+        });
         if (rows.length === 0) {
           content.innerHTML = '<p>No data yet — run the workflow at least once.</p>';
           return;
@@ -81,20 +88,44 @@
           if (rest.length === 0) return '';
           return `<br><span style="color:#7a8194;font-size:11px">also: ${rest.map(l => `${l.level} (${l.touches}x)`).join(', ')}</span>`;
         };
+        const fmtPp = value => value == null ? '—' : `${value > 0 ? '+' : ''}${Number(value).toFixed(1)} pp`;
+        const leaders = data.momentum_leaders || [];
+        const momentum = data.momentum || {};
+        const leadersHtml = momentum.available && leaders.length
+          ? `<h2>Momentum leaders</h2>
+             <p class="section-note">Ranked by adjusted 12-1 return excess versus ${esc(momentum.benchmark || 'the benchmark')} within this watchlist. The latest 21 sessions are skipped. This is descriptive context, not a validated buy signal.</p>
+             <div class="table-wrap"><table>
+               <thead><tr><th>Rank</th><th>Ticker</th><th>RS as of</th><th>12-1 return</th><th>12-1 excess</th><th>6m excess</th><th>Above 50-day MA</th><th>Trend</th><th>Pattern</th></tr></thead>
+               <tbody>${leaders.map(r => `<tr>
+                 <td>${r.leader_rank ?? '—'} <span style="color:#7a8194">(${r.leader_percentile ?? '—'}th pct.)</span></td>
+                 <td><strong>${esc(r.ticker)}</strong></td>
+                 <td>${esc(r.relative_strength_date || '—')}</td>
+                 <td>${r.momentum_12_1_pct == null ? '—' : `${r.momentum_12_1_pct > 0 ? '+' : ''}${r.momentum_12_1_pct}%`}</td>
+                 <td>${fmtPp(r.relative_strength_12_1_pct)}</td>
+                 <td>${fmtPp(r.relative_strength_6m_pct)}</td>
+                 <td>${r.above_sma50 ? 'Yes' : 'No'}</td>
+                 <td>${esc(r.trend)}</td><td>${esc(r.pattern) || '—'}</td>
+               </tr>`).join('')}</tbody>
+             </table></div>`
+          : `<h2>Momentum leaders</h2><p class="section-note">${momentum.available === false ? `Ranking unavailable versus ${esc(momentum.benchmark || 'the benchmark')}.` : 'No leaderboard data in this run.'} This ranking is descriptive, not a validated buy signal.</p>`;
 
         const html = `
-          <table>
+          ${leadersHtml}
+          <h2>Chart checklist details</h2>
+          <p class="section-note">The existing confidence and flag fields describe the reversal checklist. They are separate from the momentum ranking above.</p>
+          <div class="table-wrap"><table>
             <thead>
               <tr>
-                <th>Ticker</th><th>Date</th><th>Close</th><th>Trend</th>
+                <th>RS rank</th><th>Ticker</th><th>Date</th><th>Close</th><th>Trend</th>
                 <th>Pattern</th><th>Support</th><th>Resistance</th>
-                <th>Vol×</th><th>RSI</th><th>Checks</th><th>Confidence</th>
+                <th>12-1 excess</th><th>6m excess</th><th>Vol×</th><th>RSI</th><th>Checks</th><th>Confidence</th>
                 <th>Read</th><th>Notes</th>
               </tr>
             </thead>
             <tbody>
               ${rows.map(r => `
                 <tr class="${r.flag ? 'flagged' : ''}">
+                  <td>${r.leader_rank ?? '—'}</td>
                   <td><strong>${esc(r.ticker)}</strong></td>
                   <td>${esc(r.date)}${r.data_stale_days != null && r.data_stale_days > 1 ? ` <span class="err">(${r.data_stale_days}d stale)</span>` : ''}</td>
                   <td>${r.close}</td>
@@ -102,6 +133,8 @@
                   <td>${esc(r.pattern) || '—'}</td>
                   <td>${fmtLevel(r.support_level, r.support_touches)}${fmtLadder(r.support_ladder, r.support_level)}</td>
                   <td>${fmtLevel(r.resistance_level, r.resistance_touches)}${fmtLadder(r.resistance_ladder, r.resistance_level)}</td>
+                  <td>${fmtPp(r.relative_strength_12_1_pct)}</td>
+                  <td>${fmtPp(r.relative_strength_6m_pct)}</td>
                   <td>${r.volume_ratio ?? '—'}</td>
                   <td>${r.rsi ?? '—'}</td>
                   <td>${r.checks_passed}/${r.checks_total}</td>
@@ -111,7 +144,7 @@
                 </tr>
               `).join('')}
             </tbody>
-          </table>
+          </table></div>
         `;
         content.innerHTML = html;
       } catch (err) {

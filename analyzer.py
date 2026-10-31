@@ -7,13 +7,12 @@ checklist-based scoring function (mirrors Trade_Evaluation_Sheet.xlsx
 sections 1-5) to flag candidates worth a manual look.
 
 IMPORTANT — what has and hasn't been verified:
-yfinance needs open internet access to Yahoo's finance endpoints. The
-sandbox this was built in does NOT have that access (restricted to
-package registries), so the live data fetch path has NOT been run
-against real data. Pattern-detection math HAS been verified against
-synthetic + real historical OHLC (see test_patterns.py, which runs
-with zero network access and passes). Test fetch_ticker()/run_screen()
-for real inside GitHub Actions or locally before trusting the schedule.
+Pattern-detection and analysis math are covered by the offline suite in
+test_patterns.py. On 2026-10-31, run_screen() completed a live local scan
+of the 48-name watchlist with 48/48 ranked against NIFTYBEES.NS. Discord
+delivery, GitHub Actions publishing, and the scheduled workflow were not
+exercised in that run; use a manual workflow run before trusting the
+production schedule.
 
 What this does NOT do: decide entries, set stops, or size positions.
 Sections 6-9 of the checklist (risk:reward, position size, time stop)
@@ -80,6 +79,11 @@ LOOKBACK_PERIOD = "2y"          # yfinance's own vocabulary (1d/5d/1mo/.../2y/5y
                                  # set and isn't worth the risk of finding out it's
                                  # handled differently from the small values already
                                  # tested against real data
+RS_BENCHMARK = "NIFTYBEES.NS"   # adjusted total-return proxy for the Nifty 50
+RS_12M_LOOKBACK_BARS = 252     # 12 months of daily sessions
+RS_SKIP_RECENT_BARS = 21       # skip the latest month for 12-1 momentum
+RS_6M_LOOKBACK_BARS = 126
+RS_LEADER_BOARD_SIZE = 10
 SR_WINDOW = 20                  # legacy rolling min/max — kept only as a fallback
 SR_LOOKBACK = 480                # ~2 years of trading days for pivot-based S/R.
                                  # TREND_WINDOW below is deliberately NOT changed —
@@ -164,6 +168,82 @@ def compute_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["support"] = df["Low"].rolling(SR_WINDOW).min()
     df["resistance"] = df["High"].rolling(SR_WINDOW).max()
     return df
+
+
+def relative_strength_metrics(df: pd.DataFrame, benchmark_df: Optional[pd.DataFrame]) -> dict:
+    """Return raw 12-1 momentum and relative returns versus a benchmark.
+
+    Returns are calculated on dates shared by the stock and benchmark, using
+    adjusted closes from fetch_ticker(). The 12-1 window ends 21 sessions before
+    the latest common session; the 6-month window ends at the latest common
+    session. These are ranking/context fields, not entry signals.
+    """
+    empty = {
+        "momentum_12_1_pct": None,
+        "benchmark_momentum_12_1_pct": None,
+        "relative_strength_12_1_pct": None,
+        "relative_strength_6m_pct": None,
+        "relative_strength_date": None,
+        "momentum_12_1_end_date": None,
+    }
+    if benchmark_df is None or df.empty or benchmark_df.empty:
+        return empty
+    if "Close" not in df or "Close" not in benchmark_df:
+        return empty
+
+    aligned = pd.concat(
+        [df["Close"].rename("stock"), benchmark_df["Close"].rename("benchmark")],
+        axis=1,
+        join="inner",
+    ).dropna()
+    if aligned.empty:
+        return empty
+    stock = aligned["stock"].astype(float)
+    benchmark = aligned["benchmark"].astype(float)
+    metrics = dict(empty)
+    metrics["relative_strength_date"] = str(aligned.index[-1].date()) if hasattr(aligned.index[-1], "date") else str(aligned.index[-1])
+    if len(aligned) > RS_6M_LOOKBACK_BARS:
+        stock_6m = stock.iloc[-1] / stock.iloc[-(RS_6M_LOOKBACK_BARS + 1)] - 1
+        benchmark_6m = benchmark.iloc[-1] / benchmark.iloc[-(RS_6M_LOOKBACK_BARS + 1)] - 1
+        metrics["relative_strength_6m_pct"] = round(float((stock_6m - benchmark_6m) * 100), 2)
+
+    required_12m = RS_12M_LOOKBACK_BARS + 1
+    if len(aligned) < required_12m:
+        return metrics
+
+    start = -(RS_12M_LOOKBACK_BARS + 1)
+    end = -(RS_SKIP_RECENT_BARS + 1)
+    stock_12_1 = stock.iloc[end] / stock.iloc[start] - 1
+    benchmark_12_1 = benchmark.iloc[end] / benchmark.iloc[start] - 1
+    relative_12_1 = stock_12_1 - benchmark_12_1
+    metrics.update({
+        "momentum_12_1_pct": round(float(stock_12_1 * 100), 2),
+        "benchmark_momentum_12_1_pct": round(float(benchmark_12_1 * 100), 2),
+        "relative_strength_12_1_pct": round(float(relative_12_1 * 100), 2),
+        "momentum_12_1_end_date": str(aligned.index[end].date()) if hasattr(aligned.index[end], "date") else str(aligned.index[end]),
+    })
+    return metrics
+
+
+def rank_relative_strength(results: list[dict]) -> list[dict]:
+    """Add watchlist-relative rank fields and return available leaders in rank order."""
+    eligible = [r for r in results if r.get("relative_strength_12_1_pct") is not None]
+    if not eligible:
+        return []
+
+    values = pd.Series({r["ticker"]: r["relative_strength_12_1_pct"] for r in eligible}, dtype=float)
+    ranks = values.rank(method="min", ascending=False)
+    percentile_ranks = values.rank(method="average", ascending=False)
+    count = len(eligible)
+    for result in eligible:
+        rank = float(ranks[result["ticker"]])
+        percentile_rank = float(percentile_ranks[result["ticker"]])
+        result["leader_rank"] = int(rank)
+        result["leader_percentile"] = round(
+            100.0 if count == 1 else 100 * (count - percentile_rank) / (count - 1), 1
+        )
+        result["leader_universe_size"] = count
+    return sorted(eligible, key=lambda r: (r["leader_rank"], r["ticker"]))
 
 
 # ---------------------------------------------------------------------------
@@ -535,9 +615,20 @@ class ScreenResult:
     risk_pct: Optional[float] = None
     rr: Optional[float] = None
     trade_ok: bool = False
+    relative_strength_benchmark: Optional[str] = None
+    relative_strength_date: Optional[str] = None
+    momentum_12_1_end_date: Optional[str] = None
+    momentum_12_1_pct: Optional[float] = None
+    benchmark_momentum_12_1_pct: Optional[float] = None
+    relative_strength_12_1_pct: Optional[float] = None
+    relative_strength_6m_pct: Optional[float] = None
+    leader_rank: Optional[int] = None
+    leader_percentile: Optional[float] = None
+    leader_universe_size: Optional[int] = None
 
 
-def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
+def score_ticker(df: pd.DataFrame, ticker: str,
+                 benchmark_df: Optional[pd.DataFrame] = None) -> Optional[ScreenResult]:
     df = compute_indicators(df)
     if len(df) < max(SMA_MED, TREND_WINDOW, SR_LOOKBACK) + 2:
         return None
@@ -546,6 +637,7 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     curr = df.iloc[idx]
     prev = df.iloc[idx - 1]
     prev2 = df.iloc[idx - 2] if idx >= 2 else None
+    rs = relative_strength_metrics(df, benchmark_df)
 
     trend = trend_direction(df, idx)
     tmetrics = trend_metrics(df, idx)
@@ -683,6 +775,8 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     confidence = round(100 * weighted / total_weight, 1)
 
     notes = []
+    if rs["relative_strength_12_1_pct"] is None:
+        notes.append("12-1 relative strength unavailable (benchmark missing or fewer than 253 common sessions)")
     if trend == "choppy" and tmetrics is not None:
         notes.append(f"trend fit is weak (R^2={tmetrics['r2']:.2f}, threshold {TREND_MIN_R2}) — direction read is uncertain")
     if used_fallback_support:
@@ -766,6 +860,13 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         flag=worth_manual_look,
         entry=plan["entry"], stop=plan["stop"], target=plan["target"],
         risk_pct=plan["risk_pct"], rr=plan["rr"], trade_ok=plan["trade_ok"],
+        relative_strength_benchmark=RS_BENCHMARK if rs["relative_strength_12_1_pct"] is not None else None,
+        relative_strength_date=rs["relative_strength_date"],
+        momentum_12_1_end_date=rs["momentum_12_1_end_date"],
+        momentum_12_1_pct=rs["momentum_12_1_pct"],
+        benchmark_momentum_12_1_pct=rs["benchmark_momentum_12_1_pct"],
+        relative_strength_12_1_pct=rs["relative_strength_12_1_pct"],
+        relative_strength_6m_pct=rs["relative_strength_6m_pct"],
         # same boolean as the "Worth a manual look" recommendation text
         # above -- computed once, used twice, cannot diverge again.
     )
@@ -842,13 +943,23 @@ def fetch_ticker(ticker: str) -> Optional[pd.DataFrame]:
 
 def run_screen(watchlist: list[str] = WATCHLIST) -> list[dict]:
     results = []
+    benchmark_df = None
+    try:
+        benchmark_df = fetch_ticker(RS_BENCHMARK)
+        if benchmark_df is None or benchmark_df.empty:
+            print(f"[warning] no benchmark data for {RS_BENCHMARK}; momentum ranking unavailable", file=sys.stderr)
+            benchmark_df = None
+    except Exception as e:
+        print(f"[warning] benchmark fetch failed for {RS_BENCHMARK}: {e}; momentum ranking unavailable", file=sys.stderr)
+    time.sleep(YF_SLEEP_SECONDS)
+
     for t in watchlist:
         try:
             df = fetch_ticker(t)
             if df is None or df.empty:
                 print(f"[skip] no data for {t}", file=sys.stderr)
                 continue
-            r = score_ticker(df, t)
+            r = score_ticker(df, t, benchmark_df)
             if r:
                 results.append(asdict(r))
             else:
@@ -857,6 +968,7 @@ def run_screen(watchlist: list[str] = WATCHLIST) -> list[dict]:
         except Exception as e:
             print(f"[error] {t}: {e}", file=sys.stderr)
         time.sleep(YF_SLEEP_SECONDS)
+    rank_relative_strength(results)
     return results
 
 

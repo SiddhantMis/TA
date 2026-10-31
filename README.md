@@ -1,22 +1,28 @@
 # TA Screener
 
-EOD pre-filter for a swing-trading watchlist. Flags candidates worth manual
-review — it does not decide entries, stops, or position size. That's still
-on you, using Trade_Evaluation_Sheet.xlsx sections 6-9.
+EOD technical-analysis and momentum watchlist for Indian equities. It ranks
+relative-strength leaders and reports chart structure for manual review. It
+does not make validated buy calls, decide position size, or replace the trade
+plan in Trade_Evaluation_Sheet.xlsx.
+
+See [MOMENTUM_SCANNER_PLAN.md](MOMENTUM_SCANNER_PLAN.md) for the staged product
+plan and the validation gates for future features.
 
 ## What's actually been verified vs. what hasn't
 
-**Verified (runs with zero network access, checked in this session):**
-Pattern detection logic (`test_patterns.py`) — 25/25 passing, covering
+**Verified locally:**
+Offline suite (`test_patterns.py`) — 93/93 passing, covering
 single-candle (Marubozu, Doji, Spinning Top, Hammer/Hanging Man,
 Shooting Star/Inverted Hammer), two-candle (Engulfing, Piercing, Dark
 Cloud Cover, Harami), and three-candle (Morning Star, Evening Star)
-patterns, plus trend regression, pivot S/R, and RSI.
+patterns, plus trend regression, pivot S/R, RSI, relative-strength windows,
+watchlist ranking, and Discord formatting.
 
-**Not yet verified:** the live `yfinance` fetch path (`fetch_ticker`,
-`run_screen`). It couldn't be run in the build sandbox — no route to
-Yahoo's data endpoints there. Test this for real using the manual
-trigger below before trusting the daily schedule.
+**Live data check (2026-10-31):** `run_screen()` fetched and scored all 48
+watchlist tickers and ranked 48/48 against NIFTYBEES.NS, with common data
+through 2026-10-30. This did not exercise Discord delivery, GitHub Actions
+publishing, or the scheduled workflow. Run the manual trigger below before
+trusting production scheduling.
 
 ## First-time setup
 
@@ -45,13 +51,34 @@ add tickers. Scaling past ~30-40 names hasn't been tested — yfinance
 rate-limits, and `YF_SLEEP_SECONDS` in `analyzer.py` may need raising if
 you see repeated `[error]` lines when scaling up.
 
+## Momentum leaderboard
+
+The daily screen now reports a separate momentum leaderboard, ranked by each
+stock's adjusted 12-1 return excess versus `NIFTYBEES.NS`. The 12-1 window uses
+the close 252 sessions back as its start and the close 21 sessions back as its
+end, so it skips the latest month. The screen also reports 6-month excess
+return as context. Returns use dates shared by the stock and benchmark, and
+the percentile rank is only within the configured watchlist; it is not a
+Nifty 200 or Nifty 500 rank.
+
+This ranking is descriptive, not a buy signal. The pre-registered momentum
+research on the `experiments` branch did not validate the tested entries in
+its held-out period, and the portfolio comparison did not meet its full
+candidate rule. The leaderboard makes relative strength visible for chart
+review without turning that inconclusive evidence into a trade recommendation.
+The chart checklist and its existing `flag` remain separate reversal context.
+
+This simple raw-return ranking is not the Nifty momentum-index methodology:
+the official Nifty200 Momentum 30 score uses 6- and 12-month returns adjusted
+for volatility and additional index rules. See the
+[Nifty200 Momentum 30 methodology page](https://www.niftyindices.com/indices/equity/strategy-indices/nifty200-momentum-30).
+
 ## What "flagged" means
 
 Each ticker gets a `confidence` score (0-100, weighted) and a `recommendation`
-string — not a single pass/fail. `flag` (bool) is kept only for backward
-compatibility with the Discord alert threshold (4-of-5 weighted checks).
-None of this is a trade signal; it's a ranking of how many boxes a setup
-ticks, meant to cut 100+ tickers down to a handful worth opening a chart on.
+string — not a single pass/fail. `flag` is the existing reversal checklist
+gate (4-of-5 checks), separate from the momentum leaderboard. Neither is a
+trade signal; both are meant to help decide which charts to review.
 
 The 5 checks, weighted (pattern + trend weighted highest, volume lowest):
 1. **Trend defined** (weight 2) — linear regression over the last 15

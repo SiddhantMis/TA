@@ -1,8 +1,9 @@
 """
-Unit tests for candlestick pattern detection. Zero network access needed —
-this is what's actually been verified. The live yfinance fetch path has
-NOT been run (see analyzer.py docstring); test that separately once this
-runs inside GitHub Actions.
+Offline unit tests for candlestick patterns, technical-analysis helpers,
+momentum metrics, and the research harness. No network access is needed.
+The live yfinance fetch path was separately exercised on the full watchlist
+on 2026-10-31 (see analyzer.py docstring); Discord and Actions publishing
+were not part of that run.
 
 Several fixtures below are the real OHLC values checked by hand earlier
 this week — this test suite is partly a regression check that the code
@@ -26,6 +27,61 @@ from analyzer import (
 
 def row(o, h, l, c):
     return pd.Series({"Open": o, "High": h, "Low": l, "Close": c})
+
+
+def test_relative_strength_uses_common_dates_and_exact_12_1_windows():
+    dates = pd.bdate_range("2020-01-01", periods=300)
+    stock_close = 100 * 1.002 ** np.arange(len(dates))
+    market_close = 100 * 1.001 ** np.arange(len(dates))
+    stock = pd.DataFrame({"Close": stock_close}, index=dates)
+    benchmark = pd.DataFrame({"Close": market_close}, index=dates)
+
+    result = analyzer_module.relative_strength_metrics(stock, benchmark)
+    start, end = len(dates) - 253, len(dates) - 22
+    expected_stock = stock_close[end] / stock_close[start] - 1
+    expected_market = market_close[end] / market_close[start] - 1
+    expected_6m = (stock_close[-1] / stock_close[-127] - 1) - (market_close[-1] / market_close[-127] - 1)
+
+    assert result["momentum_12_1_pct"] == round(expected_stock * 100, 2)
+    assert result["benchmark_momentum_12_1_pct"] == round(expected_market * 100, 2)
+    assert result["relative_strength_12_1_pct"] == round((expected_stock - expected_market) * 100, 2)
+    assert result["relative_strength_6m_pct"] == round(expected_6m * 100, 2)
+    assert result["momentum_12_1_end_date"] == dates[end].date().isoformat()
+    assert result["relative_strength_date"] == dates[-1].date().isoformat()
+
+
+def test_relative_strength_reports_short_history_and_disjoint_dates():
+    dates = pd.bdate_range("2024-01-01", periods=150)
+    stock = pd.DataFrame({"Close": np.linspace(100, 130, len(dates))}, index=dates)
+    benchmark = pd.DataFrame({"Close": np.linspace(100, 115, len(dates))}, index=dates)
+    short = analyzer_module.relative_strength_metrics(stock, benchmark)
+    assert short["relative_strength_6m_pct"] is not None
+    assert short["relative_strength_12_1_pct"] is None
+    assert short["momentum_12_1_end_date"] is None
+
+    no_overlap = benchmark.copy()
+    no_overlap.index = no_overlap.index + pd.Timedelta(days=1000)
+    empty = analyzer_module.relative_strength_metrics(stock, no_overlap)
+    assert empty["relative_strength_6m_pct"] is None
+    assert empty["relative_strength_12_1_pct"] is None
+    assert empty["relative_strength_date"] is None
+
+
+def test_relative_strength_ranks_are_watchlist_relative_and_ties_share_rank():
+    results = [
+        {"ticker": "A.NS", "relative_strength_12_1_pct": 5.0},
+        {"ticker": "B.NS", "relative_strength_12_1_pct": 5.0},
+        {"ticker": "C.NS", "relative_strength_12_1_pct": -2.0},
+        {"ticker": "D.NS", "relative_strength_12_1_pct": None},
+    ]
+    ranked = analyzer_module.rank_relative_strength(results)
+    assert [r["ticker"] for r in ranked] == ["A.NS", "B.NS", "C.NS"]
+    assert results[0]["leader_rank"] == results[1]["leader_rank"] == 1
+    assert results[0]["leader_percentile"] == results[1]["leader_percentile"] == 75.0
+    assert results[2]["leader_rank"] == 3
+    assert results[2]["leader_percentile"] == 0.0
+    assert results[3].get("leader_rank") is None
+    assert all(r["leader_universe_size"] == 3 for r in ranked)
 
 
 def _pad_history(n, base=300.0, seed=0):
@@ -618,6 +674,32 @@ def test_build_alert_content_empty_flag_list_unaffected():
     content = build_alert_content([], "(test session)")
     assert "nothing worth a manual look" in content
     assert len(content) <= DISCORD_CONTENT_LIMIT
+
+
+def test_build_alert_content_shows_momentum_leaders_without_reversal_flags():
+    leaders = [{
+        "ticker": "MCX.NS", "leader_rank": 1,
+        "relative_strength_12_1_pct": 87.43,
+        "relative_strength_6m_pct": 11.44,
+    }]
+    content = build_alert_content([], "(test session)", leaders=leaders)
+    assert "MCX.NS" in content
+    assert "+87.4 pp" in content and "+11.4 pp" in content
+    assert "not a validated entry signal" in content
+    assert len(content) <= DISCORD_CONTENT_LIMIT
+
+
+def test_build_alert_content_keeps_momentum_leaders_inside_discord_limit():
+    flagged = [_fake_flag(f"TICKER{i}.NS") for i in range(30)]
+    leaders = [{
+        "ticker": f"LEADER{i}.NS", "leader_rank": i + 1,
+        "relative_strength_12_1_pct": 50.0 - i,
+        "relative_strength_6m_pct": 10.0 - i,
+    } for i in range(10)]
+    content = build_alert_content(flagged, "(test session)", leaders=leaders)
+    assert len(content) <= DISCORD_CONTENT_LIMIT, len(content)
+    assert "LEADER0.NS" in content
+    assert "truncated" in content
 
 
 def test_check_total_failure_fires_when_everything_fails():
