@@ -1032,6 +1032,43 @@ def test_portfolio_end_to_end_smoke():
     assert "-- verdicts" in text and "calendar-year" in text
 
 
+def test_portfolio_liquidity_filter_is_point_in_time():
+    import numpy as np
+    import portfolio as P
+    rng = np.random.default_rng(5)
+    idx = pd.bdate_range("2019-01-01", periods=700)
+    C = pd.DataFrame({f"S{i}": 150 + np.cumsum(rng.normal(0.05, 1, 700)) for i in range(5)}, index=idx)
+    V = pd.DataFrame({f"S{i}": 1e6 * (i + 1) for i in range(5)}, index=idx)      # S0 least liquid
+    ind = P.indicators(C, V, liquid_top=3)
+    assert ind["liquid"].iloc[-1].tolist() == [False, False, True, True, True]
+    assert not bool(ind["valid"].iloc[-1]["S0"])
+    cut = 500
+    V2 = V.copy(); V2.iloc[cut:, 0] *= 1000                                       # S0 becomes huge AFTER the cut
+    a = P.indicators(C, V, 3)["liquid"].iloc[cut - 1]
+    b = P.indicators(C, V2, 3)["liquid"].iloc[cut - 1]
+    assert a.tolist() == b.tolist()                                                # no peeking at future liquidity
+    assert P.indicators(C.iloc[:cut], V.iloc[:cut], 3)["liquid"].iloc[cut - 1].tolist() == a.tolist()
+
+
+def test_portfolio_constituent_urls_and_liquid_smoke():
+    import numpy as np
+    import portfolio as P
+    urls = P.constituent_urls("nifty500")
+    assert len(urls) == 3 and all("ind_nifty500list.csv" in u for u in urls)
+    def mk(seed, n=1200):
+        rng = np.random.default_rng(seed)
+        c = np.abs(100 + np.cumsum(rng.normal(0.06, 1.5, n))) + 20
+        o = c + rng.normal(0, .5, n)
+        return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + 1, "Low": np.minimum(o, c) - 1, "Close": c,
+                             "Volume": 1e6}, index=pd.bdate_range("2019-01-01", periods=n))
+    frames = {}
+    for i in range(8):
+        f = mk(30 + i); f["Volume"] = 1e6 * (i + 1); frames[f"S{i}"] = f
+    bench = mk(98)
+    rets, text = P.run_portfolio(frames, bench["Close"], bench["Open"], "liq", n_hold=3, liquid_top=4)
+    assert "point-in-time top 4" in text and "-- verdicts" in text and not rets.empty
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0
