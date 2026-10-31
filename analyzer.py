@@ -1,44 +1,30 @@
 """
-EOD Technical Screener
+EOD Technical Screener (analyzer.py)
 
 Fetches daily OHLCV via yfinance, computes indicators + candlestick
-patterns per the Zerodha Varsity Module 2 definitions, and applies a
-checklist-based scoring function (mirrors Trade_Evaluation_Sheet.xlsx
-sections 1-5) to flag candidates worth a manual look.
-
-IMPORTANT — what has and hasn't been verified:
-yfinance needs open internet access to Yahoo's finance endpoints. The
-sandbox this was built in does NOT have that access (restricted to
-package registries), so the live data fetch path has NOT been run
-against real data. Pattern-detection math HAS been verified against
-synthetic + real historical OHLC (see test_patterns.py, which runs
-with zero network access and passes). Test fetch_ticker()/run_screen()
-for real inside GitHub Actions or locally before trusting the schedule.
-
-What this does NOT do: decide entries, set stops, or size positions.
-Sections 6-9 of the checklist (risk:reward, position size, time stop)
-are trade-specific and still need to be done by hand once a ticker is
-flagged. This narrows 100+ tickers to a handful worth that manual work
-— it doesn't replace it.
-
-Scoring produces a `confidence` (0-100) and `recommendation` string per
-ticker, not a bare pass/fail — see README "What flagged means" for the
-5 weighted checks and known limits (long-only by construction, check-5
-still correlated with check-1, S/R and trend logic untested on live
-data as of this commit).
+patterns per Zerodha Varsity Module 2 definitions, detects multi-touch
+Support & Resistance zones with touch histories & weekly MTF confluence,
+evaluates causal geometric chart patterns (double bottoms, flags, triangles),
+ranks Relative Strength vs the index, and constructs high-conviction trade plans
+with position sizing for downstream ChatGPT daily tasks and Discord alerts.
 """
 
 from __future__ import annotations
 import json
+import math
 import sys
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Any
 from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
+
+from geo_patterns import detect_all
+from position_sizer import calculate_position_size
+from relative_strength import compute_stock_momentum, RSProfile
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -49,21 +35,13 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
-# Config — edit WATCHLIST to grow/shrink coverage. No other code changes
-# needed to scale from 10 tickers to 100+. Watch YF_SLEEP_SECONDS if you
-# do scale up — yfinance rate-limits, this hasn't been stress-tested past
-# a small list.
+# Config — edit WATCHLIST to grow/shrink coverage.
 # ---------------------------------------------------------------------------
 
 WATCHLIST = [
     "ETERNAL.NS", "DLF.NS", "IEX.NS", "UTTAMSUGAR.NS",
     "IDFCFIRSTB.NS", "BANDHANBNK.NS", "CENTRALBK.NS",
     "HDFCBANK.NS", "TITAN.NS", "MCX.NS", "BSE.NS",
-    # added from Kite watchlist group 2 — see conversation for the
-    # 4 flagged uncertainties (GOLDBEES/SILVERBEES are commodity ETFs,
-    # not equities; ARE&M has an unverified special character; TMPV is
-    # an OCR guess; IDEA/JUBLFOOD showed as BSE-listed in the source
-    # screenshot but are added here as .NS for consistency)
     "LT.NS", "GOLDBEES.NS", "SILVERBEES.NS", "ADANIENSOL.NS",
     "ADANIENT.NS", "ADANIGREEN.NS", "ADANIPORTS.NS", "ADANIPOWER.NS",
     "VOLTAS.NS", "BAJAJHFL.NS", "PFC.NS", "IDEA.NS", "PNB.NS",
@@ -75,42 +53,15 @@ WATCHLIST = [
     "RELIANCE.NS", "COALINDIA.NS",
 ]
 
-LOOKBACK_PERIOD = "2y"          # yfinance's own vocabulary (1d/5d/1mo/.../2y/5y/max) -
-                                 # an arbitrary "730d" string isn't in that documented
-                                 # set and isn't worth the risk of finding out it's
-                                 # handled differently from the small values already
-                                 # tested against real data
-SR_WINDOW = 20                  # legacy rolling min/max — kept only as a fallback
-SR_LOOKBACK = 480                # ~2 years of trading days for pivot-based S/R.
-                                 # TREND_WINDOW below is deliberately NOT changed —
-                                 # short-term momentum and multi-year S/R are different
-                                 # questions; conflating them would break the trend
-                                 # read, not improve it. SR_MAX_DISTANCE_PCT already
-                                 # filters out old levels that are no longer near
-                                 # price, so age isn't a separate problem to solve —
-                                 # a level from 18 months ago only survives the filter
-                                 # if it's still relevant today.
-PIVOT_WINDOW = 3                # bars each side that must be higher/lower for a pivot
+LOOKBACK_PERIOD = "2y"          # yfinance's vocabulary (2y)
+SR_WINDOW = 20                  # legacy rolling min/max fallback
+SR_LOOKBACK = 480               # ~2 years of trading days for pivot-based S/R
+PIVOT_WINDOW = 3                # bars each side for local pivot
 CLUSTER_TOLERANCE_PCT = 0.015   # pivots within 1.5% of each other = same zone
-SR_MAX_DISTANCE_PCT = 0.05      # ignore a zone more than 5% from current close
-SR_LEVELS_PER_SIDE = 3          # how many support/resistance levels to report
-                                 # per side for display (S1/S2/S3, R1/R2/R3).
-                                 # Unrelated to SR_MAX_DISTANCE_PCT above --
-                                 # that filter is what score_ticker's checklist
-                                 # trades against (proximity matters for a
-                                 # signal), this is for seeing the ladder
-                                 # regardless of distance, which is the entire
-                                 # point of asking for S2/S3.
+SR_MAX_DISTANCE_PCT = 0.05      # ignore zone >5% from current close for checklist
+SR_LEVELS_PER_SIDE = 3          # how many support/resistance levels to report in ladder
 SUPPORT_PROXIMITY_PCT = 0.02
-SR_TOUCH_STRENGTH_CAP = 5       # touches at/above this get full confidence
-                                 # credit for the S/R check; below it,
-                                 # credit scales linearly. Picked as a
-                                 # round number, not derived from
-                                 # anything -- same caveat as every
-                                 # other constant in this file: not
-                                 # backtested, revisit if the forward-
-                                 # return log ever has enough data to
-                                 # say whether this cap is remotely right.
+SR_TOUCH_STRENGTH_CAP = 5       # touches at/above this get full confidence credit
 VOLUME_MA_WINDOW = 20
 RSI_WINDOW = 14
 EMA_SHORT = 20
@@ -120,18 +71,16 @@ TREND_MIN_R2 = 0.35              # minimum linear fit quality to call it a trend
 TREND_SLOPE_PCT_THRESHOLD = 0.0015  # min |slope|/mean(close) per bar to not be "choppy"
 YF_SLEEP_SECONDS = 1.5
 
-# --- Trade plan gate (checklist section 6, R:R, moved into code) -------------
-# Starting values, NOT your sheet's numbers: set MIN_RR / MAX_RISK_PCT to match
-# Trade_Evaluation_Sheet.xlsx. backtest.py shows what each setting costs or earns.
+# --- Trade plan gate (checklist section 6, R:R) ------------------------------
 MIN_RR = 2.0                  # reward:risk to the chosen target must be at least this
 MAX_RISK_PCT = 0.08           # skip if entry-to-stop is wider than this fraction of entry
-ENTRY_BUFFER_PCT = 0.001      # buy-stop sits this far above the signal candle's high
-STOP_BUFFER_PCT = 0.005       # stop sits this far under the lower of candle low / support
+ENTRY_BUFFER_PCT = 0.001      # buy-stop sits this far above signal candle's high
+STOP_BUFFER_PCT = 0.005       # stop sits this far under lower of candle low / support
 TARGET_LADDER_INDEX = 0       # 0 = nearest resistance above entry, 1 = the one after it
 
 
 # ---------------------------------------------------------------------------
-# Indicators — same formulas as TA_Notes.md Ch.12/13
+# Indicators
 # ---------------------------------------------------------------------------
 
 def compute_indicators(df: pd.DataFrame) -> pd.DataFrame:
@@ -140,37 +89,25 @@ def compute_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["sma50"] = df["Close"].rolling(SMA_MED).mean()
     df["vol_ma20"] = df["Volume"].rolling(VOLUME_MA_WINDOW).mean()
 
-    # RSI: Wilder's original smoothing (alpha = 1/N), not a plain SMA of
-    # gains/losses. The previous version used .rolling().mean(), a
-    # different, non-standard formula that won't match RSI on any
-    # standard charting platform. min_periods seeds the first value with
-    # a simple average, matching Wilder's bootstrap.
+    # Wilder's original smoothing (alpha = 1/N)
     delta = df["Close"].diff()
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
     avg_gain = gain.ewm(alpha=1 / RSI_WINDOW, adjust=False, min_periods=RSI_WINDOW).mean()
     avg_loss = loss.ewm(alpha=1 / RSI_WINDOW, adjust=False, min_periods=RSI_WINDOW).mean()
-    # avg_loss == 0 means zero down-bars in the smoothing window (a clean
-    # run of gains) -- that's RSI=100 by definition, not an undefined
-    # division. Only avg_gain==avg_loss==0 (no movement at all) is truly
-    # undefined; leave that as NaN rather than fabricating 50.
     rs = avg_gain / avg_loss.replace(0, np.nan)
     rsi = 100 - (100 / (1 + rs))
     rsi = rsi.where(~((avg_loss == 0) & (avg_gain > 0)), 100.0)
     df["rsi14"] = rsi
 
-    # Legacy rolling min/max — retained only as a fallback for score_ticker
-    # when pivot-based S/R (get_sr_levels) finds no usable cluster.
+    # Legacy rolling min/max fallback
     df["support"] = df["Low"].rolling(SR_WINDOW).min()
     df["resistance"] = df["High"].rolling(SR_WINDOW).max()
     return df
 
 
 # ---------------------------------------------------------------------------
-# Candlestick patterns — pure OHLC math, same checks done by hand on
-# HDFCBANK/ETERNAL/MCX earlier this week. Thresholds are approximations
-# (Ch.4 Rule 2: "be flexible, quantify") — not a substitute for eyeballing
-# a flagged candle before acting on it.
+# Candlestick patterns
 # ---------------------------------------------------------------------------
 
 def _body(row) -> float:
@@ -206,7 +143,7 @@ def classify_single(row) -> Optional[str]:
             return "doji"
 
     if b > 0 and lw >= 2 * b and uw <= 0.5 * lw:
-        return "hammer_or_hanging_man"   # direction resolved by prior trend in score_ticker()
+        return "hammer_or_hanging_man"
     if b > 0 and uw >= 2 * b and lw <= 0.5 * uw:
         return "shooting_star_or_inverted_hammer"
 
@@ -234,16 +171,6 @@ def classify_two_candle(prev, curr) -> Optional[str]:
 
 
 def _harami(prev, curr) -> Optional[str]:
-    """Harami: curr's real body sits entirely inside prev's real body, and
-    is meaningfully smaller (< 50% of prev's body) — an "inside candle"
-    signaling the prior move has lost conviction. Direction is read off
-    prev's color, not curr's: a big red candle (prev) followed by a small
-    contained candle is a bullish Harami regardless of whether that small
-    candle itself closed up or down.
-
-    Weaker signal than engulfing/piercing by construction — it's "the move
-    stalled," not "the move reversed." Flagged as lower-conviction in
-    score_ticker's notes, not scored differently here."""
     prev_top, prev_bot = max(prev["Open"], prev["Close"]), min(prev["Open"], prev["Close"])
     curr_top, curr_bot = max(curr["Open"], curr["Close"]), min(curr["Open"], curr["Close"])
     prev_body = prev_top - prev_bot
@@ -261,25 +188,14 @@ def _harami(prev, curr) -> Optional[str]:
 
 
 def classify_three_candle(c1, c2, c3) -> Optional[str]:
-    """Morning Star (bullish) / Evening Star (bearish): a decisive candle,
-    a small-bodied "star" that stalls the move, then a decisive candle back
-    the other way that closes past the midpoint of candle 1's body.
-
-    Deliberately NOT requiring a gap between candles — Indian cash-equity
-    names frequently don't gap the way the textbook US-market version of
-    this pattern assumes; the "star" (small body, low conviction) plus the
-    third candle's close reclaiming candle 1's midpoint is treated as the
-    load-bearing part of the definition. This is a real loosening of the
-    textbook rule, not an oversight — worth knowing if you're cross-checking
-    against a source that requires the gap."""
     def body_ratio(row):
         rng = row["High"] - row["Low"]
         return (abs(row["Close"] - row["Open"]) / rng) if rng > 0 else 0.0
 
     if body_ratio(c1) < 0.5 or body_ratio(c3) < 0.5:
-        return None  # c1 and c3 must be decisive candles, not indecision
+        return None
     if body_ratio(c2) >= 0.35:
-        return None  # c2 must be a small-bodied "star"
+        return None
 
     c1_mid = (c1["Open"] + c1["Close"]) / 2
 
@@ -291,19 +207,9 @@ def classify_three_candle(c1, c2, c3) -> Optional[str]:
 
 
 def trend_metrics(df: pd.DataFrame, idx: int, window: int = TREND_WINDOW) -> Optional[dict]:
-    """Linear regression of Close over the `window` bars immediately
-    before idx (idx itself excluded). Returns slope normalized to
-    %/bar and R^2 as a fit-quality/confidence measure.
-
-    Replaces the old higher-high/lower-high counting method, which
-    counted direction changes but never measured magnitude or
-    consistency — a stock chopping +1/-1 nine times then +8 once
-    scored identically to one that rallied steadily, as long as the
-    up-count edged out the down-count by the 1.3x cutoff.
-    """
     if idx < window:
         return None
-    seg = df.iloc[idx - window: idx]
+    seg = df.iloc[idx - window : idx]
     y = seg["Close"].values.astype(float)
     x = np.arange(len(y), dtype=float)
     slope, intercept = np.polyfit(x, y, 1)
@@ -316,11 +222,6 @@ def trend_metrics(df: pd.DataFrame, idx: int, window: int = TREND_WINDOW) -> Opt
 
 
 def trend_direction(df: pd.DataFrame, idx: int, window: int = TREND_WINDOW) -> str:
-    """Direction label derived from trend_metrics. Requires BOTH a slope
-    beyond TREND_SLOPE_PCT_THRESHOLD and a fit quality (R^2) above
-    TREND_MIN_R2 — low R^2 means the "slope" is being dragged by noise
-    or a couple of outlier bars, not a real drift, and gets called
-    choppy regardless of sign."""
     m = trend_metrics(df, idx, window)
     if m is None:
         return "insufficient_data"
@@ -334,36 +235,19 @@ def trend_direction(df: pd.DataFrame, idx: int, window: int = TREND_WINDOW) -> s
 
 
 # ---------------------------------------------------------------------------
-# Support/resistance — pivot clustering. The old approach was
-# df["Low"].rolling(20).min(): a level counts as "support" even if price
-# touched it exactly once, on the single lowest day of the window, and
-# it changes every bar as the window slides. That's not what a trader
-# means by a support zone. This finds local swing lows/highs, clusters
-# ones that sit within CLUSTER_TOLERANCE_PCT of each other, and treats
-# a cluster's touch count as a rough confidence signal — a level tested
-# 3 times is more credible than one touched once.
+# Support/resistance — Pivot clustering with touch tracking
 # ---------------------------------------------------------------------------
 
 def _find_pivots(values: np.ndarray, window: int, mode: str) -> list[float]:
-    """mode='low' finds swing lows (local minima), mode='high' finds
-    swing highs. A point qualifies only if it's the extreme value in
-    its full window on both sides AND that window isn't perfectly
-    flat -- if every value in the window is equal, there's no genuine
-    local extreme to point to, and the previous version of this check
-    (values[i] == seg.min()) would have every interior bar of a flat
-    plateau satisfy that trivially, registering one 'pivot' per bar
-    instead of recognizing there's no real swing point at all. This
-    isn't just a synthetic-data edge case: a circuit-frozen NSE
-    session can produce several consecutive days with Open=High=Low=
-    Close, which would hit exactly this path on real data."""
+    """mode='low' finds swing lows (local minima), mode='high' finds swing highs."""
     pivots = []
     n = len(values)
     i = window
     while i < n - window:
-        seg = values[i - window: i + window + 1]
+        seg = values[i - window : i + window + 1]
         if seg.max() == seg.min():
             i += 1
-            continue  # flat window -- no genuine local extreme, not one pivot per bar
+            continue
         found = False
         if mode == "low" and values[i] == seg.min():
             pivots.append(float(values[i]))
@@ -374,6 +258,54 @@ def _find_pivots(values: np.ndarray, window: int, mode: str) -> list[float]:
         if found:
             pivot_value = values[i]
             while i < n - window and values[i] == pivot_value:
+                i += 1
+        else:
+            i += 1
+    return pivots
+
+
+def _find_pivots_detailed(df_seg: pd.DataFrame, start_offset: int, window: int, mode: str) -> list[dict]:
+    """Finds pivots with exact bar index, timestamp, and candle metrics."""
+    values = df_seg["Low" if mode == "low" else "High"].values.astype(float)
+    highs = df_seg["High"].values.astype(float)
+    lows = df_seg["Low"].values.astype(float)
+    opens = df_seg["Open"].values.astype(float)
+    closes = df_seg["Close"].values.astype(float)
+
+    n = len(values)
+    i = window
+    pivots = []
+    while i < n - window:
+        seg_vals = values[i - window : i + window + 1]
+        if seg_vals.max() == seg_vals.min():
+            i += 1
+            continue
+        found = False
+        if mode == "low" and values[i] == seg_vals.min():
+            found = True
+        elif mode == "high" and values[i] == seg_vals.max():
+            found = True
+
+        if found:
+            pivot_val = float(values[i])
+            bar_rng = max(highs[i] - lows[i], 1e-6)
+            if mode == "low":
+                wick = min(opens[i], closes[i]) - lows[i]
+            else:
+                wick = highs[i] - max(opens[i], closes[i])
+            wick_ratio = max(0.0, min(1.0, wick / bar_rng))
+
+            abs_idx = start_offset + i
+            date_str = str(df_seg.index[i].date()) if hasattr(df_seg.index[i], "date") else str(df_seg.index[i])
+
+            pivots.append({
+                "price": pivot_val,
+                "abs_idx": abs_idx,
+                "date": date_str,
+                "wick_ratio": round(float(wick_ratio), 2),
+                "mode": mode,
+            })
+            while i < n - window and values[i] == pivot_val:
                 i += 1
         else:
             i += 1
@@ -396,36 +328,84 @@ def _cluster_levels(prices: list[float], tolerance_pct: float) -> list[dict]:
     return [{"level": float(np.mean(c)), "touches": len(c)} for c in clusters]
 
 
+def _cluster_levels_detailed(pivots: list[dict], current_close: float, tolerance_pct: float, current_idx: int) -> list[dict]:
+    if not pivots:
+        return []
+    pivots_sorted = sorted(pivots, key=lambda x: x["price"])
+    clusters, current = [], [pivots_sorted[0]]
+
+    for p in pivots_sorted[1:]:
+        anchor = current[0]["price"]
+        if abs(p["price"] - anchor) / anchor <= tolerance_pct:
+            current.append(p)
+        else:
+            clusters.append(current)
+            current = [p]
+    clusters.append(current)
+
+    out = []
+    for c in clusters:
+        prices = [x["price"] for x in c]
+        level = float(np.mean(prices))
+        c_by_time = sorted(c, key=lambda x: x["abs_idx"])
+        dates = [x["date"] for x in c_by_time]
+        days_ago = [current_idx - x["abs_idx"] for x in c_by_time]
+        modes = [x["mode"] for x in c_by_time]
+
+        role_reversal = ("low" in modes and "high" in modes)
+        avg_wick = np.mean([x["wick_ratio"] for x in c])
+
+        if avg_wick >= 0.35:
+            quality = "High"
+        elif avg_wick >= 0.20:
+            quality = "Moderate"
+        else:
+            quality = "Tentative"
+
+        out.append({
+            "level": round(level, 2),
+            "touches": len(c),
+            "touch_dates": dates,
+            "days_ago": days_ago,
+            "bounce_quality": quality,
+            "role_reversal": role_reversal,
+            "weekly_confluence": False,
+        })
+    return out
+
+
 def get_sr_levels(df: pd.DataFrame, idx: int) -> dict:
-    """Returns nearest credible support (below close) and resistance
-    (above close) using pivot clustering over the SR_LOOKBACK bars
-    before idx, PLUS a ranked ladder of up to SR_LEVELS_PER_SIDE levels
-    on each side (S1 = nearest below, S2 = next below that, etc.).
-
-    The single nearest/level fields still only count within
-    SR_MAX_DISTANCE_PCT -- that's what score_ticker's checklist trades
-    against. The ladder is NOT constrained by that filter, on purpose:
-    seeing S2/S3 regardless of distance is the whole point of asking
-    for them, not something to clip to a 5% band.
-
-    touches is None (not 0) whenever a level came from the rolling-
-    min/max fallback rather than a real pivot cluster -- a real cluster
-    always has >=1 member, so touches=0 could never legitimately mean
-    "a confirmed zone with zero confirmations." 0 was ambiguous with
-    "thin but real"; None isn't. The ladder has no fallback equivalent
-    at all: if there's no second cluster, there's no S2, full stop --
-    the fallback exists so score_ticker's checklist has *something* to
-    check proximity against, not to manufacture display levels that
-    aren't backed by any real pivot.
-    """
+    """Returns nearest credible support/resistance plus ranked ladders with touch dates & bounce quality."""
     start = max(0, idx - SR_LOOKBACK)
-    seg = df.iloc[start:idx]  # excludes idx itself, same convention as trend_metrics
-    close = float(df.iloc[idx]["Close"])
+    seg = df.iloc[start:idx]
+    close = float(df.iloc[idx]["Close"]) if not np.isnan(df.iloc[idx]["Close"]) else 0.0
 
-    low_pivots = _find_pivots(seg["Low"].values, PIVOT_WINDOW, "low")
-    high_pivots = _find_pivots(seg["High"].values, PIVOT_WINDOW, "high")
-    support_clusters = _cluster_levels(low_pivots, CLUSTER_TOLERANCE_PCT)
-    resistance_clusters = _cluster_levels(high_pivots, CLUSTER_TOLERANCE_PCT)
+    low_pivots_detail = _find_pivots_detailed(seg, start, PIVOT_WINDOW, "low")
+    high_pivots_detail = _find_pivots_detailed(seg, start, PIVOT_WINDOW, "high")
+
+    # Combine for role-reversal detection
+    all_pivots = low_pivots_detail + high_pivots_detail
+    all_clusters = _cluster_levels_detailed(all_pivots, close, CLUSTER_TOLERANCE_PCT, idx)
+
+    # Separate into support (<= close) and resistance (>= close)
+    support_clusters = [c for c in all_clusters if c["level"] <= close]
+    resistance_clusters = [c for c in all_clusters if c["level"] >= close]
+
+    # Weekly chart confluence check if enough history
+    if idx >= 60 and isinstance(df.index, pd.DatetimeIndex):
+        try:
+            weekly = df.iloc[:idx].resample("W-FRI").agg({"High": "max", "Low": "min"}).dropna()
+            if len(weekly) >= 8:
+                w_highs = weekly["High"].values
+                w_lows = weekly["Low"].values
+                w_pivots = _find_pivots(w_highs, 2, "high") + _find_pivots(w_lows, 2, "low")
+                for c in all_clusters:
+                    for wp in w_pivots:
+                        if abs(c["level"] - wp) / wp <= 0.02:
+                            c["weekly_confluence"] = True
+                            break
+        except Exception:
+            pass
 
     def nearest(clusters, side):
         candidates = [c for c in clusters if (c["level"] <= close if side == "support" else c["level"] >= close)]
@@ -440,37 +420,46 @@ def get_sr_levels(df: pd.DataFrame, idx: int) -> dict:
     def ladder(clusters, side, n):
         candidates = [c for c in clusters if (c["level"] <= close if side == "support" else c["level"] >= close)]
         candidates.sort(key=lambda c: abs(close - c["level"]))
-        return [{"level": round(c["level"], 2), "touches": c["touches"]} for c in candidates[:n]]
+        return [{
+            "level": round(c["level"], 2),
+            "touches": c["touches"],
+            "touch_dates": c.get("touch_dates", []),
+            "days_ago": c.get("days_ago", []),
+            "bounce_quality": c.get("bounce_quality", "Moderate"),
+            "role_reversal": c.get("role_reversal", False),
+            "weekly_confluence": c.get("weekly_confluence", False),
+        } for c in candidates[:n]]
 
     support = nearest(support_clusters, "support")
     resistance = nearest(resistance_clusters, "resistance")
+
     return {
         "support": support["level"] if support else None,
         "support_touches": support["touches"] if support else None,
+        "support_dates": support["touch_dates"] if support else [],
+        "support_days_ago": support["days_ago"] if support else [],
+        "support_quality": support["bounce_quality"] if support else None,
+        "support_role_reversal": support["role_reversal"] if support else False,
+        "support_weekly_confluence": support["weekly_confluence"] if support else False,
         "resistance": resistance["level"] if resistance else None,
         "resistance_touches": resistance["touches"] if resistance else None,
+        "resistance_dates": resistance["touch_dates"] if resistance else [],
+        "resistance_days_ago": resistance["days_ago"] if resistance else [],
+        "resistance_quality": resistance["bounce_quality"] if resistance else None,
+        "resistance_role_reversal": resistance["role_reversal"] if resistance else False,
+        "resistance_weekly_confluence": resistance["weekly_confluence"] if resistance else False,
         "support_ladder": ladder(support_clusters, "support", SR_LEVELS_PER_SIDE),
         "resistance_ladder": ladder(resistance_clusters, "resistance", SR_LEVELS_PER_SIDE),
     }
 
 
 # ---------------------------------------------------------------------------
-# Checklist scoring — mirrors Trade_Evaluation_Sheet.xlsx sections 1-5.
-# Sections 6-9 (R:R, position size, time stop, post-trade log) are
-# deliberately NOT here — those need an entry/stop you set by hand.
+# Trade Plan Construction & Gate
 # ---------------------------------------------------------------------------
 
 def build_trade_plan(signal_high: float, signal_low: float, support: Optional[float],
                      resistance_ladder: list) -> dict:
-    """Entry / stop / target from the signal candle and the S/R ladder.
-
-    Entry is a buy-stop just above the signal candle's high: the next session
-    has to take that high out before you are in, so a reversal pattern needs
-    follow-through instead of being bought blind at the close.
-    Stop sits under the lower of the candle's low and the support zone.
-    Target is the TARGET_LADDER_INDEX-th resistance level above entry.
-    trade_ok is the R:R / risk gate; why_not says which part failed.
-    """
+    """Entry / stop / target from the signal candle and S/R ladder."""
     entry = signal_high * (1 + ENTRY_BUFFER_PCT)
     stop_base = signal_low if support is None else min(signal_low, support)
     stop = stop_base * (1 - STOP_BUFFER_PCT)
@@ -490,12 +479,23 @@ def build_trade_plan(signal_high: float, signal_low: float, support: Optional[fl
     elif rr < MIN_RR:
         why_not = f"R:R {rr:.1f} to nearest target (need {MIN_RR:.1f})"
 
+    # Calculate position sizing guide
+    sizing = None
+    if why_not is None and target is not None:
+        try:
+            sizing = calculate_position_size(entry, stop, target)
+        except Exception:
+            sizing = None
+
     return {
         "entry": round(entry, 2), "stop": round(stop, 2),
         "target": round(target, 2) if target is not None else None,
         "risk_pct": round(risk_pct, 4) if risk_pct is not None else None,
         "rr": round(rr, 2) if rr is not None else None,
         "trade_ok": why_not is None, "why_not": why_not,
+        "suggested_shares": sizing.shares if sizing else None,
+        "capital_required": sizing.capital_required if sizing else None,
+        "risk_amount_rupees": sizing.risk_amount if sizing else None,
     }
 
 
@@ -527,17 +527,48 @@ class ScreenResult:
     recommendation: str
     notes: list[str]
     flag: bool
-    # Trade plan (build_trade_plan). `flag` is still the pattern/checklist gate;
-    # `trade_ok` is the R:R gate. main.py treats flag AND trade_ok as actionable.
     entry: Optional[float] = None
     stop: Optional[float] = None
     target: Optional[float] = None
     risk_pct: Optional[float] = None
     rr: Optional[float] = None
     trade_ok: bool = False
+    # Enhanced S/R tracking
+    support_dates: list = field(default_factory=list)
+    support_days_ago: list = field(default_factory=list)
+    support_quality: Optional[str] = None
+    support_role_reversal: bool = False
+    support_weekly_confluence: bool = False
+    resistance_dates: list = field(default_factory=list)
+    resistance_days_ago: list = field(default_factory=list)
+    resistance_quality: Optional[str] = None
+    resistance_role_reversal: bool = False
+    resistance_weekly_confluence: bool = False
+    # Geometric patterns (from geo_patterns.py)
+    geo_pattern: Optional[str] = None
+    geo_pattern_key: Optional[float] = None
+    geo_pattern_target: Optional[float] = None
+    geo_pattern_stop: Optional[float] = None
+    geo_pattern_status: Optional[str] = None
+    # Relative Strength & Market Leader Ranking
+    rs_rank: Optional[int] = None
+    rs_percentile: Optional[float] = None
+    rs_trend: Optional[str] = None
+    is_leader: bool = False
+    # Position sizing guide
+    suggested_shares: Optional[int] = None
+    capital_required: Optional[float] = None
+    risk_amount_rupees: Optional[float] = None
+    # ChatGPT Daily Task prompts
+    ai_audit_prompt: Optional[str] = None
+    ai_veto_checklist: Optional[str] = None
 
 
-def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
+def score_ticker(
+    df: pd.DataFrame,
+    ticker: str,
+    rs_profile: Optional[RSProfile] = None,
+) -> Optional[ScreenResult]:
     df = compute_indicators(df)
     if len(df) < max(SMA_MED, TREND_WINDOW, SR_LOOKBACK) + 2:
         return None
@@ -547,18 +578,19 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     prev = df.iloc[idx - 1]
     prev2 = df.iloc[idx - 2] if idx >= 2 else None
 
+    # Safe close price
+    raw_close = curr["Close"]
+    if np.isnan(raw_close) or raw_close <= 0:
+        valid_closes = df["Close"].dropna()
+        close_val = round(float(valid_closes.iloc[-1]), 2) if not valid_closes.empty else 0.0
+    else:
+        close_val = round(float(raw_close), 2)
+
     trend = trend_direction(df, idx)
     tmetrics = trend_metrics(df, idx)
     trend_r2 = round(tmetrics["r2"], 2) if tmetrics else None
 
-    # Precedence: 3-candle beats 2-candle beats single. More candles
-    # agreeing on the same read is a stronger claim than one candle's
-    # shape. But compute all three regardless of which one wins — a loose
-    # 3-candle match (Morning/Evening Star, no gap required) can suppress
-    # a cleaner, already-validated 2-candle or single-candle match on the
-    # exact same bar just by running first. "Check the flag manually"
-    # only works if the report shows what got suppressed, not just the
-    # winner.
+    # Candlestick pattern precedence: 3-candle > 2-candle > single
     three_candle = classify_three_candle(prev2, prev, curr) if prev2 is not None else None
     two_candle = classify_two_candle(prev, curr)
     single = classify_single(curr)
@@ -572,14 +604,7 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     if pattern in ("bullish_engulfing", "piercing_pattern", "bullish_marubozu", "morning_star", "bullish_harami"):
         pattern_ok = trend in ("downtrend", "choppy")
     elif pattern in ("hammer_or_hanging_man", "shooting_star_or_inverted_hammer"):
-        pattern_ok = trend == "downtrend"  # Hanging Man (uptrend case) is a warning, not a signal here
-    # No bearish-pattern branch exists (bearish_engulfing, dark_cloud_cover,
-    # bearish_marubozu, evening_star,
-    # bearish_harami always fall through to pattern_ok=False). Deliberate,
-    # not a scope bug: this trades cash equity delivery, not F&O — there's
-    # no mechanism to carry a short position overnight, so a bearish signal
-    # has nothing to attach an action to. Revisit only if a derivatives
-    # account enters the picture.
+        pattern_ok = trend == "downtrend"
 
     sr = get_sr_levels(df, idx)
     support = sr["support"]
@@ -588,10 +613,7 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     resistance_touches = sr["resistance_touches"]
     support_ladder = sr["support_ladder"]
     resistance_ladder = sr["resistance_ladder"]
-    # fallback to legacy rolling min if pivot clustering found nothing usable.
-    # touches stays None here, not 0 -- a real cluster always has >=1 member,
-    # so 0 could never mean "confirmed zone, zero confirmations." None is the
-    # only value that unambiguously means "not a real tested level."
+
     used_fallback_support = False
     used_fallback_resistance = False
     if support is None and not np.isnan(curr["support"]):
@@ -604,29 +626,14 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         used_fallback_resistance = True
 
     near_support = bool(
-        support is not None and support > 0 and
-        abs(float(curr["Close"]) - support) / support <= SUPPORT_PROXIMITY_PCT
+        support is not None and support > 0 and close_val > 0 and
+        abs(close_val - support) / support <= SUPPORT_PROXIMITY_PCT
     )
 
-    # Support strength scales with touch count -- Ch.11: "the more
-    # touches, the stronger the level." A real pivot-confirmed zone
-    # with 1 touch and one with 6 touches previously contributed the
-    # exact same weight to confidence; only near_support's raw True/
-    # False mattered. This affects confidence only, not the pass/fail
-    # gate itself (checks[2] stays a plain boolean below, so `flag`'s
-    # logic is untouched) -- it's specifically about how much a real
-    # support level should move the needle, not whether it counts.
-    #
-    # Fallback levels stay binary on purpose (kept as-is, not changed):
-    # they're not from real pivot clustering, so there's no touch
-    # count to scale by -- min(0 touches out of 5) would always score
-    # a fallback level as near-worthless even when it's the best signal
-    # available, which isn't what "leave the fallback case alone,
-    # just keep it labeled" was asking for.
     if near_support and not used_fallback_support and support_touches is not None:
         support_strength = min(support_touches, SR_TOUCH_STRENGTH_CAP) / SR_TOUCH_STRENGTH_CAP
     elif near_support:
-        support_strength = 1.0  # fallback or unscaled -- binary, per the decision to leave #3 as-is
+        support_strength = 1.0
     else:
         support_strength = 0.0
 
@@ -634,24 +641,12 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         curr["Volume"] / curr["vol_ma20"]
         if curr["vol_ma20"] and not np.isnan(curr["vol_ma20"]) else np.nan
     )
-    # bool(...) wrapper matters: a numpy.float64 comparison returns
-    # numpy.bool_, which leaks into sum()/json.dumps and silently
-    # stringifies ("checks_passed": "2" instead of 2). See commit 966e7dd.
     volume_ok = bool(not np.isnan(vol_ratio) and vol_ratio >= 1.0)
 
-    above_ema20 = bool(curr["Close"] > curr["ema20"])
-    above_sma50 = bool(curr["Close"] > curr["sma50"]) if not np.isnan(curr["sma50"]) else False
+    above_ema20 = bool(close_val > curr["ema20"]) if not np.isnan(curr["ema20"]) else False
+    above_sma50 = bool(close_val > curr["sma50"]) if not np.isnan(curr["sma50"]) else False
 
     rsi_val = float(curr["rsi14"]) if not np.isnan(curr["rsi14"]) else None
-    # Check 5 used to be "above both MAs" unconditionally, then briefly
-    # "below both MAs when trend is downtrend" — but trend_direction()
-    # is itself derived from price, and audit (500 synthetic walks)
-    # showed downtrend and below-both-MAs coincide ~84% of the time.
-    # Counting both as separate checks mostly double-counts the same
-    # information. RSI is a different input (momentum, not price level),
-    # so it adds independent evidence: in a downtrend context, RSI <=45
-    # supports the "selling is exhausted" reversal thesis without just
-    # restating "price is below its averages" a second time.
     if trend == "downtrend":
         rsi_confirms = rsi_val is not None and rsi_val <= 45
     elif trend == "choppy":
@@ -660,25 +655,18 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         rsi_confirms = False
 
     checks = [
-        trend in ("uptrend", "downtrend"),   # 1. defined trend (regression R^2 above threshold)
-        bool(pattern) and pattern_ok,        # 2. pattern present, matches context
-        near_support,                        # 3. near a pivot-confirmed S/R zone
-        volume_ok,                           # 4. volume confirms
-        rsi_confirms,                        # 5. momentum (RSI) agrees with the reversal read
+        trend in ("uptrend", "downtrend"),
+        bool(pattern) and pattern_ok,
+        near_support,
+        volume_ok,
+        rsi_confirms,
     ]
-    # Checks aren't equally informative — pattern presence and a defined
-    # trend are the core structural claims; proximity to a real S/R zone
-    # matters more than a single day's volume ratio, which is noisy.
     weights = [2.0, 2.0, 1.5, 1.0, 1.0]
     total_weight = sum(weights)
     passed = int(sum(checks))
-    # check index 2 (near_support) uses support_strength instead of a
-    # flat weight -- a 1-touch level and a 6-touch level both satisfy
-    # the boolean gate the same way, but shouldn't move confidence the
-    # same amount.
     weighted = sum(
-        (support_strength * w if idx == 2 else w)
-        for idx, (c, w) in enumerate(zip(checks, weights)) if c
+        (support_strength * w if idx_c == 2 else w)
+        for idx_c, (c, w) in enumerate(zip(checks, weights)) if c
     )
     confidence = round(100 * weighted / total_weight, 1)
 
@@ -694,9 +682,15 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     if not pattern_ok and pattern is not None:
         notes.append(f"pattern '{pattern}' detected but doesn't match trend context — not scored as a signal")
     if pattern in ("bullish_harami", "bearish_harami"):
-        notes.append("Harami is a lower-conviction reversal signal than engulfing/piercing — the inside candle only shows the prior move stalling, not reversing; wants more confirmation before acting on it alone")
+        notes.append("Harami is a lower-conviction reversal signal than engulfing/piercing")
     if suppressed:
-        notes.append(f"'{suppressed}' also matched on this candle but was suppressed by 3-candle precedence ({pattern}) — check both by hand before deciding which read to trust")
+        notes.append(f"'{suppressed}' also matched on this candle but was suppressed by 3-candle precedence ({pattern})")
+
+    # Add S/R notes if high-conviction structural features present
+    if sr.get("support_weekly_confluence"):
+        notes.append("support level has major weekly chart confluence")
+    if sr.get("support_role_reversal"):
+        notes.append("support was previously a major resistance level (role reversal / polarity flip)")
 
     data_date = curr.name.date() if hasattr(curr.name, "date") else None
     data_stale_days = None
@@ -705,25 +699,9 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         if data_stale_days > 1:
             notes.append(
                 f"data is {data_stale_days} trading day(s) old, not the most recent close — "
-                f"yfinance likely hadn't posted the newer session at fetch time. This flag/score "
-                f"is based on stale data, not a same-day snapshot."
+                f"yfinance likely hadn't posted the newer session at fetch time."
             )
 
-    # Advisory threshold, not a decision: this narrows the watchlist to
-    # what's worth the manual checklist (sections 6-9: R:R, position
-    # size, time stop) — it does not tell you to enter anything.
-    #
-    # worth_manual_look is THE gate — used for both flag and the top
-    # recommendation tier below. Previously these were two separate
-    # conditions (flag: pattern gate + raw passed>=4; recommendation:
-    # confidence>=75 + checks[0]+checks[1]) that could disagree: a
-    # result could show flag=true (highlighted on the page) while its
-    # own recommendation text said "Borderline" -- directly
-    # self-contradictory to whoever's reading it. JIOFIN.NS on the
-    # 2026-07-07 run hit exactly this (confidence 73.3, just under the
-    # old 75 threshold, checks[0] failing because "choppy" doesn't
-    # count as a defined trend even though it's a valid pattern
-    # context) -- flagged and labeled "Borderline" at the same time.
     worth_manual_look = bool(pattern is not None and pattern_ok and passed >= 4)
 
     if worth_manual_look:
@@ -737,11 +715,45 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
     if worth_manual_look and not plan["trade_ok"]:
         notes.append(f"trade plan fails the gate: {plan['why_not']}")
 
+    # Causal geometric chart pattern detection
+    geo_pattern_name = None
+    geo_pattern_key = None
+    geo_pattern_target = None
+    geo_pattern_stop = None
+    geo_pattern_status = None
+    try:
+        if len(df) >= 60:
+            sub = df.iloc[:idx + 1]
+            events = detect_all(sub["Open"], sub["High"], sub["Low"], sub["Close"])
+            recent = [e for e in events if e["t"] >= len(sub) - 3]
+            if recent:
+                ev = recent[-1]
+                geo_pattern_name = ev["name"]
+                geo_pattern_key = round(float(ev["key"]), 2)
+                geo_pattern_target = round(float(ev["target"]), 2)
+                geo_pattern_stop = round(float(ev["stop"]), 2)
+                geo_pattern_status = "unvalidated_context"
+                notes.append(f"chart pattern context: {geo_pattern_name} (breakout @ {geo_pattern_key}, target {geo_pattern_target})")
+    except Exception:
+        pass
+
+    # AI daily task prompts
+    ai_audit_prompt = (
+        f"Audit {ticker} news and corporate actions in the last 72 hours: "
+        f"1. Upcoming quarterly earnings or board meeting dates in next 5 days. "
+        f"2. Regulatory, tax, or court notices (SEBI, CCI, etc.). "
+        f"3. Promoter pledge changes, block deals, or bulk deals."
+    )
+    ai_veto_checklist = (
+        f"VETO trade on {ticker} if: (a) Earnings announcement within 3 trading days, "
+        f"(b) Adverse regulatory action or investigation, (c) Promoter net selling > 0.5%."
+    )
+
     return ScreenResult(
         ticker=ticker,
         date=str(curr.name.date()) if hasattr(curr.name, "date") else str(curr.name),
         data_stale_days=data_stale_days,
-        close=round(float(curr["Close"]), 2),
+        close=close_val,
         trend=trend,
         trend_r2=trend_r2,
         pattern=pattern,
@@ -766,16 +778,34 @@ def score_ticker(df: pd.DataFrame, ticker: str) -> Optional[ScreenResult]:
         flag=worth_manual_look,
         entry=plan["entry"], stop=plan["stop"], target=plan["target"],
         risk_pct=plan["risk_pct"], rr=plan["rr"], trade_ok=plan["trade_ok"],
-        # same boolean as the "Worth a manual look" recommendation text
-        # above -- computed once, used twice, cannot diverge again.
+        support_dates=sr.get("support_dates", []),
+        support_days_ago=sr.get("support_days_ago", []),
+        support_quality=sr.get("support_quality"),
+        support_role_reversal=sr.get("support_role_reversal", False),
+        support_weekly_confluence=sr.get("support_weekly_confluence", False),
+        resistance_dates=sr.get("resistance_dates", []),
+        resistance_days_ago=sr.get("resistance_days_ago", []),
+        resistance_quality=sr.get("resistance_quality"),
+        resistance_role_reversal=sr.get("resistance_role_reversal", False),
+        resistance_weekly_confluence=sr.get("resistance_weekly_confluence", False),
+        geo_pattern=geo_pattern_name,
+        geo_pattern_key=geo_pattern_key,
+        geo_pattern_target=geo_pattern_target,
+        geo_pattern_stop=geo_pattern_stop,
+        geo_pattern_status=geo_pattern_status,
+        rs_rank=rs_profile.rank if rs_profile else None,
+        rs_percentile=rs_profile.rs_percentile if rs_profile else None,
+        rs_trend=rs_profile.rs_trend if rs_profile else None,
+        is_leader=rs_profile.is_leader if rs_profile else False,
+        suggested_shares=plan.get("suggested_shares"),
+        capital_required=plan.get("capital_required"),
+        risk_amount_rupees=plan.get("risk_amount_rupees"),
+        ai_audit_prompt=ai_audit_prompt,
+        ai_veto_checklist=ai_veto_checklist,
     )
 
 
 def _flatten_columns(data: pd.DataFrame, ticker: str) -> pd.DataFrame:
-    """yfinance sometimes returns MultiIndex columns even for a single
-    ticker, and the level order (field-first vs ticker-first) isn't
-    consistent across versions. Flatten to plain Open/High/Low/Close/
-    Volume columns regardless of which layout came back."""
     if not isinstance(data.columns, pd.MultiIndex):
         return data
     lvl0 = set(data.columns.get_level_values(0))
@@ -785,14 +815,6 @@ def _flatten_columns(data: pd.DataFrame, ticker: str) -> pd.DataFrame:
 
 
 def _drop_unsettled_today(data: pd.DataFrame) -> pd.DataFrame:
-    """Yahoo can hand back a same-day row with an understated Volume figure
-    (partial session, or an intraday snapshot) and there's no wall-clock
-    time at which that's guaranteed safe to trust -- the 4pm IST cron slot
-    is only 30 min after NSE close and isn't a reliable settlement point
-    either. Drop any row stamped with today's IST calendar date so every
-    run, scheduled or manual, always scores the last *completed* session.
-    Trade-off: a run on the same day as a real close will report T-1, not
-    T-0, until the next day's row exists."""
     if data.empty:
         return data
     today_ist = datetime.now(IST).date()
@@ -802,15 +824,6 @@ def _drop_unsettled_today(data: pd.DataFrame) -> pd.DataFrame:
 
 
 def _data_staleness_business_days(last_date, today_ist) -> int:
-    """Rough business-day gap between the data's actual date and now --
-    weekends only, no NSE holiday calendar, so an occasional holiday
-    reads as one day 'more stale' than it really is. Not meant to be a
-    precise trading calendar -- meant to catch the case _drop_unsettled_
-    today doesn't: yfinance simply hasn't posted the newest session yet
-    at fetch time, so the data is a full day (or more) old with no
-    signal of that anywhere in the output. A run at 6pm the day after a
-    real close, silently scoring the day before that, is exactly this
-    gap -- it already happened once, unflagged, before this existed."""
     d = last_date
     days = 0
     while d < today_ist:
@@ -823,12 +836,6 @@ def _data_staleness_business_days(last_date, today_ist) -> int:
 def fetch_ticker(ticker: str) -> Optional[pd.DataFrame]:
     if yf is None:
         raise RuntimeError("yfinance not installed — pip install yfinance")
-    # auto_adjust=True set explicitly, not relying on whatever yfinance's
-    # current default happens to be. At 2 years of history the odds of a
-    # split or bonus issue falling inside the window are real -- HDFCBANK's
-    # own chart earlier in this build showed exactly that kind of
-    # discontinuity. Unadjusted OHLC across a split would hand the S/R
-    # pivot logic a fake price cliff to treat as a real level.
     data = yf.download(ticker, period=LOOKBACK_PERIOD, interval="1d", auto_adjust=True, progress=False)
     if data.empty:
         return None
@@ -840,27 +847,53 @@ def fetch_ticker(ticker: str) -> Optional[pd.DataFrame]:
     return data
 
 
-def run_screen(watchlist: list[str] = WATCHLIST) -> list[dict]:
-    results = []
+def run_screen(watchlist: list[str] = WATCHLIST, benchmark_ticker: str = "NIFTYBEES.NS") -> list[dict]:
+    """Runs screener with Relative Strength ranking across the watchlist."""
+    dfs: dict[str, pd.DataFrame] = {}
+    benchmark_df = None
+
+    # Fetch benchmark index for RS ranking if available
+    try:
+        benchmark_df = fetch_ticker(benchmark_ticker)
+    except Exception:
+        pass
+
     for t in watchlist:
         try:
             df = fetch_ticker(t)
-            if df is None or df.empty:
-                print(f"[skip] no data for {t}", file=sys.stderr)
-                continue
-            r = score_ticker(df, t)
-            if r:
-                results.append(asdict(r))
+            if df is not None and not df.empty:
+                dfs[t] = df
             else:
-                print(f"[skip] {t}: fetched data but not enough history to score "
-                      f"(needs 2y+ for S/R; likely a recent IPO)", file=sys.stderr)
+                print(f"[skip] no data for {t}", file=sys.stderr)
         except Exception as e:
             print(f"[error] {t}: {e}", file=sys.stderr)
         time.sleep(YF_SLEEP_SECONDS)
+
+    # Compute Relative Strength profiles
+    rs_profiles: dict[str, RSProfile] = {}
+    if dfs:
+        try:
+            from relative_strength import rank_universe
+            rs_profiles = rank_universe(dfs, benchmark_df)
+        except Exception:
+            pass
+
+    results = []
+    for t, df in dfs.items():
+        try:
+            profile = rs_profiles.get(t)
+            r = score_ticker(df, t, rs_profile=profile)
+            if r:
+                results.append(asdict(r))
+            else:
+                print(f"[skip] {t}: not enough history to score", file=sys.stderr)
+        except Exception as e:
+            print(f"[error] scoring {t}: {e}", file=sys.stderr)
+
     return results
 
 
 if __name__ == "__main__":
     out = run_screen()
     flagged = sorted((r for r in out if r["flag"]), key=lambda r: -r["confidence"])
-    print(json.dumps({"all": out, "flagged": flagged}, indent=2, default=str))
+    print(f"Total screened: {len(out)}, Flagged: {len(flagged)}")

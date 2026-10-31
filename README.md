@@ -140,6 +140,39 @@ report lands in the run summary). Tune `MIN_RR` / `TARGET_LADDER_INDEX` from its
 table 4, not by feel. Biases: today's watchlist only (survivorship), daily bars,
 flat cost percentage; fewer than ~30 trades per row is noise.
 
+## Leaders-First Scanner & Advanced TA Enhancements
+
+Branch `antigravity/leaders-scanner` introduces a four-pillar upgrade addressing the empirical backtest findings:
+
+### 1. Relative Strength & Market Leader Ranking (`relative_strength.py`)
+- Computes weighted momentum (40% 3M, 30% 6M, 30% 12-1M skipping short-term reversal).
+- Tracks the RS Line against benchmark index (`NIFTYBEES.NS` / `^NSEI`).
+- Ranks universe percentiles (0-100th) and flags top 20% names with bullish RS trend as `Market Leaders`.
+- Allows filtering setups to focus exclusively on leaders where structural TA has the highest statistical tailwind.
+
+### 2. Multi-Touch Support & Resistance Engine (`sr_engine.py`)
+- **Touch Ledger**: Records exact touch timestamps (`support_dates`) and lookback trading days (`support_days_ago`).
+- **Bounce Quality**: Classifies rejection velocity into `High`, `Moderate`, or `Tentative` based on rejection wicks and subsequent bar expansion.
+- **Role Reversal (SR Flip)**: Detects when a prior major swing high (resistance) was broken and successfully retested from above as support (`support_role_reversal: True`).
+- **Multi-Timeframe Confluence**: Resamples daily bars to weekly OHLCV to detect major weekly turning points, granting extra weight to daily levels with weekly confluence (`support_weekly_confluence: True`).
+
+### 3. Causal Geometric Patterns (`geo_patterns.py` & `swings.py`)
+- Detects 12 classical chart patterns (Double bottoms/tops, Head & Shoulders / Inverse, Ascending/Descending/Symmetrical triangles, Bull/Bear flags, Wedges, Rectangles).
+- Built on causal ATR zigzag swings (`conf <= t`) with strictly zero lookahead.
+- Surfaced in `ScreenResult` as `geo_pattern`, `geo_pattern_key` (breakout level), `geo_pattern_target` (measured move), and `geo_pattern_stop`, explicitly labeled as `unvalidated_context` to guide structure and R:R without acting as false standalone buy signals.
+
+### 4. Position Sizing Arithmetic (`position_sizer.py`)
+- Adapts risk management arithmetic from `day-trader-skill`.
+- Given portfolio capital (default ₹5,00,000) and max risk budget (default 1% = ₹5,000), calculates exact `suggested_shares`, `capital_required`, and Rupee risk for every flagged trade plan.
+- Enforces a 25% single-stock capital cap to prevent over-allocation to low-volatility names.
+
+### 5. ChatGPT Daily Tasks Integration (`docs/latest_screen.json`)
+- Sanitizes all numeric fields (`main.sanitize_for_json`) to ensure strictly valid RFC-8259 JSON (eliminates naked `NaN` or `Infinity` floats).
+- Pushes a dedicated `chatgpt_daily_task` payload containing:
+  - Market regime and breadth summary.
+  - Formulated `news_audit_query` for each candidate (searching for earnings dates, board meetings, SEBI/regulatory orders, block deals in the last 72 hours).
+  - Explicit `veto_rule` criteria for ChatGPT daily tasks (veto if earnings in ≤3 days, negative regulatory inquiry, or promoter insider selling).
+
 ## Optional: Supabase persistence
 
 `schema.sql` has a `daily_flags` table for history/trend-over-time

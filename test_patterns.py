@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from main import check_total_failure, check_stale_after_cutoff, enable_settled_daily_candle
 import analyzer as analyzer_module
+import analyzer as A
 from alerts import build_alert_content, DISCORD_CONTENT_LIMIT
 from datetime import date, datetime, time as dt_time
 from zoneinfo import ZoneInfo
@@ -828,6 +829,178 @@ def test_run_backtest_pipeline_runs_end_to_end_with_a_stubbed_scorer():
         assert "Does the R:R gate help?" in text and "By watchlist breadth" in text
     finally:
         A.score_ticker = real
+
+
+def test_sr_engine_touch_ledger_and_dates():
+    """Verifies that the enhanced S/R engine records exact touch dates and lookback days."""
+    dates = pd.date_range("2026-01-01", periods=100, freq="B")
+    base = 200.0
+    # Two dips at bar 30 and bar 60
+    lows = [base + 10.0] * 100
+    for c in [30, 60]:
+        for off in range(-2, 3):
+            lows[c + off] = base + abs(off) * 2.0
+    highs = [l + 5.0 for l in lows]
+    opens = [l + 2.0 for l in lows]
+    closes = [l + 3.0 for l in lows]
+    closes[-1] = base + 1.0  # current close right near 200
+    df = pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": [1_000_000]*100}, index=dates)
+
+    sr = A.get_sr_levels(df, 99)
+    assert sr["support"] is not None
+    assert sr["support_touches"] == 2
+    assert len(sr["support_dates"]) == 2
+    assert len(sr["support_days_ago"]) == 2
+    assert sr["support_days_ago"][0] > sr["support_days_ago"][1]
+    assert sr["support_quality"] in ("High", "Moderate", "Tentative")
+
+
+def test_sr_role_reversal_detection():
+    """Verifies that a prior resistance level that is later tested as support is flagged as role reversal."""
+    dates = pd.date_range("2026-01-01", periods=120, freq="B")
+    level = 150.0
+
+    # Pre-breakout baseline: 135
+    highs = [135.0] * 120
+    lows = [130.0] * 120
+    opens = [132.0] * 120
+    closes = [132.0] * 120
+
+    # Swing high at bar 30 up to 150 (prior resistance)
+    for off in range(-3, 4):
+        highs[30 + off] = level - abs(off) * 2.0
+        lows[30 + off] = level - abs(off) * 2.0 - 5.0
+        opens[30 + off] = lows[30 + off] + 1.0
+        closes[30 + off] = highs[30 + off] - 1.0
+
+    # Post-breakout baseline: 165
+    for i in range(50, 120):
+        highs[i] = 168.0
+        lows[i] = 162.0
+        opens[i] = 165.0
+        closes[i] = 165.0
+
+    # Pullback dip at bar 80 down to 150 (retested as support)
+    for off in range(-3, 4):
+        lows[80 + off] = level + abs(off) * 2.0
+        highs[80 + off] = level + abs(off) * 2.0 + 5.0
+        opens[80 + off] = lows[80 + off] + 1.0
+        closes[80 + off] = lows[80 + off] + 2.0
+
+    closes[-1] = level + 2.0
+    highs[-1] = level + 4.0
+    lows[-1] = level + 1.0
+    opens[-1] = level + 1.5
+
+    df = pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": [1_000_000]*120}, index=dates)
+    sr = A.get_sr_levels(df, 119)
+    assert sr["support"] == 150.0
+    assert sr["support_touches"] == 2
+    assert sr["support_role_reversal"] is True
+
+
+def test_position_sizing_calculation():
+    """Verifies that position_sizer properly sizes shares and enforces capital caps."""
+    from position_sizer import calculate_position_size
+    # Account ₹5,00,000, Risk 1% (₹5,000)
+    # Entry 100, Stop 95 -> risk = 5/share -> 1,000 shares -> ₹1,00,000 (20% cap ok)
+    plan = calculate_position_size(entry=100.0, stop=95.0, target=115.0, capital=500_000.0, risk_pct=0.01)
+    assert plan.sizing_ok is True
+    assert plan.shares == 1000
+    assert plan.risk_amount == 5000.0
+    assert plan.reward_amount == 15000.0
+    assert plan.planned_rr == 3.0
+    assert plan.warning is None
+
+    # Oversized risk test (capping at 25% = ₹1,25,000)
+    # Entry 1000, Stop 995 -> risk = 5 -> 1000 shares = ₹10,00,000 > ₹1.25L cap -> capped to 125 shares
+    plan2 = calculate_position_size(entry=1000.0, stop=995.0, target=1020.0, capital=500_000.0, risk_pct=0.01)
+    assert plan2.shares == 125
+    assert plan2.warning is not None and "capped at 25%" in plan2.warning
+
+
+def test_relative_strength_and_leader_ranking():
+    """Verifies that relative strength correctly ranks and identifies market leaders."""
+    from relative_strength import compute_stock_momentum, rank_universe
+    dates = pd.date_range("2025-01-01", periods=300, freq="B")
+    # Strong uptrend: +100%
+    strong = pd.DataFrame({
+        "Open": np.linspace(100, 200, 300), "High": np.linspace(101, 201, 300),
+        "Low": np.linspace(99, 199, 300), "Close": np.linspace(100, 200, 300),
+        "Volume": [1_000_000]*300
+    }, index=dates)
+
+    # Flat stock
+    flat = pd.DataFrame({
+        "Open": [100.0]*300, "High": [101.0]*300, "Low": [99.0]*300,
+        "Close": [100.0]*300, "Volume": [1_000_000]*300
+    }, index=dates)
+
+    # Downtrend: -50%
+    weak = pd.DataFrame({
+        "Open": np.linspace(200, 100, 300), "High": np.linspace(201, 101, 300),
+        "Low": np.linspace(199, 99, 300), "Close": np.linspace(200, 100, 300),
+        "Volume": [1_000_000]*300
+    }, index=dates)
+
+    profiles = rank_universe({"STRONG.NS": strong, "FLAT.NS": flat, "WEAK.NS": weak}, benchmark_df=flat)
+    assert profiles["STRONG.NS"].is_leader is True
+    assert profiles["STRONG.NS"].rank == 1
+    assert profiles["WEAK.NS"].rank == 3
+    assert profiles["WEAK.NS"].is_leader is False
+
+
+def test_json_serialization_no_nan():
+    """Verifies that main.sanitize_for_json eliminates any NaN or Infinity floats for valid RFC-8259 JSON."""
+    from main import sanitize_for_json
+    import json
+    data = {
+        "ticker": "TEST.NS",
+        "close": float("nan"),
+        "inf_val": float("inf"),
+        "ladder": [{"level": float("nan"), "touches": 2}, {"level": 150.0, "touches": 1}],
+        "valid_float": 123.45,
+    }
+    clean = sanitize_for_json(data)
+    assert clean["close"] is None
+    assert clean["inf_val"] is None
+    assert clean["ladder"][0]["level"] is None
+    assert clean["ladder"][1]["level"] == 150.0
+
+    # Ensure json.dumps produces 100% strictly valid JSON without error or naked NaN
+    raw_json = json.dumps(clean)
+    assert "NaN" not in raw_json
+    assert "Infinity" not in raw_json
+    assert "null" in raw_json
+
+
+def test_geo_pattern_detection_integration():
+    """Verifies that causal geometric patterns (double bottoms/tops, triangles, flags) are detected and surfaced in ScreenResult."""
+    dates = pd.date_range("2024-01-01", periods=550, freq="B")
+    O, H, L, C = [150.0]*550, [155.0]*550, [145.0]*550, [150.0]*550
+
+    shift = 20
+    for i in range(400 + shift, 500 + shift):
+        if i <= 420 + shift:
+            L[i], H[i], C[i], O[i] = 100 - (i-(400+shift)), 102 - (i-(400+shift)), 99 - (i-(400+shift)), 101 - (i-(400+shift))
+        elif i <= 440 + shift:
+            L[i], H[i], C[i], O[i] = 80 + (i-(420+shift))*1.5, 82 + (i-(420+shift))*1.5, 81 + (i-(420+shift))*1.5, 80 + (i-(420+shift))*1.5
+        elif i <= 460 + shift:
+            L[i], H[i], C[i], O[i] = 110 - (i-(440+shift))*1.5, 112 - (i-(440+shift))*1.5, 109 - (i-(440+shift))*1.5, 111 - (i-(440+shift))*1.5
+        elif i <= 470 + shift:
+            L[i], H[i], C[i], O[i] = 80 + (i-(460+shift))*3.5, 83 + (i-(460+shift))*3.5, 82 + (i-(460+shift))*3.5, 81 + (i-(460+shift))*3.5
+        else:
+            L[i], H[i], C[i], O[i] = 115.0, 118.0, 116.0, 115.0
+
+    df = pd.DataFrame({"Open": O, "High": H, "Low": L, "Close": C, "Volume": [1_000_000]*550}, index=dates)
+    r = A.score_ticker(df.iloc[:491], "GEO.NS")
+    assert r is not None
+    assert r.geo_pattern == "double_bottom"
+    assert r.geo_pattern_status == "unvalidated_context"
+    assert r.geo_pattern_key == 112.0
+    assert r.geo_pattern_target == 144.0
+
+
 
 
 if __name__ == "__main__":
