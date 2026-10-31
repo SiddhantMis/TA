@@ -1441,6 +1441,20 @@ def test_alert_shows_wide_leaders_and_degrades_gracefully():
     assert len(build_alert_content([], "(s)", wide_leaders=wl)) <= DISCORD_CONTENT_LIMIT
 
 
+def test_leaders_scan_stops_at_the_time_limit_and_says_so():
+    import analyzer as A
+    import leaders as LD
+    frames, bench = _lead_universe()
+    real = A.fetch_ticker
+    A.fetch_ticker = lambda t: frames[t.replace(".NS", "")]
+    try:
+        out = LD.run_leaders(["FAST.NS", "MID.NS", "FLAT.NS"], benchmark_df=bench, sleep=0, max_seconds=-1)
+    finally:
+        A.fetch_ticker = real
+    assert out["counts"]["partial_scan_time_limit"] is True and out["leaders"] == []
+    assert out["counts"]["load_coverage_pct"] == 0.0
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

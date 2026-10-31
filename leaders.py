@@ -77,7 +77,8 @@ def select_leaders(rows: list, liquid_top: int = LIQUID_TOP, board: int = BOARD_
     return trend[:board], counts
 
 
-def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=BOARD_SIZE, sleep=None):
+def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=BOARD_SIZE, sleep=None,
+                max_seconds=2700):
     universe = universe or load_universe()
     if benchmark_df is None:
         benchmark_df = A.fetch_ticker(A.RS_BENCHMARK)
@@ -85,7 +86,12 @@ def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=B
         raise RuntimeError(f"no benchmark data for {A.RS_BENCHMARK}")
     sleep = A.YF_SLEEP_SECONDS if sleep is None else sleep
     rows, frames, failed = [], {}, []
+    started, partial = time.time(), False
     for t in universe:
+        if time.time() - started > max_seconds:        # a slow Yahoo day must not hold the whole daily run hostage
+            partial = True
+            failed.append(t)
+            continue
         try:
             df = A.fetch_ticker(t)
             if df is None or df.empty or len(df) < 260:
@@ -110,6 +116,7 @@ def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=B
             "volume_ratio", "rsi", "above_sma50")}
         r["traded_value_cr"] = round(r["traded_value_126d"] / 1e7, 1)
     counts["failed_to_load"] = len(failed)
+    counts["partial_scan_time_limit"] = partial
     counts["load_coverage_pct"] = round(100 * (len(universe) - len(failed)) / len(universe), 1)
     return {
         "as_of": benchmark_df.index[-1].date().isoformat(), "benchmark": A.RS_BENCHMARK,
