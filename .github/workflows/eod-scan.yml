@@ -46,9 +46,14 @@ jobs:
           # whatever the winning run pushed, then re-apply THIS run's
           # output on top -- never attempt to reconcile the two.
           cp docs/latest_screen.json /tmp/this_run_output.json
+          cp docs/scorecard.json /tmp/this_run_scorecard.json 2>/dev/null || true
+          rm -rf /tmp/this_run_history && mkdir -p /tmp/this_run_history
+          cp -r docs/history/. /tmp/this_run_history/ 2>/dev/null || true
           for attempt in 1 2 3 4 5; do
             cp /tmp/this_run_output.json docs/latest_screen.json
-            git add docs/latest_screen.json
+            [ -f /tmp/this_run_scorecard.json ] && cp /tmp/this_run_scorecard.json docs/scorecard.json
+            mkdir -p docs/history && cp -r /tmp/this_run_history/. docs/history/ 2>/dev/null || true
+            git add docs/latest_screen.json docs/scorecard.json docs/history 2>/dev/null || git add docs/latest_screen.json
             if git diff --staged --quiet; then
               echo "no changes to commit"
               exit 0
@@ -71,4 +76,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: latest-screen
-          path: docs/latest_screen.json
+          path: |
+            docs/latest_screen.json
+            docs/scorecard.json

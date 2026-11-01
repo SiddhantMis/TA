@@ -41,6 +41,8 @@
         const res = await fetch('latest_screen.json?_=' + Date.now());
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
+        let scorecard = null;                                   // optional: the paper-trading log
+        try { const sr = await fetch('scorecard.json?_=' + Date.now()); if (sr.ok) scorecard = await sr.json(); } catch (e) {}
 
         const runTime = data.run_timestamp ? new Date(data.run_timestamp) : null;
         meta.innerHTML = runTime
@@ -97,7 +99,7 @@
         const leaders = data.momentum_leaders || [];
         const momentum = data.momentum || {};
         const leadersHtml = momentum.available && leaders.length
-          ? `<h2>Momentum leaders</h2>
+          ? `<h2>Momentum ranking inside your watchlist</h2>
              <p class="section-note">Equities in the configured watchlist, ranked by adjusted 12-1 return excess versus ${esc(momentum.benchmark || 'the benchmark')}. The separate 1-month excess shows whether recent strength is accelerating or fading; 6-month excess is longer-term context. Horizons are not blended into the rank. Commodity ETFs are excluded. All names use the same benchmark session dates; stale closes and names with less than 95% 12-month price coverage are omitted. This is descriptive context, not a validated buy signal.</p>
              <div class="table-wrap"><table>
                <thead><tr><th>Rank</th><th>Ticker</th><th>Type</th><th>RS as of</th><th>12-1 return</th><th>12-1 excess</th><th>1m excess</th><th>6m excess</th><th>12m coverage</th><th>Above 50-day MA</th><th>Trend</th><th>Pattern</th></tr></thead>
@@ -115,10 +117,42 @@
                  <td>${esc(r.trend)}</td><td>${esc(r.pattern) || '—'}</td>
                </tr>`).join('')}</tbody>
              </table></div>`
-          : `<h2>Momentum leaders</h2><p class="section-note">${momentum.available === false ? esc(momentum.unavailable_reason || `No eligible equity data versus ${momentum.benchmark || 'the benchmark'}.`) : 'No leaderboard data in this run.'} This ranking is descriptive, not a validated buy signal.</p>`;
+          : `<h2>Momentum ranking inside your watchlist</h2><p class="section-note">${momentum.available === false ? esc(momentum.unavailable_reason || `No eligible equity data versus ${momentum.benchmark || 'the benchmark'}.`) : 'No leaderboard data in this run.'} This ranking is descriptive, not a validated buy signal.</p>`;
+
+        const wl = data.wide_leaders || null;
+        const pctF = v => (v == null || !isFinite(v)) ? '—' : `${v > 0 ? '+' : ''}${(v * 100).toFixed(1)}%`;
+        const wideHtml = (wl && wl.leaders && wl.leaders.length)
+          ? `<h2>Momentum leaders — liquid Nifty 500 above the 200-day average</h2>
+             <p class="section-note">As of ${esc(wl.as_of)}: the ${esc(wl.counts.liquid)} most-traded names, ${esc(wl.counts.above_200dma)} above their 200-day average, ranked by 12-1 return versus ${esc(wl.benchmark)}. ${esc(wl.setup_record || '')} This is a ranking, not an entry signal. ${esc(wl.scorecard_text || '')}</p>
+             <div class="table-wrap"><table>
+               <thead><tr><th>#</th><th>Ticker</th><th>12-1 vs bench</th><th>6m</th><th>1m</th><th>Off 52w high</th><th>Support / resistance</th><th>Setup today</th><th>Stop (2 ATR)</th><th>Shares per ₹1,000 risk</th><th>Breakout above</th></tr></thead>
+               <tbody>${wl.leaders.map(r => { const p = r.plan || {}; const s = r.structure || {}; const res = (s.resistance_ladder || [])[0];
+                 return `<tr>
+                   <td>${esc(r.leader_rank)}</td><td><strong>${esc(r.ticker)}</strong></td>
+                   <td>${fmtPp(r.relative_strength_12_1_pct)}</td><td>${fmtPp(r.relative_strength_6m_pct)}</td><td>${fmtPp(r.relative_strength_1m_pct)}</td>
+                   <td>${r.pct_below_52w_high == null ? '—' : esc(r.pct_below_52w_high) + '%'}</td>
+                   <td>${s.support_level == null ? '—' : esc(s.support_level) + ' (' + esc(s.support_touches || 0) + 'x)'} / ${res ? esc(res.level) : '—'}</td>
+                   <td>${(p.fired || []).length ? esc((p.fired || []).join(', ')) : '—'}</td>
+                   <td>${p.stop_if_filled_at_ref == null ? '—' : esc(p.stop_if_filled_at_ref) + ' (' + esc(p.risk_pct) + '%)'}</td>
+                   <td>${p.shares_per_1000_risk == null ? '—' : esc(p.shares_per_1000_risk)}</td>
+                   <td>${p.triggers ? esc(p.triggers.breakout55_close_above) : '—'}</td>
+                 </tr>`; }).join('')}</tbody>
+             </table></div>`
+          : (wl && wl.error ? `<h2>Momentum leaders</h2><p class="section-note">Wide-universe scan unavailable: ${esc(wl.error)}</p>` : '');
+        const months = (scorecard && scorecard.monthly) ? scorecard.monthly.filter(m => m.status !== 'pending') : [];
+        const scoreHtml = scorecard
+          ? `<h2>Paper-trading log</h2>
+             <p class="section-note">${esc(scorecard.summary || '')} Each month-end top-20 list is pretend-bought at the next open, equal weight, after 0.30% round-trip cost on turnover, and compared with the Nifty 50 and with all liquid names held equally. Not real money; a handful of months proves nothing.</p>
+             ${months.length ? `<div class="table-wrap"><table>
+               <thead><tr><th>List date</th><th>Status</th><th>Top 20 (net)</th><th>Same universe, equal weight</th><th>Nifty 50</th></tr></thead>
+               <tbody>${months.map(m => `<tr><td>${esc(m.signal_date)}</td><td>${esc(m.status)}</td><td>${pctF(m.top20_net)}</td><td>${pctF(m.same_universe_equal_weight)}</td><td>${pctF(m.nifty50)}</td></tr>`).join('')}</tbody>
+             </table></div>` : ''}`
+          : '';
 
         const html = `
           ${coverageWarning}
+          ${wideHtml}
+          ${scoreHtml}
           ${leadersHtml}
           <h2>Chart checklist details</h2>
           <p class="section-note">The existing confidence and flag fields describe the reversal checklist. They are separate from the momentum ranking above.</p>

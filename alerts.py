@@ -92,7 +92,8 @@ def build_alert_content(flagged: list[dict], session_note: str,
             leader_block = (f"\n\n**Momentum leaders** (liquid Nifty 500 top {c.get('liquid')}, above 200-DMA, "
                             f"{c.get('above_200dma')} qualify; RS = 12-1 vs {benchmark}):\n" + "\n".join(rows)
                             + ("\n" + "\n".join(fired_rows[:4]) if fired_rows else "\nNo setup fired today in the top 20.")
-                            + f"\n_{str(wide_leaders.get('setup_record') or '')[:230]}_")
+                            + f"\n_{str(wide_leaders.get('setup_record') or '')[:230]}_"
+                            + (f"\n_{str(wide_leaders['scorecard_text'])[:200]}_" if wide_leaders.get("scorecard_text") else ""))
     if not flagged:
         content = (f"EOD screen: nothing worth a manual look from the legacy reversal checklist today "
                    f"(this is a pre-filter, not a verdict). {session_note}{coverage_line}{breadth_line}{watch_line}"

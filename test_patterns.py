@@ -1566,6 +1566,104 @@ def test_fetch_ticker_drops_trailing_nan_rows():
     assert out is not None and len(out) == 29 and out["Close"].notna().all() and out.index[-1] == idx[-2]
 
 
+def _score_world():
+    """Deterministic prices: A +1%/day, B flat, C -1%/day, bench +0.2%/day; open = close."""
+    import numpy as np
+    idx = pd.bdate_range("2026-01-01", periods=120)
+    mk = lambda g: pd.DataFrame({"Open": 100.0 * (1 + g) ** np.arange(120), "Close": 100.0 * (1 + g) ** np.arange(120),
+                                 "High": 1e9, "Low": 0.0, "Volume": 1e6}, index=idx)
+    return {"A": mk(0.01), "B": mk(0.0), "C": mk(-0.01)}, mk(0.002), idx
+
+
+def _snap(date, tickers=("A", "B")):
+    return {"as_of": date, "benchmark": "NIFTYBEES.NS", "counts": {},
+            "leaders": [{"ticker": t, "rank": i + 1, "rs12_1": 10.0, "close": 100.0, "fired": []} for i, t in enumerate(tickers)],
+            "liquid": [{"ticker": t, "close": 100.0} for t in ("A", "B", "C")]}
+
+
+def test_scorecard_math_entry_after_signal_costs_and_open_period():
+    import leaders as LD
+    frames, bench, idx = _score_world()
+    d1, d2, d3 = idx[20], idx[40], idx[100]                     # three month-end style signals (distinct 'months' via the date strings)
+    snaps = [_snap(d1.date().isoformat()), _snap(d2.date().isoformat()), _snap(d3.date().isoformat())]
+    snaps[0]["as_of"], snaps[1]["as_of"], snaps[2]["as_of"] = "2026-01-30", "2026-02-27", "2026-04-30"
+    cal = bench.index
+    p = [cal.searchsorted(pd.Timestamp(s["as_of"]), side="right") for s in snaps]
+    sc = LD.build_scorecard(snaps, frames, bench, cost_pct=0.30, n_hold=2)
+    m = sc["monthly"]
+    n1 = p[1] - p[0]
+    gross1 = (1.01 ** n1 - 1 + 0.0) / 2                          # equal weight of A (+1%/day) and B (flat)
+    assert m[0]["status"] == "closed" and m[0]["entry_date"] == cal[p[0]].date().isoformat()   # first session AFTER the signal
+    assert abs(m[0]["top20_gross"] - gross1) < 1e-9
+    assert abs(m[0]["top20_net"] - (gross1 - 0.0015)) < 1e-9     # first month: all names are new, turnover 1.0 -> 0.15% of the book
+    assert abs(m[0]["nifty50"] - (1.002 ** n1 - 1)) < 1e-9
+    ew = ((1.01 ** n1 - 1) + 0.0 + (0.99 ** n1 - 1)) / 3
+    assert abs(m[0]["same_universe_equal_weight"] - ew) < 1e-9
+    assert abs(m[1]["top20_net"] - m[1]["top20_gross"]) < 1e-12  # same holdings -> no turnover -> no cost
+    assert m[2]["status"] == "open" and m[2]["exit_date"] == cal[-1].date().isoformat()        # marked to the latest close
+    assert sc["cumulative"]["months"] == 2 and "completed month" in sc["summary"]
+    assert set(sc["daily_forward"]) == {"5d", "21d", "63d"} and sc["daily_forward"]["5d"]["snapshots"] == 3
+
+
+def test_scorecard_with_no_history_says_collecting():
+    import leaders as LD
+    frames, bench, _ = _score_world()
+    assert LD.build_scorecard([], frames, bench)["status"] == "collecting"
+
+
+def test_snapshot_is_skipped_for_partial_or_thin_scans_and_is_strict_json(tmp_path=None):
+    import json
+    import os
+    import tempfile
+    import leaders as LD
+    leaders = [{"ticker": "A.NS", "leader_rank": 1, "relative_strength_12_1_pct": 5.0, "last_close": 100.0, "plan": {"fired": ["breakout55"]}}]
+    base = {"as_of": "2026-10-30", "benchmark": "NIFTYBEES.NS", "leaders": leaders, "liquid_universe": [{"ticker": "A.NS", "close": float("nan")}]}
+    d = tempfile.mkdtemp()
+    assert LD.save_snapshot(dict(base, counts={"load_coverage_pct": 99.0, "partial_scan_time_limit": True}), d)[0] is None
+    assert LD.save_snapshot(dict(base, counts={"load_coverage_pct": 60.0, "partial_scan_time_limit": False}), d)[0] is None
+    assert os.listdir(d) == []
+    path, why = LD.save_snapshot(dict(base, counts={"load_coverage_pct": 99.0, "partial_scan_time_limit": False}), d)
+    assert why == "saved" and os.path.basename(path) == "leaders_2026-10-30.json"
+    snap = json.loads(open(path).read(), parse_constant=lambda c: (_ for _ in ()).throw(ValueError(c)))
+    assert snap["leaders"][0]["fired"] == ["breakout55"] and snap["liquid"][0]["close"] is None
+    assert [s["as_of"] for s in LD.load_snapshots(d)] == ["2026-10-30"]
+
+
+def test_run_leaders_logs_a_snapshot_and_scorecard_without_ever_breaking_the_scan():
+    import json
+    import os
+    import tempfile
+    import analyzer as A
+    import leaders as LD
+    frames, bench = _lead_universe()
+    real = A.fetch_ticker
+    A.fetch_ticker = lambda t: frames[t.replace(".NS", "")]
+    d = tempfile.mkdtemp()
+    hist = os.path.join(d, "history")
+    try:
+        out = LD.run_leaders(["FAST.NS", "MID.NS", "FLAT.NS", "ILLIQ.NS", "CRASH.NS"], benchmark_df=bench, liquid_top=4, board=5,
+                             sleep=0, history_dir=hist)
+        assert out["snapshot_status"].startswith("saved") and "Paper log" in out["scorecard_text"]
+        assert json.load(open(os.path.join(d, "scorecard.json")))["snapshots"] == 1
+        assert len(out["liquid_universe"]) == 4
+        out2 = LD.run_leaders(["FAST.NS", "MID.NS", "FLAT.NS", "ILLIQ.NS", "CRASH.NS"], benchmark_df=bench, liquid_top=4, board=5,
+                              sleep=0, history_dir=os.path.join(d, "nope", "\0bad"))       # an unwritable path must not raise
+        assert "error" in out2["snapshot_status"] and out2["leaders"]
+    finally:
+        A.fetch_ticker = real
+
+
+def test_alert_includes_the_paper_log_line_within_the_limit():
+    from alerts import build_alert_content, DISCORD_CONTENT_LIMIT
+    wl = {"counts": {"liquid": 200, "above_200dma": 80}, "setup_record": "x" * 300, "scorecard_text": "Paper log since 2026-11-02: 1 completed month(s) " + "y" * 300,
+          "leaders": [{"leader_rank": i, "ticker": f"T{i}.NS", "relative_strength_12_1_pct": 50.0, "relative_strength_6m_pct": 10.0,
+                       "pct_below_52w_high": 4.0, "plan": {"fired": ["pullback20"], "stop_if_filled_at_ref": 90.0, "risk_pct": 8.0,
+                                                           "shares_per_1000_risk": 12, "triggers": {"breakout55_close_above": 120.0}},
+                       "structure": {"support_level": 95.0, "support_touches": 2, "resistance_ladder": [{"level": 130.0}]}} for i in range(1, 21)]}
+    text = build_alert_content([], "(s)", wide_leaders=wl)
+    assert "Paper log since" in text and len(text) <= DISCORD_CONTENT_LIMIT, len(text)
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

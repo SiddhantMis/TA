@@ -126,8 +126,163 @@ def select_leaders(rows: list, liquid_top: int = LIQUID_TOP, board: int = BOARD_
     return trend[:board], counts
 
 
+# ------------------------------------------------------------------ paper-trading log ---
+SNAPSHOT_DIR = "docs/history"
+MIN_COVERAGE_PCT = 90.0
+
+
+def snapshot_record(payload: dict) -> dict:
+    """What gets saved each day: the top-20 plus the liquid universe (for the equal-weight baseline)."""
+    return {
+        "as_of": payload["as_of"], "benchmark": payload["benchmark"], "counts": payload["counts"],
+        "leaders": [{"ticker": r["ticker"], "rank": r["leader_rank"], "rs12_1": r["relative_strength_12_1_pct"],
+                     "close": r["last_close"], "fired": (r.get("plan") or {}).get("fired", [])} for r in payload["leaders"]],
+        "liquid": payload.get("liquid_universe", []),
+    }
+
+
+def save_snapshot(payload: dict, history_dir: str = SNAPSHOT_DIR):
+    """Write docs/history/leaders_<date>.json unless the scan was partial or thin. Returns (path or None, reason)."""
+    c = payload.get("counts", {})
+    if c.get("partial_scan_time_limit"):
+        return None, "scan hit its time limit"
+    if c.get("load_coverage_pct", 0) < MIN_COVERAGE_PCT:
+        return None, f"coverage {c.get('load_coverage_pct')}% < {MIN_COVERAGE_PCT}%"
+    if not payload.get("leaders"):
+        return None, "no leaders"
+    os.makedirs(history_dir, exist_ok=True)
+    path = os.path.join(history_dir, f"leaders_{payload['as_of']}.json")
+    with open(path, "w") as fh:
+        json.dump(sanitize_json(snapshot_record(payload)), fh, indent=1, allow_nan=False)
+    return path, "saved"
+
+
+def load_snapshots(history_dir: str = SNAPSHOT_DIR) -> list:
+    out = []
+    if os.path.isdir(history_dir):
+        for fn in sorted(os.listdir(history_dir)):
+            if fn.startswith("leaders_") and fn.endswith(".json"):
+                try:
+                    with open(os.path.join(history_dir, fn)) as fh:
+                        out.append(json.load(fh))
+                except Exception as e:
+                    print(f"[history] could not read {fn}: {e}", file=sys.stderr)
+    return sorted(out, key=lambda s: s["as_of"])
+
+
+def _px(frames, t, kind, date):
+    df = frames.get(t)
+    if df is None or date not in df.index:
+        return float("nan")
+    v = df[kind].at[date]
+    return float(v) if np.isfinite(v) else float("nan")
+
+
+def _basket_return(tickers, frames, entry_date, exit_date, exit_kind):
+    r = []
+    for t in tickers:
+        a, b = _px(frames, t, "Open", entry_date), _px(frames, t, exit_kind, exit_date)
+        if np.isfinite(a) and np.isfinite(b) and a > 0:
+            r.append(b / a - 1)
+    return float(np.mean(r)) if r else float("nan"), len(r)
+
+
+def build_scorecard(snaps: list, frames: dict, benchmark_df: pd.DataFrame, cost_pct: float = 0.30, n_hold: int = BOARD_SIZE) -> dict:
+    """Pretend-trade the logged lists. Signal on a snapshot's date, enter at the NEXT session's open (as the backtests did).
+    monthly: the last snapshot of each calendar month, held until the open after the next one, equal weight, costs on turnover.
+    daily_forward: every snapshot, top-20 vs Nifty over the next 5/21/63 sessions (overlapping, so a diagnostic only)."""
+    cal = benchmark_df.index
+    bench = {"Open": benchmark_df["Open"], "Close": benchmark_df["Close"]}
+    bpx = lambda kind, d: float(bench[kind].at[d]) if d in bench[kind].index else float("nan")
+    if not snaps:
+        return {"status": "collecting", "snapshots": 0, "monthly": [], "daily_forward": {}, "summary": "Paper log: no snapshots yet."}
+    by_month = {}
+    for s in snaps:
+        by_month[s["as_of"][:7]] = s                         # later snapshot in a month replaces earlier
+    sigs = [by_month[k] for k in sorted(by_month)]
+    monthly, prev = [], set()
+    for i, s in enumerate(sigs):
+        pos = cal.searchsorted(pd.Timestamp(s["as_of"]), side="right")
+        if pos >= len(cal):
+            monthly.append({"signal_date": s["as_of"], "status": "pending"})
+            continue
+        entry = cal[pos]
+        closed = False
+        if i + 1 < len(sigs):
+            xpos = cal.searchsorted(pd.Timestamp(sigs[i + 1]["as_of"]), side="right")
+            if xpos < len(cal):
+                exit_date, kind, closed = cal[xpos], "Open", True
+        if not closed:
+            exit_date, kind = cal[-1], "Close"
+        top = [h["ticker"] for h in s["leaders"]]
+        liq = [x["ticker"] for x in s.get("liquid", [])]
+        r_top, n_top = _basket_return(top, frames, entry, exit_date, kind)
+        r_ew, _ = _basket_return(liq, frames, entry, exit_date, kind)
+        b0, b1 = bpx("Open", entry), bpx(kind, exit_date)
+        r_b = b1 / b0 - 1 if np.isfinite(b0) and np.isfinite(b1) and b0 > 0 else float("nan")
+        cur = set(top)
+        turnover = (len(cur - prev) + len(prev - cur)) / float(n_hold)          # sum |weight change|, equal weights of 1/n_hold
+        net = r_top - turnover * cost_pct / 200.0 if np.isfinite(r_top) else float("nan")
+        prev = cur
+        monthly.append({"signal_date": s["as_of"], "entry_date": entry.date().isoformat(), "exit_date": exit_date.date().isoformat(),
+                        "status": "closed" if closed else "open", "holdings": len(top), "priced": n_top,
+                        "top20_gross": r_top, "top20_net": net, "same_universe_equal_weight": r_ew, "nifty50": r_b,
+                        "excess_vs_universe": net - r_ew if np.isfinite(net) and np.isfinite(r_ew) else float("nan"),
+                        "excess_vs_nifty": net - r_b if np.isfinite(net) and np.isfinite(r_b) else float("nan")})
+    done = [m for m in monthly if m.get("status") == "closed" and np.isfinite(m["top20_net"])]
+    comp = lambda k: float(np.prod([1 + m[k] for m in done]) - 1) if done else float("nan")
+    cumulative = {"months": len(done), "top20_net": comp("top20_net"), "same_universe_equal_weight": comp("same_universe_equal_weight"),
+                  "nifty50": comp("nifty50")} if done else {"months": 0}
+    # diagnostic: every snapshot, fixed horizons
+    fwd = {}
+    for h in (5, 21, 63):
+        ex, fired_ex, quiet_ex = [], [], []
+        for s in snaps:
+            pos = cal.searchsorted(pd.Timestamp(s["as_of"]), side="right")
+            if pos + h - 1 >= len(cal):
+                continue
+            entry, exit_date = cal[pos], cal[pos + h - 1]
+            b0, b1 = bpx("Open", entry), bpx("Close", exit_date)
+            if not (np.isfinite(b0) and np.isfinite(b1) and b0 > 0):
+                continue
+            rb = b1 / b0 - 1
+            r, _ = _basket_return([x["ticker"] for x in s["leaders"]], frames, entry, exit_date, "Close")
+            if np.isfinite(r):
+                ex.append(r - rb)
+            for x in s["leaders"]:
+                rr, n = _basket_return([x["ticker"]], frames, entry, exit_date, "Close")
+                if n:
+                    (fired_ex if x.get("fired") else quiet_ex).append(rr - rb)
+        fwd[f"{h}d"] = {"snapshots": len(ex), "mean_excess_vs_nifty": float(np.mean(ex)) if ex else None,
+                        "share_positive": float(np.mean([e > 0 for e in ex])) if ex else None,
+                        "setup_fired_n": len(fired_ex), "setup_fired_mean_excess": float(np.mean(fired_ex)) if fired_ex else None,
+                        "no_setup_n": len(quiet_ex), "no_setup_mean_excess": float(np.mean(quiet_ex)) if quiet_ex else None}
+    first = snaps[0]["as_of"]
+    if done:
+        c = cumulative
+        summary = (f"Paper log since {first}: {c['months']} completed month(s): top-20 {c['top20_net'] * 100:+.1f}% vs "
+                   f"Nifty {c['nifty50'] * 100:+.1f}% vs same-universe equal-weight {c['same_universe_equal_weight'] * 100:+.1f}% "
+                   f"(after costs; far too early to judge).")
+    else:
+        summary = f"Paper log: {len(snaps)} daily snapshot(s) since {first}; first completed month appears after the next month-end list."
+    return {"status": "tracking", "snapshots": len(snaps), "first_snapshot": first, "monthly": monthly,
+            "cumulative": cumulative, "daily_forward": fwd, "summary": summary}
+
+
+def log_and_score(payload: dict, frames: dict, benchmark_df, history_dir=SNAPSHOT_DIR, scorecard_path="docs/scorecard.json") -> dict:
+    """Save today's snapshot (if the scan was healthy), then rebuild the scorecard from all snapshots."""
+    path, reason = save_snapshot(payload, history_dir)
+    sc = build_scorecard(load_snapshots(history_dir), frames, benchmark_df)
+    sc = sanitize_json(sc)
+    sc["snapshot_status"] = reason if path is None else f"saved {os.path.basename(path)}"
+    os.makedirs(os.path.dirname(scorecard_path) or ".", exist_ok=True)
+    with open(scorecard_path, "w") as fh:
+        json.dump(sc, fh, indent=1, allow_nan=False)
+    return sc
+
+
 def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=BOARD_SIZE, sleep=None,
-                max_seconds=2700):
+                max_seconds=2700, history_dir=None):
     universe = universe or load_universe()
     if benchmark_df is None:
         benchmark_df = A.fetch_ticker(A.RS_BENCHMARK)
@@ -172,15 +327,25 @@ def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=B
         except Exception as e:
             r["plan"] = None
             print(f"[plan] {r['ticker']}: {e}", file=sys.stderr)
+    liquid_universe = [{"ticker": r["ticker"], "close": r["last_close"]} for r in rows if r.get("liquidity_rank") and r["liquidity_rank"] <= liquid_top]
     counts["failed_to_load"] = len(failed)
     counts["partial_scan_time_limit"] = partial
     counts["load_coverage_pct"] = round(100 * (len(universe) - len(failed)) / len(universe), 1)
-    return {
-        "as_of": benchmark_df.index[-1].date().isoformat(), "benchmark": A.RS_BENCHMARK,
+    out = {
+        "as_of": benchmark_df.index[-1].date().isoformat(), "benchmark": A.RS_BENCHMARK, "liquid_universe": liquid_universe,
         "definition": (f"Top {liquid_top} by 126-day traded value of the Nifty 500 list, close above 200-day average, "
                        "ranked by 12-1 return relative to the benchmark (latest 21 sessions skipped)."),
         "evidence": EVIDENCE, "setup_record": SETUP_RECORD, "counts": counts, "failed_tickers": failed[:60], "leaders": leaders,
     }
+    if history_dir:                                   # the paper-trading log must never be able to break the scan
+        try:
+            sc = log_and_score(out, frames, benchmark_df, history_dir,
+                               os.path.join(os.path.dirname(os.path.normpath(history_dir)), "scorecard.json"))
+            out["scorecard_text"], out["snapshot_status"] = sc["summary"], sc["snapshot_status"]
+        except Exception as e:
+            out["scorecard_text"], out["snapshot_status"] = "Paper log unavailable today.", f"error: {e}"
+            print(f"[history] {e}", file=sys.stderr)
+    return out
 
 
 def main(argv=None):

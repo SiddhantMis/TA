@@ -105,7 +105,7 @@ if __name__ == "__main__":
     wide_leaders = None
     if os.environ.get("SKIP_WIDE_LEADERS") != "1":
         try:
-            wide_leaders = wide.run_leaders()
+            wide_leaders = wide.run_leaders(history_dir="docs/history")
         except Exception as e:
             print(f"[warning] wide leaders failed: {e}", file=sys.stderr)
             wide_leaders = {"error": str(e)}
