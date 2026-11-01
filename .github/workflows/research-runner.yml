@@ -1,0 +1,129 @@
+name: Hosted Research Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: What should GitHub run?
+        required: true
+        type: choice
+        options:
+          - tests
+          - paper_audit
+          - liquid500_backtest
+      years:
+        description: Backtest lookback in years (used for liquid500_backtest)
+        required: false
+        default: "10"
+        type: string
+      cost_pct:
+        description: Round-trip transaction cost percentage
+        required: false
+        default: "0.30"
+        type: string
+  repository_dispatch:
+    types: [run-tests, paper-audit, run-backtest]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hosted-research-$${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      REQUEST_ACTION: ${{ github.event.action || '' }}
+      REQUEST_TASK: ${{ inputs.task || github.event.client_payload.task || '' }}
+      REQUEST_YEARS: ${{ inputs.years || github.event.client_payload.years || '10' }}
+      REQUEST_COST: ${{ inputs.cost_pct || github.event.client_payload.cost_pct || '0.30' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Resolve and validate request
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          task="$REQUEST_TASK"
+          if [[ "$GITHUB_EVENT_NAME" == "repository_dispatch" ]]; then
+            case "$REQUEST_ACTION" in
+              run-tests) task="tests" ;;
+              paper-audit) task="paper_audit" ;;
+              run-backtest) task="liquid500_backtest" ;;
+              *) echo "Unsupported repository_dispatch action: $REQUEST_ACTION"; exit 1 ;;
+            esac
+          fi
+          case "$task" in
+            tests|paper_audit|liquid500_backtest) ;;
+            *) echo "Unsupported task: $task"; exit 1 ;;
+          esac
+          if ! [[ "$REQUEST_YEARS" =~ ^[1-9][0-9]?$ ]]; then
+            echo "years must be an integer from 1 to 99"; exit 1
+          fi
+          python - "$REQUEST_COST" <<'PY'
+          import math, sys
+          value = float(sys.argv[1])
+          if not math.isfinite(value) or value < 0 or value > 5:
+              raise SystemExit("cost_pct must be a finite number between 0 and 5")
+          PY
+          echo "task=$task" >> "$GITHUB_OUTPUT"
+          echo "years=$REQUEST_YEARS" >> "$GITHUB_OUTPUT"
+          echo "cost_pct=$REQUEST_COST" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Hosted research request"
+            echo "- Task: \`$task\`"
+            echo "- Backtest years: \`$REQUEST_YEARS\`"
+            echo "- Round-trip cost: \`$REQUEST_COST%\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run deterministic regression tests
+        if: steps.request.outputs.task == 'tests' || steps.request.outputs.task == 'paper_audit' || steps.request.outputs.task == 'liquid500_backtest'
+        run: |
+          python test_patterns.py
+          if [ -f test_momentum_portfolio.py ]; then
+            python test_momentum_portfolio.py
+          fi
+          python -m py_compile analyzer.py leaders.py portfolio.py backtest.py main.py
+
+      - name: Audit published paper scorecard
+        if: steps.request.outputs.task == 'paper_audit'
+        run: python scripts/audit_paper_scorecard.py
+
+      - name: Run liquid500 walk-forward portfolio backtest
+        if: steps.request.outputs.task == 'liquid500_backtest'
+        run: |
+          mkdir -p results/hosted
+          python portfolio.py \
+            --universes liquid500 \
+            --years "$${{ steps.request.outputs.years }}" \
+            --oos-frac 0.35 \
+            --cost-pct "$${{ steps.request.outputs.cost_pct }}" \
+            --outdir results/hosted
+          {
+            echo "## Liquid500 backtest report"
+            for report in results/hosted/portfolio_report*.md; do
+              [ -f "$report" ] && cat "$report"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload public research outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hosted-research-${{ github.run_id }}
+          path: |
+            results/hosted/**
+            docs/scorecard.json
+            docs/history/**
+          if-no-files-found: warn
+          retention-days: 30
