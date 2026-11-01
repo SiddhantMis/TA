@@ -28,7 +28,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: hosted-research-$${{ github.ref }}
+  group: hosted-research-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -105,9 +105,9 @@ jobs:
           mkdir -p results/hosted
           python portfolio.py \
             --universes liquid500 \
-            --years "$${{ steps.request.outputs.years }}" \
+            --years "${{ steps.request.outputs.years }}" \
             --oos-frac 0.35 \
-            --cost-pct "$${{ steps.request.outputs.cost_pct }}" \
+            --cost-pct "${{ steps.request.outputs.cost_pct }}" \
             --outdir results/hosted
           {
             echo "## Liquid500 backtest report"
