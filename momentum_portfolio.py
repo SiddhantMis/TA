@@ -516,7 +516,13 @@ def _relative_context_for_frame(df, benchmark_df):
     return relative_context(aligned["stock"].tolist(), aligned["benchmark"].tolist(), 63)
 
 
-def scan_market(universe_path=None, liquid_top=LIQUID_TOP):
+def scan_market(universe_path=None, liquid_top=LIQUID_TOP, as_of=None):
+    """Scan the configured universe, optionally freezing every series at an exact session date.
+
+    When as_of is supplied, the benchmark must contain that exact session. All
+    stock and benchmark bars after that date are removed before indicators or
+    rankings are calculated, preventing accidental look-ahead from later data.
+    """
     import analyzer as A
     import leaders as LD
     import pandas as pd
@@ -524,6 +530,22 @@ def scan_market(universe_path=None, liquid_top=LIQUID_TOP):
     benchmark_df = A.fetch_ticker(A.RS_BENCHMARK)
     if benchmark_df is None or benchmark_df.empty:
         raise RuntimeError(f"Could not fetch benchmark {A.RS_BENCHMARK}")
+
+    requested_session = None
+    if as_of:
+        try:
+            requested_session = date.fromisoformat(str(as_of)).isoformat()
+        except ValueError as exc:
+            raise ValueError("--as-of must be an ISO calendar date (YYYY-MM-DD)") from exc
+        cutoff = pd.Timestamp(requested_session)
+        benchmark_df = benchmark_df.loc[benchmark_df.index <= cutoff]
+        if benchmark_df.empty or benchmark_df.index[-1].date().isoformat() != requested_session:
+            latest = benchmark_df.index[-1].date().isoformat() if not benchmark_df.empty else "none"
+            raise RuntimeError(
+                f"Requested benchmark session {requested_session} is unavailable; "
+                f"latest available session at or before it: {latest}"
+            )
+
     benchmark_close = pd.to_numeric(benchmark_df["Close"], errors="coerce").dropna()
     if benchmark_close.empty:
         raise RuntimeError("Benchmark data contains no valid closes")
@@ -536,6 +558,8 @@ def scan_market(universe_path=None, liquid_top=LIQUID_TOP):
     for ticker in universe:
         try:
             frame = A.fetch_ticker(ticker)
+            if frame is not None and not frame.empty and requested_session:
+                frame = frame.loc[frame.index <= pd.Timestamp(requested_session)]
             if frame is None or frame.empty or len(frame) < 260:
                 failed.append(ticker)
             else:
@@ -590,6 +614,7 @@ def main(argv=None):
     parser.add_argument("--portfolio-size", type=int, default=PORTFOLIO_SIZE)
     parser.add_argument("--hysteresis-rank", type=int, default=HYSTERESIS_RANK)
     parser.add_argument("--liquid-top", type=int, default=LIQUID_TOP)
+    parser.add_argument("--as-of", help="freeze the market scan at this exact exchange session (YYYY-MM-DD)")
     parser.add_argument("--force-rebalance", action="store_true")
     parser.add_argument("--record-fill", nargs=4, metavar=("TICKER", "BUY|SELL", "QTY", "PRICE"),
                         help="record a confirmed execution; this does not run a market scan")
@@ -610,7 +635,7 @@ def main(argv=None):
         print(f"Actual positions: {len(state['actual_holdings'])}; cash: ₹{state['cash_balance_inr']:,.2f}")
         return
 
-    as_of, regime, rows, ranked, quality = scan_market(args.universe, args.liquid_top)
+    as_of, regime, rows, ranked, quality = scan_market(args.universe, args.liquid_top, args.as_of)
     state = run_portfolio(
         state, as_of, regime, rows, ranked, quality,
         args.portfolio_size, args.hysteresis_rank, args.force_rebalance,
