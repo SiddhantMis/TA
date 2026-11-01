@@ -1054,6 +1054,11 @@ def fetch_ticker(ticker: str) -> Optional[pd.DataFrame]:
         return None
     data = _flatten_columns(data, ticker)
     data = data.rename(columns=str.title)
+    # Yahoo sometimes returns the newest session with NaN prices. Without this, every comparison on that
+    # row is silently False (no patterns, no flags) and the published 'close' was NaN for all 48 stocks.
+    data = data.dropna(subset=["Close"])
+    if data.empty:
+        return None
     return data
 
 

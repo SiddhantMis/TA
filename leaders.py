@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 import time
@@ -66,6 +67,23 @@ def entry_plan(df: pd.DataFrame, benchmark_df: pd.DataFrame) -> dict:
                      "pullback20_ema20": round(float(last.ema20), 2)},
         "exit_rule": f"stop {R.ATR_STOP}xATR under the fill; then exit at highest close - {R.ATR_TRAIL}xATR; 60-session time stop",
     }
+
+
+def sanitize_json(obj):
+    """NaN / Infinity / numpy scalars -> strict JSON (RFC 8259). Python's json writes NaN as a bare word that
+    browsers' JSON.parse and ChatGPT's tools reject, which broke the published screen file."""
+    if isinstance(obj, dict):
+        return {str(k): sanitize_json(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [sanitize_json(x) for x in obj]
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, (np.floating, float)):
+        v = float(obj)
+        return v if math.isfinite(v) else None
+    return obj
 
 
 def load_universe(path: str = UNIVERSE_FILE) -> list:

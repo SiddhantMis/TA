@@ -118,7 +118,7 @@ if __name__ == "__main__":
     # is a notification on top of that, not a precondition for it.
     os.makedirs("docs", exist_ok=True)
     with open(OUTPUT_PATH, "w") as f:
-        json.dump({
+        json.dump(wide.sanitize_json({
             "run_timestamp": run_ts.isoformat(),
             "note": "Every 'date'/'close' below is the last COMPLETE session as of run_timestamp, "
                      "never a same-day live price. The momentum leaderboard ranks 12-1 adjusted "
@@ -155,7 +155,7 @@ if __name__ == "__main__":
             "flagged": flagged,
             "watch": watch,
             "breadth_above_sma50": breadth,
-        }, f, indent=2, default=str)
+        }), f, indent=2, default=str, allow_nan=False)
 
     send_discord_alert(flagged, run_timestamp=run_ts, watch=watch, breadth=breadth,
                        leaders=momentum_leaders, benchmark=RS_BENCHMARK,

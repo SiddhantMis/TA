@@ -1536,6 +1536,36 @@ def test_setup_record_fits_the_alert_and_says_unvalidated():
     assert len(LD.SETUP_RECORD) <= 230 and "unvalidated" in LD.SETUP_RECORD.lower()
 
 
+def test_sanitize_json_makes_strict_json_and_keeps_values():
+    import json
+    import numpy as np
+    import leaders as LD
+    raw = {"a": float("nan"), "b": [float("inf"), -float("inf"), np.float64(1.5), np.int64(3), np.bool_(True)], "c": {"d": None, 2: "x"}}
+    clean = LD.sanitize_json(raw)
+    text = json.dumps(clean, allow_nan=False)                       # would raise on any NaN/Infinity
+    back = json.loads(text, parse_constant=lambda c: (_ for _ in ()).throw(ValueError(c)))
+    assert back == {"a": None, "b": [None, None, 1.5, 3, True], "c": {"d": None, "2": "x"}}
+
+
+def test_fetch_ticker_drops_trailing_nan_rows():
+    import numpy as np
+    import analyzer as A
+    idx = pd.bdate_range(end="2020-06-12", periods=30)               # a past date, so the 'today' rule does not interfere
+    df = pd.DataFrame({"Open": 100.0, "High": 101.0, "Low": 99.0, "Close": 100.0, "Volume": 1e6}, index=idx)
+    df.iloc[-1] = np.nan                                              # Yahoo's NaN row for the newest session
+    class FakeYF:
+        @staticmethod
+        def download(*a, **k):
+            return df
+    real = A.yf
+    A.yf = FakeYF
+    try:
+        out = A.fetch_ticker("X.NS")
+    finally:
+        A.yf = real
+    assert out is not None and len(out) == 29 and out["Close"].notna().all() and out.index[-1] == idx[-2]
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0
