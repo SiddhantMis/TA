@@ -42,6 +42,23 @@ For a backtest, the payload may include `years` (1–99) and `cost_pct` (0–5; 
 
 **Security:** never put a PAT in a Task/Gem prompt or repository file. Store the dispatch token in the calling agent's secure connection/secret store. Restrict it to this repository and only the permissions required to create repository dispatch events. If the calling environment cannot make authenticated GitHub API requests, use the manual Actions trigger above instead. The currently connected GitHub tools in this conversation can read workflow runs, but they do not expose a direct workflow-dispatch action.
 
+## Copy-ready Task / Gem behavior
+
+Use these instructions in both the ChatGPT Task and the Gemini Gem:
+
+```text
+For a requested TA research run, select exactly one job:
+- tests -> repository_dispatch event_type "run-tests"
+- paper audit -> event_type "paper-audit"
+- full liquid500 backtest -> event_type "run-backtest" with years=10 and cost_pct=0.30 unless the user specifies otherwise.
+
+Send the dispatch request using the securely connected GitHub API credential. Never ask the user to paste a token and never place a token in this instruction, prompt, issue, or repository file. If no secure API credential/action is available, return the manual Hosted Research Runner URL and ask the user to click Run workflow; do not pretend the run was started.
+
+After dispatch, poll the repository Actions runs for the new repository_dispatch run. Wait for status=completed. Read its job logs and download the hosted-research artifact. Summarize the test count or backtest report, including FULL / IS / OOS, drawdown, turnover, costs, and the same-universe control. Flag incomplete data and survivorship bias. Do not convert backtest results into live-performance claims.
+```
+
+The dispatch request is an execution trigger, not the analysis result. The Task/Gem must retrieve and inspect the completed run before reporting conclusions.
+
 ## Result-reading protocol for Tasks and Gems
 
 1. Do not say a run started until GitHub returns dispatch success or a workflow run is visible.
