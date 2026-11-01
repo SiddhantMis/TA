@@ -13,6 +13,8 @@ on:
       - "alerts.py"
       - "test_patterns.py"
       - "docs/index.html"
+      - "docs/RESEARCH_AUTOMATION.md"
+      - "scripts/**"
       - ".github/workflows/**"
   push:
     branches: [main, paper-log, codex/momentum-portfolio-hardening]
@@ -49,4 +51,4 @@ jobs:
         if: hashFiles('test_momentum_portfolio.py') != ''
         run: python test_momentum_portfolio.py
       - name: Compile research modules
-        run: python -m py_compile analyzer.py leaders.py portfolio.py backtest.py main.py
+        run: python -m py_compile analyzer.py leaders.py portfolio.py backtest.py main.py scripts/audit_paper_scorecard.py
