@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 .env
 .venv/
+data_cache/
+results/*.csv
+data_cache/

@@ -1,13 +1,31 @@
 import json
 import os
+import sys
 from datetime import date, datetime, time as dt_time
 
 import analyzer as analyzer_module
-from analyzer import WATCHLIST, IST, run_screen
+from analyzer import WATCHLIST, IST, RS_BENCHMARK, RS_LEADER_BOARD_SIZE, run_screen
 from alerts import send_discord_alert, send_discord_failure
+import leaders as wide
 
 OUTPUT_PATH = "docs/latest_screen.json"
 EOD_CUTOFF = dt_time(19, 0)
+
+
+def summarize_scan_coverage(watchlist: list[str], results: list[dict]) -> dict:
+    """Report configured symbols that did not produce a screen result."""
+    expected = list(dict.fromkeys(watchlist))
+    expected_set = set(expected)
+    scored = {r.get("ticker") for r in results if r.get("ticker") in expected_set}
+    missing = [ticker for ticker in expected if ticker not in scored]
+    requested = len(expected)
+    scored_count = requested - len(missing)
+    return {
+        "requested": requested,
+        "scored": scored_count,
+        "coverage_pct": round(100 * scored_count / requested, 1) if requested else None,
+        "missing_tickers": missing,
+    }
 
 
 def enable_settled_daily_candle() -> None:
@@ -77,6 +95,20 @@ if __name__ == "__main__":
     # a near-miss is visible instead of silently vanishing.
     flagged = [r for r in results if r["flag"] and r.get("trade_ok")]
     watch = [r for r in results if r["flag"] and not r.get("trade_ok")]
+    momentum_leaders = sorted(
+        (r for r in results if r.get("leader_rank") is not None),
+        key=lambda r: (r.get("leader_rank") or float("inf"), r["ticker"]),
+    )[:RS_LEADER_BOARD_SIZE]
+    scan_coverage = summarize_scan_coverage(WATCHLIST, results)
+    # Wide-universe leaders (the evidence-backed part). A failure here must never cost the legacy
+    # screen's output, so it is isolated and reported inside the JSON/alert instead of raising.
+    wide_leaders = None
+    if os.environ.get("SKIP_WIDE_LEADERS") != "1":
+        try:
+            wide_leaders = wide.run_leaders()
+        except Exception as e:
+            print(f"[warning] wide leaders failed: {e}", file=sys.stderr)
+            wide_leaders = {"error": str(e)}
     breadth = (round(sum(1 for r in results if r["above_sma50"]) / len(results), 2)
                if results else None)
 
@@ -86,17 +118,50 @@ if __name__ == "__main__":
     # is a notification on top of that, not a precondition for it.
     os.makedirs("docs", exist_ok=True)
     with open(OUTPUT_PATH, "w") as f:
-        json.dump({
+        json.dump(wide.sanitize_json({
             "run_timestamp": run_ts.isoformat(),
             "note": "Every 'date'/'close' below is the last COMPLETE session as of run_timestamp, "
-                     "never a same-day live price. A flag here is for planning tomorrow's open — "
-                     "not for acting before today's 3:30 PM close.",
+                     "never a same-day live price. The momentum leaderboard ranks 12-1 adjusted "
+                     "returns relative to NIFTYBEES within this fixed watchlist; it is descriptive "
+                     "and is not a validated buy signal. It ranks equities only; commodity ETFs "
+                     "are excluded. 'flagged' remains the legacy reversal "
+                     "checklist and is also for manual review only.",
             "all": results,
+            "scan_coverage": scan_coverage,
+            "momentum": {
+                "benchmark": RS_BENCHMARK,
+                "available": bool(momentum_leaders),
+                "definition": (
+                    "12-1 adjusted return excess versus benchmark on benchmark sessions; "
+                    "latest 21 sessions skipped. 1m and 6m excess are separate context fields; "
+                    "stale and <95% coverage rows excluded"
+                ),
+                "universe": "equities in the configured watchlist; commodity ETFs excluded",
+                "leader_universe_size": sum(1 for r in results if r.get("leader_rank") is not None),
+                "status_counts": {
+                    status: sum(1 for r in results if r.get("relative_strength_status") == status)
+                    for status in sorted({r.get("relative_strength_status", "unavailable") for r in results})
+                },
+                "unavailable_reason": (
+                    None if momentum_leaders else
+                    "No equity rows passed benchmark, freshness, history, and coverage checks. See per-ticker status."
+                ),
+                "excluded_non_equity_tickers": [
+                    r["ticker"] for r in results if r.get("instrument_type") != "equity"
+                ],
+            },
+            "momentum_leaders": momentum_leaders,
+            "wide_leaders": wide_leaders,
             "flagged": flagged,
             "watch": watch,
             "breadth_above_sma50": breadth,
-        }, f, indent=2, default=str)
+        }), f, indent=2, default=str, allow_nan=False)
 
-    send_discord_alert(flagged, run_timestamp=run_ts, watch=watch, breadth=breadth)
-    print(f"Screened {len(results)} tickers, {len(flagged)} flagged, {len(watch)} watch-only (failed R:R gate), breadth {breadth}. Data as of run at {run_ts.isoformat()}.")
+    send_discord_alert(flagged, run_timestamp=run_ts, watch=watch, breadth=breadth,
+                       leaders=momentum_leaders, benchmark=RS_BENCHMARK,
+                       scan_coverage=scan_coverage, wide_leaders=wide_leaders)
+    print(f"Screened {scan_coverage['scored']}/{scan_coverage['requested']} watchlist instruments, "
+          f"{len(momentum_leaders)} equity momentum leaders, "
+          f"{len(flagged)} flagged, {len(watch)} watch-only (failed R:R gate), "
+          f"breadth {breadth}. Data as of run at {run_ts.isoformat()}.")
     print(f"Written to {OUTPUT_PATH} for the Pages site.")
