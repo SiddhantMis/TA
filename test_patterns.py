@@ -1566,6 +1566,166 @@ def test_fetch_ticker_drops_trailing_nan_rows():
     assert out is not None and len(out) == 29 and out["Close"].notna().all() and out.index[-1] == idx[-2]
 
 
+def _score_world():
+    """Deterministic prices: A +1%/day, B flat, C -1%/day, bench +0.2%/day; open = close."""
+    import numpy as np
+    idx = pd.bdate_range("2026-01-01", periods=120)
+    mk = lambda g: pd.DataFrame({"Open": 100.0 * (1 + g) ** np.arange(120), "Close": 100.0 * (1 + g) ** np.arange(120),
+                                 "High": 1e9, "Low": 0.0, "Volume": 1e6}, index=idx)
+    return {"A": mk(0.01), "B": mk(0.0), "C": mk(-0.01)}, mk(0.002), idx
+
+
+def _snap(date, tickers=("A", "B")):
+    return {"as_of": date, "benchmark": "NIFTYBEES.NS", "counts": {},
+            "leaders": [{"ticker": t, "rank": i + 1, "rs12_1": 10.0, "close": 100.0, "fired": []} for i, t in enumerate(tickers)],
+            "liquid": [{"ticker": t, "close": 100.0} for t in ("A", "B", "C")]}
+
+
+def _month_end_signals(idx):
+    latest_by_month = {}
+    for day in idx:
+        latest_by_month[day.strftime("%Y-%m")] = day
+    return list(latest_by_month.values())[:-1]  # final observed month is not yet confirmed complete
+
+
+def test_scorecard_math_month_end_fixed_weights_and_drifted_turnover():
+    import leaders as LD
+    frames, bench, idx = _score_world()
+    month_ends = _month_end_signals(idx)
+    snaps = [_snap(day.date().isoformat()) for day in month_ends]
+    sc = LD.build_scorecard(snaps, frames, bench, cost_pct=0.30, n_hold=2)
+    monthly = sc["monthly"]
+    cal = bench.index
+    first_entry_pos = cal.searchsorted(pd.Timestamp(snaps[0]["as_of"]), side="right")
+    second_entry_pos = cal.searchsorted(pd.Timestamp(snaps[1]["as_of"]), side="right")
+    first_entry, second_entry = cal[first_entry_pos], cal[second_entry_pos]
+    a_growth = frames["A"].at[second_entry, "Open"] / frames["A"].at[first_entry, "Open"]
+    gross = (a_growth - 1.0) / 2.0
+    drifted_a_weight = a_growth / (a_growth + 1.0)
+    drift_turnover = 2.0 * (drifted_a_weight - 0.5)
+
+    assert len(monthly) == len(month_ends)
+    assert monthly[0]["status"] == "closed"
+    assert monthly[0]["entry_date"] == first_entry.date().isoformat()
+    assert abs(monthly[0]["top20_gross"] - gross) < 1e-9
+    assert abs(monthly[0]["turnover_l1"] - 1.0) < 1e-12
+    assert abs(monthly[0]["top20_net"] - (gross - 0.0015)) < 1e-9
+    assert abs(monthly[0]["nifty50"] - (1.002 ** (second_entry_pos - first_entry_pos) - 1)) < 1e-9
+
+    # The second rebalance has unchanged names, but A appreciated relative to B.
+    # The portfolio must pay a cost for restoring equal weights.
+    assert abs(monthly[1]["turnover_l1"] - drift_turnover) < 1e-9
+    assert monthly[1]["turnover_l1"] > 0
+    assert monthly[1]["top20_net"] < monthly[1]["top20_gross"]
+
+    # A 2-stock selection with a 20-slot target invests only 2/20; the rest is cash.
+    fixed = LD._basket_return(["A", "B"], frames, first_entry, second_entry, "Open", denominator=20)[0]
+    assert abs(fixed - (a_growth - 1.0) / 20.0) < 1e-9
+
+    assert sc["cumulative"]["status"] == "complete"
+    assert sc["cumulative"]["months"] == len(month_ends) - 1
+    assert sc["missing_month_ends"] == []
+    assert sc["monthly"][-1]["status"] == "open"
+    assert sc["monthly"][-1]["exit_date"] == cal[-1].date().isoformat()
+    assert set(sc["daily_forward"]) == {"5d", "21d", "63d"}
+    assert sc["daily_forward"]["5d"]["snapshots"] == len(snaps)
+
+
+def test_scorecard_does_not_reweight_missing_constituents_or_publish_partial_cumulative():
+    import leaders as LD
+    frames, bench, idx = _score_world()
+    signals = _month_end_signals(idx)
+    snaps = [_snap(day.date().isoformat()) for day in signals]
+    del frames["B"]
+    sc = LD.build_scorecard(snaps, frames, bench, cost_pct=0.30, n_hold=2)
+    first = sc["monthly"][0]
+    assert first["status"] == "incomplete_data"
+    assert first["data_status"] == "missing_price_or_turnover_data"
+    assert first["top20_net"] is None
+    assert "B" in first["missing_tickers"]
+    assert sc["cumulative"]["status"] == "incomplete"
+    assert sc["cumulative"]["top20_net"] is None
+    assert "Cumulative returns withheld" in sc["summary"]
+
+
+def test_scorecard_flags_missing_month_end_and_old_price_history():
+    import leaders as LD
+    frames, bench, idx = _score_world()
+    signals = _month_end_signals(idx)
+    snaps = [_snap(day.date().isoformat()) for day in signals]
+    # Remove one middle month-end scan: do not stretch the prior portfolio over two months.
+    snaps = [snap for snap in snaps if not snap["as_of"].startswith("2026-03")]
+    sc = LD.build_scorecard(snaps, frames, bench, cost_pct=0.30, n_hold=2)
+    assert any(item["month"] == "2026-03" for item in sc["missing_month_ends"])
+    assert any(item["data_status"] == "missing_month_end_snapshot" for item in sc["monthly"])
+    assert sc["cumulative"]["status"] == "incomplete"
+    assert sc["cumulative"]["top20_net"] is None
+
+    old = _snap("2025-12-31")
+    sc_old = LD.build_scorecard([old] + snaps, frames, bench, cost_pct=0.30, n_hold=2)
+    assert "2025-12-31" in sc_old["snapshots_outside_price_window"]
+    assert sc_old["cumulative"]["status"] == "incomplete"
+    assert sc_old["cumulative"]["top20_net"] is None
+
+def test_scorecard_with_no_history_says_collecting():
+    import leaders as LD
+    frames, bench, _ = _score_world()
+    assert LD.build_scorecard([], frames, bench)["status"] == "collecting"
+
+
+def test_snapshot_is_skipped_for_partial_or_thin_scans_and_is_strict_json(tmp_path=None):
+    import json
+    import os
+    import tempfile
+    import leaders as LD
+    leaders = [{"ticker": "A.NS", "leader_rank": 1, "relative_strength_12_1_pct": 5.0, "last_close": 100.0, "plan": {"fired": ["breakout55"]}}]
+    base = {"as_of": "2026-10-30", "benchmark": "NIFTYBEES.NS", "leaders": leaders, "liquid_universe": [{"ticker": "A.NS", "close": float("nan")}]}
+    d = tempfile.mkdtemp()
+    assert LD.save_snapshot(dict(base, counts={"load_coverage_pct": 99.0, "partial_scan_time_limit": True}), d)[0] is None
+    assert LD.save_snapshot(dict(base, counts={"load_coverage_pct": 60.0, "partial_scan_time_limit": False}), d)[0] is None
+    assert os.listdir(d) == []
+    path, why = LD.save_snapshot(dict(base, counts={"load_coverage_pct": 99.0, "partial_scan_time_limit": False}), d)
+    assert why == "saved" and os.path.basename(path) == "leaders_2026-10-30.json"
+    snap = json.loads(open(path).read(), parse_constant=lambda c: (_ for _ in ()).throw(ValueError(c)))
+    assert snap["leaders"][0]["fired"] == ["breakout55"] and snap["liquid"][0]["close"] is None
+    assert [s["as_of"] for s in LD.load_snapshots(d)] == ["2026-10-30"]
+
+
+def test_run_leaders_logs_a_snapshot_and_scorecard_without_ever_breaking_the_scan():
+    import json
+    import os
+    import tempfile
+    import analyzer as A
+    import leaders as LD
+    frames, bench = _lead_universe()
+    real = A.fetch_ticker
+    A.fetch_ticker = lambda t: frames[t.replace(".NS", "")]
+    d = tempfile.mkdtemp()
+    hist = os.path.join(d, "history")
+    try:
+        out = LD.run_leaders(["FAST.NS", "MID.NS", "FLAT.NS", "ILLIQ.NS", "CRASH.NS"], benchmark_df=bench, liquid_top=4, board=5,
+                             sleep=0, history_dir=hist)
+        assert out["snapshot_status"].startswith("saved") and "Paper log" in out["scorecard_text"]
+        assert json.load(open(os.path.join(d, "scorecard.json")))["snapshots"] == 1
+        assert len(out["liquid_universe"]) == 4
+        out2 = LD.run_leaders(["FAST.NS", "MID.NS", "FLAT.NS", "ILLIQ.NS", "CRASH.NS"], benchmark_df=bench, liquid_top=4, board=5,
+                              sleep=0, history_dir=os.path.join(d, "nope", "\0bad"))       # an unwritable path must not raise
+        assert "error" in out2["snapshot_status"] and out2["leaders"]
+    finally:
+        A.fetch_ticker = real
+
+
+def test_alert_includes_the_paper_log_line_within_the_limit():
+    from alerts import build_alert_content, DISCORD_CONTENT_LIMIT
+    wl = {"counts": {"liquid": 200, "above_200dma": 80}, "setup_record": "x" * 300, "scorecard_text": "Paper log since 2026-11-02: 1 completed month(s) " + "y" * 300,
+          "leaders": [{"leader_rank": i, "ticker": f"T{i}.NS", "relative_strength_12_1_pct": 50.0, "relative_strength_6m_pct": 10.0,
+                       "pct_below_52w_high": 4.0, "plan": {"fired": ["pullback20"], "stop_if_filled_at_ref": 90.0, "risk_pct": 8.0,
+                                                           "shares_per_1000_risk": 12, "triggers": {"breakout55_close_above": 120.0}},
+                       "structure": {"support_level": 95.0, "support_touches": 2, "resistance_ladder": [{"level": 130.0}]}} for i in range(1, 21)]}
+    text = build_alert_content([], "(s)", wide_leaders=wl)
+    assert "Paper log since" in text and len(text) <= DISCORD_CONTENT_LIMIT, len(text)
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0
