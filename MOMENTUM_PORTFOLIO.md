@@ -36,6 +36,16 @@ Set initial capital to the account's actual starting cash with the --capital opt
 
 The first scan builds an initial target. Subsequent automatic rebalances occur on the first scan on or after the 28th of a new calendar month. A manual force-rebalance option is available. This calendar rule is an operational approximation; verify the exchange calendar and next-session execution timing before relying on it.
 
+## Hosted Friday-data preview
+
+After this PR is merged, use **Actions → Momentum Portfolio Friday Preview → Run workflow**. The default session is **2026-10-30**. The scanner truncates both benchmark and stock history to that exact exchange session and fails if the benchmark does not contain it; it cannot silently substitute Monday's data or use later prices.
+
+The workflow runs on a GitHub-hosted runner. It uses a fresh temporary state with a nominal ₹1 capital only to satisfy the ledger's positive-capital requirement; this is **not** an account balance and is not used to publish quantities or orders. The workflow exports only a market-data preview and two review-input files for Gemini and ChatGPT. It excludes actual holdings, broker fills, cash, capital, cost basis, suggested quantities and private state. Temporary state and internal briefs are not uploaded or committed.
+
+The preview is a market/strategy test, not a personalized account run. It starts with an empty actual-holdings ledger, so the Top-30 retention rule cannot account for existing positions until those are reconciled from broker-confirmed holdings. Do not treat the preview's target tickers as trades.
+
+Run the first trial with the default date (Friday, 30 October 2026), inspect universe coverage and benchmark regime, then have the Gemini and ChatGPT review inputs analysed separately. If the data provider cannot return the exact requested session, the workflow must fail rather than switch dates.
+
 ## AI briefs
 
 Both briefs are generated from one portfolio-state snapshot and saved under .local/. That folder is git-ignored because the files contain private holdings, cash and transaction information. Gemini focuses on fundamental durability and sector/catalyst context. ChatGPT focuses on filings, current news, event risk and portfolio exposure. Neither AI can update actual_holdings or execute a proposed trade.
