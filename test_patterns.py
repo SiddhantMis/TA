@@ -1620,7 +1620,7 @@ def test_scorecard_math_month_end_fixed_weights_and_drifted_turnover():
 
     # A 2-stock selection with a 20-slot target invests only 2/20; the rest is cash.
     fixed = LD._basket_return(["A", "B"], frames, first_entry, second_entry, "Open", denominator=20)[0]
-    assert abs(fixed - gross / 20.0) < 1e-9
+    assert abs(fixed - (a_growth - 1.0) / 20.0) < 1e-9
 
     assert sc["cumulative"]["status"] == "complete"
     assert sc["cumulative"]["months"] == len(month_ends) - 1
