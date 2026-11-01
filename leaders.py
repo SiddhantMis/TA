@@ -185,6 +185,8 @@ def _basket_return(tickers, frames, entry_date, exit_date, exit_kind, denominato
     n_hold so fewer than n_hold names leave the unused allocation in zero-return cash.
     """
     names = list(dict.fromkeys(tickers))
+    if not names:
+        return None, 0, []
     returns, missing = {}, []
     for ticker in names:
         entry = _px(frames, ticker, "Open", entry_date)
@@ -197,7 +199,7 @@ def _basket_return(tickers, frames, entry_date, exit_date, exit_kind, denominato
         return None, len(returns), missing
     weight_denominator = len(names) if denominator is None else int(denominator)
     if weight_denominator <= 0:
-        return (0.0 if not names else None), len(returns), []
+        return None, len(returns), []
     return sum(returns.values()) / weight_denominator, len(returns), []
 
 
