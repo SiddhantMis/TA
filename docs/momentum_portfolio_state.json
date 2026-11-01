@@ -1,0 +1,1360 @@
+{
+  "as_of": "2026-10-30",
+  "benchmark": "NIFTYBEES.NS",
+  "market_regime": {
+    "benchmark": "NIFTYBEES.NS",
+    "last_close": 262.89,
+    "sma200": 273.05,
+    "above_sma200": false,
+    "regime": "bear",
+    "regime_ok": false,
+    "filter_active": false,
+    "description": "Benchmark <= 200-DMA (Market regime filter triggers cash/defensive posture)"
+  },
+  "portfolio_rules": {
+    "target_slots": 20,
+    "hysteresis_hold_buffer_rank": 30,
+    "liquidity_filter_top_n": 200,
+    "trend_gate": "Close > 200-DMA (entry also requires Close > 50-DMA & <= +12% from 20-EMA)",
+    "regime_gate": "NIFTYBEES.NS > 200-DMA (else raise cash per mom12_1+mkt)"
+  },
+  "summary": {
+    "mode": "INITIAL_BUILD",
+    "active_stock_slots": 0,
+    "cash_slots": 20,
+    "cash_allocation_pct": 100.0,
+    "retained_count": 0,
+    "exits_flagged_count": 0,
+    "replacements_found_count": 0
+  },
+  "rotation_actions": [],
+  "holdings": [],
+  "flagged_exits": [],
+  "replacements": [],
+  "next_in_line_watchlist": [
+    {
+      "ticker": "STLTECH.NS",
+      "momentum_12_1_pct": 642.27,
+      "benchmark_momentum_12_1_pct": -11.1,
+      "relative_strength_12_1_pct": 653.37,
+      "relative_strength_1m_pct": -6.18,
+      "relative_strength_6m_pct": 180.22,
+      "relative_strength_date": "2026-10-30",
+      "relative_strength_benchmark_date": "2026-10-30",
+      "momentum_12_1_end_date": "2026-09-29",
+      "relative_strength_12m_coverage_pct": 100.0,
+      "relative_strength_stale_sessions": 0,
+      "relative_strength_status": "ok",
+      "last_close": 824.5,
+      "sma200": 476.31,
+      "above_sma200": true,
+      "traded_value_126d": 1618346884.7514093,
+      "pct_below_52w_high": 21.6,
+      "liquidity_rank": 168,
+      "leader_rank": 1,
+      "structure": {
+        "trend": "downtrend",
+        "support_level": 787.72,
+        "support_touches": 2,
+        "support_dates": [
+          "2026-09-21",
+          "2026-09-29"
+        ],
+        "support_days_ago": [
+          27,
+          21
+        ],
+        "support_quality": "Moderate",
+        "support_ladder": [
+          {
+            "level": 787.72,
+            "touches": 2
+          },
+          {
+            "level": 760.85,
+            "touches": 1
+          },
+          {
+            "level": 665.5,
+            "touches": 1
+          }
+        ],
+        "resistance_ladder": [
+          {
+            "level": 870.95,
+            "touches": 1
+          },
+          {
+            "level": 913.4,
+            "touches": 2
+          },
+          {
+            "level": 1051.1,
+            "touches": 1
+          }
+        ],
+        "volume_ratio": 0.48,
+        "rsi": 43.74,
+        "above_sma50": false,
+        "support_weekly_confluence": true,
+        "support_role_reversal": false
+      },
+      "traded_value_cr": 161.8,
+      "plan": {
+        "fired": [],
+        "ref_close": 824.5,
+        "atr14": 56.26,
+        "stop_if_filled_at_ref": 711.97,
+        "risk_per_share": 112.53,
+        "risk_pct": 13.6,
+        "shares_per_1000_risk": 8,
+        "triggers": {
+          "breakout55_close_above": 1051.1,
+          "pullback20_ema20": 878.3
+        },
+        "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+        "rr_to_next_resistance": 0.4
+      },
+      "swing_setup": {
+        "setup": "trend_continuation",
+        "actionable_now": false,
+        "reason": "Trending above 200-DMA; no specific entry trigger fired"
+      },
+      "trade_plan": {
+        "entry_buy_stop": 841.63,
+        "stop_loss": 783.78,
+        "target_price": 913.4,
+        "atr14": 56.26,
+        "risk_per_share": 57.85,
+        "risk_pct": 6.87,
+        "gross_rr": 1.24,
+        "net_rr": 1.15,
+        "suggested_shares": 172,
+        "capital_required": 144760.36,
+        "capital_pct": 0.1448,
+        "rupee_risk": 9950.2,
+        "sizing_warning": null
+      },
+      "portfolio_rating": {
+        "health_score": 67,
+        "status": "EXIT_AND_REPLACE",
+        "recommended_action": "REMOVE / REPLACE",
+        "exit_reasons": [
+          "Breached 18.0% volatility trailing stop (861.90) & 50-DMA"
+        ],
+        "warnings": [],
+        "above_sma50": false,
+        "above_sma200": true,
+        "dist_from_20ema_pct": -6.13,
+        "dist_from_50sma_pct": -0.81,
+        "behavior_bands": {
+          "behavior_profile": "High-Beta Momentum",
+          "atr14_pct": 6.82,
+          "annualized_vol_pct": 54.9,
+          "ideal_entry_low": 878.3,
+          "ideal_entry_high": 900.26,
+          "max_chase_limit_pct": 12.0,
+          "trailing_stop_pct": 18.0,
+          "trailing_stop_price": 861.9,
+          "structural_stop_price": 775.9,
+          "trim_extension_pct": 35.0,
+          "trim_target_price": 1122.14
+        }
+      },
+      "slot_allocation": {
+        "slot_weight_pct": 5.0,
+        "slot_capital_inr": 50000.0,
+        "target_shares": 60,
+        "deployed_capital_inr": 49470.0
+      }
+    },
+    {
+      "ticker": "CUPID.NS",
+      "momentum_12_1_pct": 474.41,
+      "benchmark_momentum_12_1_pct": -11.1,
+      "relative_strength_12_1_pct": 485.52,
+      "relative_strength_1m_pct": 11.37,
+      "relative_strength_6m_pct": 183.92,
+      "relative_strength_date": "2026-10-30",
+      "relative_strength_benchmark_date": "2026-10-30",
+      "momentum_12_1_end_date": "2026-09-29",
+      "relative_strength_12m_coverage_pct": 100.0,
+      "relative_strength_stale_sessions": 0,
+      "relative_strength_status": "ok",
+      "last_close": 324.55,
+      "sma200": 177.31,
+      "above_sma200": true,
+      "traded_value_126d": 6167446100.903611,
+      "pct_below_52w_high": 12.0,
+      "liquidity_rank": 18,
+      "leader_rank": 2,
+      "structure": {
+        "trend": "downtrend",
+        "support_level": 302.1,
+        "support_touches": null,
+        "support_dates": [],
+        "support_days_ago": [],
+        "support_quality": null,
+        "support_ladder": [
+          {
+            "level": 302.3,
+            "touches": 1
+          },
+          {
+            "level": 265.98,
+            "touches": 2
+          },
+          {
+            "level": 246.0,
+            "touches": 1
+          }
+        ],
+        "resistance_ladder": [
+          {
+            "level": 368.95,
+            "touches": 1
+          }
+        ],
+        "volume_ratio": 0.32,
+        "rsi": 53.42,
+        "above_sma50": true,
+        "support_weekly_confluence": false,
+        "support_role_reversal": false
+      },
+      "traded_value_cr": 616.7,
+      "plan": {
+        "fired": [
+          "pullback20"
+        ],
+        "ref_close": 324.55,
+        "atr14": 15.64,
+        "stop_if_filled_at_ref": 293.28,
+        "risk_per_share": 31.27,
+        "risk_pct": 9.6,
+        "shares_per_1000_risk": 31,
+        "triggers": {
+          "breakout55_close_above": 368.95,
+          "pullback20_ema20": 322.09
+        },
+        "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+        "rr_to_next_resistance": 1.4
+      },
+      "swing_setup": {
+        "setup": "pullback_20ema_or_support",
+        "actionable_now": true,
+        "ema20": 322.09,
+        "support_level": 302.1,
+        "support_touches": null,
+        "reason": "Pullback within 2.5% of rising 20-EMA or testing multi-touch support zone"
+      },
+      "trade_plan": {
+        "entry_buy_stop": 328.91,
+        "stop_loss": 300.59,
+        "target_price": 368.95,
+        "atr14": 15.64,
+        "risk_per_share": 28.32,
+        "risk_pct": 8.61,
+        "gross_rr": 1.41,
+        "net_rr": 1.33,
+        "suggested_shares": 353,
+        "capital_required": 116105.23,
+        "capital_pct": 0.1161,
+        "rupee_risk": 9996.96,
+        "sizing_warning": null
+      },
+      "portfolio_rating": {
+        "health_score": 89,
+        "status": "HOLD_STRONG",
+        "recommended_action": "BUY / ENTER",
+        "exit_reasons": [],
+        "warnings": [],
+        "above_sma50": true,
+        "above_sma200": true,
+        "dist_from_20ema_pct": 0.76,
+        "dist_from_50sma_pct": 7.97,
+        "behavior_bands": {
+          "behavior_profile": "High-Beta Momentum",
+          "atr14_pct": 4.82,
+          "annualized_vol_pct": 54.1,
+          "ideal_entry_low": 302.1,
+          "ideal_entry_high": 330.15,
+          "max_chase_limit_pct": 12.0,
+          "trailing_stop_pct": 15.4,
+          "trailing_stop_price": 312.13,
+          "structural_stop_price": 291.58,
+          "trim_extension_pct": 31.3,
+          "trim_target_price": 394.69
+        }
+      },
+      "slot_allocation": {
+        "slot_weight_pct": 5.0,
+        "slot_capital_inr": 50000.0,
+        "target_shares": 154,
+        "deployed_capital_inr": 49980.7
+      }
+    },
+    {
+      "ticker": "MTARTECH.NS",
+      "momentum_12_1_pct": 247.07,
+      "benchmark_momentum_12_1_pct": -11.1,
+      "relative_strength_12_1_pct": 258.18,
+      "relative_strength_1m_pct": -9.24,
+      "relative_strength_6m_pct": 24.64,
+      "relative_strength_date": "2026-10-30",
+      "relative_strength_benchmark_date": "2026-10-30",
+      "momentum_12_1_end_date": "2026-09-29",
+      "relative_strength_12m_coverage_pct": 100.0,
+      "relative_strength_stale_sessions": 0,
+      "relative_strength_status": "ok",
+      "last_close": 6838.0,
+      "sma200": 5789.84,
+      "above_sma200": true,
+      "traded_value_126d": 5645967809.620098,
+      "pct_below_52w_high": 21.5,
+      "liquidity_rank": 26,
+      "leader_rank": 3,
+      "structure": {
+        "trend": "downtrend",
+        "support_level": 6813.0,
+        "support_touches": 1,
+        "support_dates": [
+          "2026-06-01"
+        ],
+        "support_days_ago": [
+          105
+        ],
+        "support_quality": "Moderate",
+        "support_ladder": [
+          {
+            "level": 6813.0,
+            "touches": 1
+          },
+          {
+            "level": 6729.33,
+            "touches": 3
+          },
+          {
+            "level": 6605.75,
+            "touches": 2
+          }
+        ],
+        "resistance_ladder": [
+          {
+            "level": 7135.0,
+            "touches": 1
+          },
+          {
+            "level": 7369.0,
+            "touches": 2
+          },
+          {
+            "level": 7730.0,
+            "touches": 1
+          }
+        ],
+        "volume_ratio": 2.02,
+        "rsi": 43.89,
+        "above_sma50": false,
+        "support_weekly_confluence": false,
+        "support_role_reversal": false
+      },
+      "traded_value_cr": 564.6,
+      "plan": {
+        "fired": [],
+        "ref_close": 6838.0,
+        "atr14": 384.46,
+        "stop_if_filled_at_ref": 6069.07,
+        "risk_per_share": 768.93,
+        "risk_pct": 11.2,
+        "shares_per_1000_risk": 1,
+        "triggers": {
+          "breakout55_close_above": 8186.5,
+          "pullback20_ema20": 7098.07
+        },
+        "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+        "rr_to_next_resistance": 0.4
+      },
+      "swing_setup": {
+        "setup": "trend_continuation",
+        "actionable_now": false,
+        "reason": "Trending above 200-DMA; no specific entry trigger fired"
+      },
+      "trade_plan": {
+        "entry_buy_stop": 7293.06,
+        "stop_loss": 6778.94,
+        "target_price": 8578.36,
+        "atr14": 384.46,
+        "risk_per_share": 514.12,
+        "risk_pct": 7.05,
+        "gross_rr": 2.5,
+        "net_rr": 2.36,
+        "suggested_shares": 19,
+        "capital_required": 138568.14,
+        "capital_pct": 0.1386,
+        "rupee_risk": 9768.28,
+        "sizing_warning": null
+      },
+      "portfolio_rating": {
+        "health_score": 65,
+        "status": "WARNING_WATCH",
+        "recommended_action": "HOLD ON TIGHT LEASH",
+        "exit_reasons": [],
+        "warnings": [
+          "Trading below 50-DMA (7194.59); tighten stop to 6710.81",
+          "Short-term 1M relative return lagging (-9.2%)"
+        ],
+        "above_sma50": false,
+        "above_sma200": true,
+        "dist_from_20ema_pct": -3.66,
+        "dist_from_50sma_pct": -4.96,
+        "behavior_bands": {
+          "behavior_profile": "High-Beta Momentum",
+          "atr14_pct": 5.62,
+          "annualized_vol_pct": 45.1,
+          "ideal_entry_low": 7098.07,
+          "ideal_entry_high": 7275.52,
+          "max_chase_limit_pct": 12.0,
+          "trailing_stop_pct": 18.0,
+          "trailing_stop_price": 6712.93,
+          "structural_stop_price": 6710.81,
+          "trim_extension_pct": 35.0,
+          "trim_target_price": 9712.7
+        }
+      },
+      "slot_allocation": {
+        "slot_weight_pct": 5.0,
+        "slot_capital_inr": 50000.0,
+        "target_shares": 7,
+        "deployed_capital_inr": 47866.0
+      }
+    },
+    {
+      "ticker": "WELCORP.NS",
+      "momentum_12_1_pct": 235.38,
+      "benchmark_momentum_12_1_pct": -11.1,
+      "relative_strength_12_1_pct": 246.49,
+      "relative_strength_1m_pct": -18.93,
+      "relative_strength_6m_pct": 89.13,
+      "relative_strength_date": "2026-10-30",
+      "relative_strength_benchmark_date": "2026-10-30",
+      "momentum_12_1_end_date": "2026-09-29",
+      "relative_strength_12m_coverage_pct": 100.0,
+      "relative_strength_stale_sessions": 0,
+      "relative_strength_status": "ok",
+      "last_close": 2341.6,
+      "sma200": 1524.76,
+      "above_sma200": true,
+      "traded_value_126d": 3275057264.695335,
+      "pct_below_52w_high": 19.3,
+      "liquidity_rank": 75,
+      "leader_rank": 4,
+      "structure": {
+        "trend": "downtrend",
+        "support_level": 2315.0,
+        "support_touches": 1,
+        "support_dates": [
+          "2026-10-26"
+        ],
+        "support_days_ago": [
+          4
+        ],
+        "support_quality": "Moderate",
+        "support_ladder": [
+          {
+            "level": 2315.0,
+            "touches": 1
+          },
+          {
+            "level": 2240.2,
+            "touches": 1
+          },
+          {
+            "level": 1571.1,
+            "touches": 2
+          }
+        ],
+        "resistance_ladder": [
+          {
+            "level": 2659.75,
+            "touches": 2
+          },
+          {
+            "level": 2801.4,
+            "touches": 2
+          },
+          {
+            "level": 2900.0,
+            "touches": 1
+          }
+        ],
+        "volume_ratio": 1.21,
+        "rsi": 41.85,
+        "above_sma50": false,
+        "support_weekly_confluence": false,
+        "support_role_reversal": false
+      },
+      "traded_value_cr": 327.5,
+      "plan": {
+        "fired": [],
+        "ref_close": 2341.6,
+        "atr14": 149.19,
+        "stop_if_filled_at_ref": 2043.23,
+        "risk_per_share": 298.37,
+        "risk_pct": 12.7,
+        "shares_per_1000_risk": 3,
+        "triggers": {
+          "breakout55_close_above": 2900.0,
+          "pullback20_ema20": 2527.37
+        },
+        "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+        "rr_to_next_resistance": 1.1
+      },
+      "swing_setup": {
+        "setup": "trend_continuation",
+        "actionable_now": false,
+        "reason": "Trending above 200-DMA; no specific entry trigger fired"
+      },
+      "trade_plan": {
+        "entry_buy_stop": 2494.98,
+        "stop_loss": 2303.43,
+        "target_price": 2801.4,
+        "atr14": 149.19,
+        "risk_per_share": 191.55,
+        "risk_pct": 7.68,
+        "gross_rr": 1.6,
+        "net_rr": 1.5,
+        "suggested_shares": 52,
+        "capital_required": 129738.96,
+        "capital_pct": 0.1297,
+        "rupee_risk": 9960.6,
+        "sizing_warning": null
+      },
+      "portfolio_rating": {
+        "health_score": 64,
+        "status": "WARNING_WATCH",
+        "recommended_action": "HOLD ON TIGHT LEASH",
+        "exit_reasons": [],
+        "warnings": [
+          "Trading below 50-DMA (2547.08); tighten stop to 2280.28",
+          "Short-term 1M relative return lagging (-18.9%)"
+        ],
+        "above_sma50": false,
+        "above_sma200": true,
+        "dist_from_20ema_pct": -7.35,
+        "dist_from_50sma_pct": -8.07,
+        "behavior_bands": {
+          "behavior_profile": "High-Beta Momentum",
+          "atr14_pct": 6.37,
+          "annualized_vol_pct": 65.2,
+          "ideal_entry_low": 2527.37,
+          "ideal_entry_high": 2590.56,
+          "max_chase_limit_pct": 12.0,
+          "trailing_stop_pct": 18.0,
+          "trailing_stop_price": 2310.76,
+          "structural_stop_price": 2280.28,
+          "trim_extension_pct": 35.0,
+          "trim_target_price": 3438.56
+        }
+      },
+      "slot_allocation": {
+        "slot_weight_pct": 5.0,
+        "slot_capital_inr": 50000.0,
+        "target_shares": 21,
+        "deployed_capital_inr": 49173.6
+      }
+    },
+    {
+      "ticker": "HFCL.NS",
+      "momentum_12_1_pct": 180.29,
+      "benchmark_momentum_12_1_pct": -11.1,
+      "relative_strength_12_1_pct": 191.39,
+      "relative_strength_1m_pct": 5.66,
+      "relative_strength_6m_pct": 119.91,
+      "relative_strength_date": "2026-10-30",
+      "relative_strength_benchmark_date": "2026-10-30",
+      "momentum_12_1_end_date": "2026-09-29",
+      "relative_strength_12m_coverage_pct": 100.0,
+      "relative_strength_stale_sessions": 0,
+      "relative_strength_status": "ok",
+      "last_close": 231.29,
+      "sma200": 158.62,
+      "above_sma200": true,
+      "traded_value_126d": 5697803853.562098,
+      "pct_below_52w_high": 18.1,
+      "liquidity_rank": 23,
+      "leader_rank": 5,
+      "structure": {
+        "trend": "downtrend",
+        "support_level": 228.51,
+        "support_touches": 1,
+        "support_dates": [
+          "2026-07-07",
+          "2026-07-16",
+          "2026-08-13",
+          "2026-10-26"
+        ],
+        "support_days_ago": [
+          80,
+          73,
+          53,
+          4
+        ],
+        "support_quality": "High",
+        "support_ladder": [
+          {
+            "level": 228.51,
+            "touches": 1
+          },
+          {
+            "level": 217.45,
+            "touches": 1
+          },
+          {
+            "level": 204.6,
+            "touches": 3
+          }
+        ],
+        "resistance_ladder": [
+          {
+            "level": 255.69,
+            "touches": 2
+          },
+          {
+            "level": 275.91,
+            "touches": 1
+          },
+          {
+            "level": 282.25,
+            "touches": 1
+          }
+        ],
+        "volume_ratio": 0.29,
+        "rsi": 43.75,
+        "above_sma50": false,
+        "support_weekly_confluence": true,
+        "support_role_reversal": true
+      },
+      "traded_value_cr": 569.8,
+      "plan": {
+        "fired": [],
+        "ref_close": 231.29,
+        "atr14": 14.06,
+        "stop_if_filled_at_ref": 203.17,
+        "risk_per_share": 28.12,
+        "risk_pct": 12.2,
+        "shares_per_1000_risk": 35,
+        "triggers": {
+          "breakout55_close_above": 282.25,
+          "pullback20_ema20": 245.7
+        },
+        "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+        "rr_to_next_resistance": 0.9
+      },
+      "swing_setup": {
+        "setup": "trend_continuation",
+        "actionable_now": false,
+        "reason": "Trending above 200-DMA; no specific entry trigger fired"
+      },
+      "trade_plan": {
+        "entry_buy_stop": 240.48,
+        "stop_loss": 227.37,
+        "target_price": 275.91,
+        "atr14": 14.06,
+        "risk_per_share": 13.11,
+        "risk_pct": 5.45,
+        "gross_rr": 2.7,
+        "net_rr": 2.51,
+        "suggested_shares": 762,
+        "capital_required": 183245.76,
+        "capital_pct": 0.1832,
+        "rupee_risk": 9989.82,
+        "sizing_warning": null
+      },
+      "portfolio_rating": {
+        "health_score": 68,
+        "status": "EXIT_AND_REPLACE",
+        "recommended_action": "REMOVE / REPLACE",
+        "exit_reasons": [
+          "Breached 18.0% volatility trailing stop (231.45) & 50-DMA"
+        ],
+        "warnings": [],
+        "above_sma50": false,
+        "above_sma200": true,
+        "dist_from_20ema_pct": -5.86,
+        "dist_from_50sma_pct": -2.82,
+        "behavior_bands": {
+          "behavior_profile": "High-Beta Momentum",
+          "atr14_pct": 6.08,
+          "annualized_vol_pct": 54.9,
+          "ideal_entry_low": 245.7,
+          "ideal_entry_high": 251.84,
+          "max_chase_limit_pct": 12.0,
+          "trailing_stop_pct": 18.0,
+          "trailing_stop_price": 231.45,
+          "structural_stop_price": 225.08,
+          "trim_extension_pct": 35.0,
+          "trim_target_price": 321.32
+        }
+      },
+      "slot_allocation": {
+        "slot_weight_pct": 5.0,
+        "slot_capital_inr": 50000.0,
+        "target_shares": 216,
+        "deployed_capital_inr": 49958.64
+      }
+    },
+    {
+      "ticker": "TDPOWERSYS.NS",
+      "momentum_12_1_pct": 138.98,
+      "benchmark_momentum_12_1_pct": -11.1,
+      "relative_strength_12_1_pct": 150.08,
+      "relative_strength_1m_pct": -9.48,
+      "relative_strength_6m_pct": 28.41,
+      "relative_strength_date": "2026-10-30",
+      "relative_strength_benchmark_date": "2026-10-30",
+      "momentum_12_1_end_date": "2026-09-29",
+      "relative_strength_12m_coverage_pct": 100.0,
+      "relative_strength_stale_sessions": 0,
+      "relative_strength_status": "ok",
+      "last_close": 713.9,
+      "sma200": 575.38,
+      "above_sma200": true,
+      "traded_value_126d": 2016340323.8686411,
+      "pct_below_52w_high": 16.6,
+      "liquidity_rank": 132,
+      "leader_rank": 6,
+      "structure": {
+        "trend": "downtrend",
+        "support_level": 680.0,
+        "support_touches": 1,
+        "support_dates": [
+          "2026-05-27"
+        ],
+        "support_days_ago": [
+          107
+        ],
+        "support_quality": "Moderate",
+        "support_ladder": [
+          {
+            "level": 680.0,
+            "touches": 1
+          },
+          {
+            "level": 613.45,
+            "touches": 1
+          },
+          {
+            "level": 595.92,
+            "touches": 1
+          }
+        ],
+        "resistance_ladder": [
+          {
+            "level": 787.88,
+            "touches": 2
+          },
+          {
+            "level": 798.85,
+            "touches": 1
+          },
+          {
+            "level": 817.55,
+            "touches": 1
+          }
+        ],
+        "volume_ratio": 0.54,
+        "rsi": 46.4,
+        "above_sma50": false,
+        "support_weekly_confluence": true,
+        "support_role_reversal": false
+      },
+      "traded_value_cr": 201.6,
+      "plan": {
+        "fired": [],
+        "ref_close": 713.9,
+        "atr14": 40.77,
+        "stop_if_filled_at_ref": 632.36,
+        "risk_per_share": 81.54,
+        "risk_pct": 11.4,
+        "shares_per_1000_risk": 12,
+        "triggers": {
+          "breakout55_close_above": 856.1,
+          "pullback20_ema20": 728.42
+        },
+        "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+        "rr_to_next_resistance": 0.9
+      },
+      "swing_setup": {
+        "setup": "trend_continuation",
+        "actionable_now": false,
+        "reason": "Trending above 200-DMA; no specific entry trigger fired"
+      },
+      "trade_plan": {
+        "entry_buy_stop": 718.78,
+        "stop_loss": 676.6,
+        "target_price": 787.88,
+        "atr14": 40.77,
+        "risk_per_share": 42.18,
+        "risk_pct": 5.87,
+        "gross_rr": 1.64,
+        "net_rr": 1.51,
+        "suggested_shares": 237,
+        "capital_required": 170350.86,
+        "capital_pct": 0.1704,
+        "rupee_risk": 9996.66,
+        "sizing_warning": null
+      },
+      "portfolio_rating": {
+        "health_score": 71,
+        "status": "WARNING_WATCH",
+        "recommended_action": "HOLD ON TIGHT LEASH",
+        "exit_reasons": [],
+        "warnings": [
+          "Trading below 50-DMA (750.24); tighten stop to 669.80",
+          "Short-term 1M relative return lagging (-9.5%)"
+        ],
+        "above_sma50": false,
+        "above_sma200": true,
+        "dist_from_20ema_pct": -1.99,
+        "dist_from_50sma_pct": -4.84,
+        "behavior_bands": {
+          "behavior_profile": "High-Beta Momentum",
+          "atr14_pct": 5.71,
+          "annualized_vol_pct": 65.2,
+          "ideal_entry_low": 728.42,
+          "ideal_entry_high": 746.63,
+          "max_chase_limit_pct": 12.0,
+          "trailing_stop_pct": 18.0,
+          "trailing_stop_price": 702.0,
+          "structural_stop_price": 669.8,
+          "trim_extension_pct": 35.0,
+          "trim_target_price": 1012.82
+        }
+      },
+      "slot_allocation": {
+        "slot_weight_pct": 5.0,
+        "slot_capital_inr": 50000.0,
+        "target_shares": 70,
+        "deployed_capital_inr": 49973.0
+      }
+    },
+    {
+      "ticker": "LAURUSLABS.NS",
+      "momentum_12_1_pct": 114.59,
+      "benchmark_momentum_12_1_pct": -11.1,
+      "relative_strength_12_1_pct": 125.69,
+      "relative_strength_1m_pct": 20.23,
+      "relative_strength_6m_pct": 121.44,
+      "relative_strength_date": "2026-10-30",
+      "relative_strength_benchmark_date": "2026-10-30",
+      "momentum_12_1_end_date": "2026-09-29",
+      "relative_strength_12m_coverage_pct": 100.0,
+      "relative_strength_stale_sessions": 0,
+      "relative_strength_status": "ok",
+      "last_close": 2405.5,
+      "sma200": 1449.38,
+      "above_sma200": true,
+      "traded_value_126d": 4092429965.5091176,
+      "pct_below_52w_high": 0.0,
+      "liquidity_rank": 50,
+      "leader_rank": 7,
+      "structure": {
+        "trend": "choppy",
+        "support_level": 1933.5,
+        "support_touches": null,
+        "support_dates": [],
+        "support_days_ago": [],
+        "support_quality": null,
+        "support_ladder": [
+          {
+            "level": 1942.8,
+            "touches": 2
+          },
+          {
+            "level": 1863.5,
+            "touches": 1
+          },
+          {
+            "level": 1811.7,
+            "touches": 1
+          }
+        ],
+        "resistance_ladder": [],
+        "volume_ratio": 4.01,
+        "rsi": 78.71,
+        "above_sma50": true,
+        "support_weekly_confluence": false,
+        "support_role_reversal": false
+      },
+      "traded_value_cr": 409.2,
+      "plan": {
+        "fired": [
+          "breakout55"
+        ],
+        "ref_close": 2405.5,
+        "atr14": 74.21,
+        "stop_if_filled_at_ref": 2257.07,
+        "risk_per_share": 148.43,
+        "risk_pct": 6.2,
+        "shares_per_1000_risk": 6,
+        "triggers": {
+          "breakout55_close_above": 2405.5,
+          "pullback20_ema20": 2093.32
+        },
+        "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+        "rr_to_next_resistance": null
+      },
+      "swing_setup": {
+        "setup": "extended_wait_for_pullback",
+        "actionable_now": false,
+        "pct_from_ema20": 14.9,
+        "reason": "Stretched 14.9% above 20-EMA; wait for pullback to avoid chasing"
+      },
+      "trade_plan": {
+        "entry_buy_stop": 2410.31,
+        "stop_loss": 2261.88,
+        "target_price": 2781.38,
+        "atr14": 74.21,
+        "risk_per_share": 148.43,
+        "risk_pct": 6.16,
+        "gross_rr": 2.5,
+        "net_rr": 2.34,
+        "suggested_shares": 67,
+        "capital_required": 161490.77,
+        "capital_pct": 0.1615,
+        "rupee_risk": 9944.81,
+        "sizing_warning": null
+      },
+      "portfolio_rating": {
+        "health_score": 77,
+        "status": "HOLD_EXTENDED_TRIM_WATCH",
+        "recommended_action": "WAIT FOR PULLBACK",
+        "exit_reasons": [],
+        "warnings": [],
+        "above_sma50": true,
+        "above_sma200": true,
+        "dist_from_20ema_pct": 14.91,
+        "dist_from_50sma_pct": 21.38,
+        "behavior_bands": {
+          "behavior_profile": "Core Trend",
+          "atr14_pct": 3.09,
+          "annualized_vol_pct": 31.5,
+          "ideal_entry_low": 2093.32,
+          "ideal_entry_high": 2145.65,
+          "max_chase_limit_pct": 12.0,
+          "trailing_stop_pct": 9.9,
+          "trailing_stop_price": 2167.36,
+          "structural_stop_price": 1904.5,
+          "trim_extension_pct": 20.1,
+          "trim_target_price": 2380.22
+        }
+      },
+      "slot_allocation": {
+        "slot_weight_pct": 5.0,
+        "slot_capital_inr": 50000.0,
+        "target_shares": 20,
+        "deployed_capital_inr": 48110.0
+      }
+    },
+    {
+      "ticker": "SYRMA.NS",
+      "momentum_12_1_pct": 112.95,
+      "benchmark_momentum_12_1_pct": -11.1,
+      "relative_strength_12_1_pct": 124.05,
+      "relative_strength_1m_pct": -5.29,
+      "relative_strength_6m_pct": 70.44,
+      "relative_strength_date": "2026-10-30",
+      "relative_strength_benchmark_date": "2026-10-30",
+      "momentum_12_1_end_date": "2026-09-29",
+      "relative_strength_12m_coverage_pct": 100.0,
+      "relative_strength_stale_sessions": 0,
+      "relative_strength_status": "ok",
+      "last_close": 1625.3,
+      "sma200": 1182.71,
+      "above_sma200": true,
+      "traded_value_126d": 2381031629.7318563,
+      "pct_below_52w_high": 10.8,
+      "liquidity_rank": 107,
+      "leader_rank": 8,
+      "structure": {
+        "trend": "downtrend",
+        "support_level": 1399.9,
+        "support_touches": null,
+        "support_dates": [],
+        "support_days_ago": [],
+        "support_quality": null,
+        "support_ladder": [
+          {
+            "level": 1416.85,
+            "touches": 2
+          },
+          {
+            "level": 1396.25,
+            "touches": 2
+          },
+          {
+            "level": 1340.23,
+            "touches": 2
+          }
+        ],
+        "resistance_ladder": [
+          {
+            "level": 1660.0,
+            "touches": 1
+          },
+          {
+            "level": 1813.25,
+            "touches": 2
+          }
+        ],
+        "volume_ratio": 1.21,
+        "rsi": 51.83,
+        "above_sma50": true,
+        "support_weekly_confluence": false,
+        "support_role_reversal": false
+      },
+      "traded_value_cr": 238.1,
+      "plan": {
+        "fired": [],
+        "ref_close": 1625.3,
+        "atr14": 79.09,
+        "stop_if_filled_at_ref": 1467.11,
+        "risk_per_share": 158.19,
+        "risk_pct": 9.7,
+        "shares_per_1000_risk": 6,
+        "triggers": {
+          "breakout55_close_above": 1822.6,
+          "pullback20_ema20": 1600.57
+        },
+        "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+        "rr_to_next_resistance": 0.2
+      },
+      "swing_setup": {
+        "setup": "pullback_20ema_or_support",
+        "actionable_now": true,
+        "ema20": 1600.57,
+        "support_level": 1399.9,
+        "support_touches": null,
+        "reason": "Pullback within 2.5% of rising 20-EMA or testing multi-touch support zone"
+      },
+      "trade_plan": {
+        "entry_buy_stop": 1689.37,
+        "stop_loss": 1531.18,
+        "target_price": 2084.84,
+        "atr14": 79.09,
+        "risk_per_share": 158.19,
+        "risk_pct": 9.36,
+        "gross_rr": 2.5,
+        "net_rr": 2.39,
+        "suggested_shares": 63,
+        "capital_required": 106430.31,
+        "capital_pct": 0.1064,
+        "rupee_risk": 9965.97,
+        "sizing_warning": null
+      },
+      "portfolio_rating": {
+        "health_score": 79,
+        "status": "WARNING_WATCH",
+        "recommended_action": "HOLD ON TIGHT LEASH",
+        "exit_reasons": [],
+        "warnings": [
+          "Short-term 1M relative return lagging (-5.3%)"
+        ],
+        "above_sma50": true,
+        "above_sma200": true,
+        "dist_from_20ema_pct": 1.55,
+        "dist_from_50sma_pct": 1.92,
+        "behavior_bands": {
+          "behavior_profile": "High-Beta Momentum",
+          "atr14_pct": 4.87,
+          "annualized_vol_pct": 51.4,
+          "ideal_entry_low": 1600.57,
+          "ideal_entry_high": 1640.58,
+          "max_chase_limit_pct": 12.0,
+          "trailing_stop_pct": 15.6,
+          "trailing_stop_price": 1538.27,
+          "structural_stop_price": 1378.9,
+          "trim_extension_pct": 31.6,
+          "trim_target_price": 2098.55
+        }
+      },
+      "slot_allocation": {
+        "slot_weight_pct": 5.0,
+        "slot_capital_inr": 50000.0,
+        "target_shares": 30,
+        "deployed_capital_inr": 48759.0
+      }
+    },
+    {
+      "ticker": "APARINDS.NS",
+      "momentum_12_1_pct": 108.12,
+      "benchmark_momentum_12_1_pct": -11.1,
+      "relative_strength_12_1_pct": 119.22,
+      "relative_strength_1m_pct": -13.25,
+      "relative_strength_6m_pct": 30.75,
+      "relative_strength_date": "2026-10-30",
+      "relative_strength_benchmark_date": "2026-10-30",
+      "momentum_12_1_end_date": "2026-09-29",
+      "relative_strength_12m_coverage_pct": 100.0,
+      "relative_strength_stale_sessions": 0,
+      "relative_strength_status": "ok",
+      "last_close": 15678.0,
+      "sma200": 13271.8,
+      "above_sma200": true,
+      "traded_value_126d": 2361825158.422766,
+      "pct_below_52w_high": 18.6,
+      "liquidity_rank": 108,
+      "leader_rank": 9,
+      "structure": {
+        "trend": "downtrend",
+        "support_level": 15557.99,
+        "support_touches": 1,
+        "support_dates": [
+          "2026-06-19"
+        ],
+        "support_days_ago": [
+          91
+        ],
+        "support_quality": "Moderate",
+        "support_ladder": [
+          {
+            "level": 15557.99,
+            "touches": 1
+          },
+          {
+            "level": 13855.85,
+            "touches": 2
+          },
+          {
+            "level": 13250.99,
+            "touches": 3
+          }
+        ],
+        "resistance_ladder": [
+          {
+            "level": 17097.64,
+            "touches": 1
+          },
+          {
+            "level": 17464.37,
+            "touches": 1
+          },
+          {
+            "level": 18040.87,
+            "touches": 2
+          }
+        ],
+        "volume_ratio": 1.36,
+        "rsi": 42.42,
+        "above_sma50": false,
+        "support_weekly_confluence": false,
+        "support_role_reversal": false
+      },
+      "traded_value_cr": 236.2,
+      "plan": {
+        "fired": [],
+        "ref_close": 15678.0,
+        "atr14": 782.0,
+        "stop_if_filled_at_ref": 14114.0,
+        "risk_per_share": 1564.0,
+        "risk_pct": 10.0,
+        "shares_per_1000_risk": 0,
+        "triggers": {
+          "breakout55_close_above": 19265.0,
+          "pullback20_ema20": 16196.72
+        },
+        "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+        "rr_to_next_resistance": 0.9
+      },
+      "swing_setup": {
+        "setup": "trend_continuation",
+        "actionable_now": false,
+        "reason": "Trending above 200-DMA; no specific entry trigger fired"
+      },
+      "trade_plan": {
+        "entry_buy_stop": 16231.4,
+        "stop_loss": 15480.2,
+        "target_price": 17464.37,
+        "atr14": 782.0,
+        "risk_per_share": 751.2,
+        "risk_pct": 4.63,
+        "gross_rr": 1.64,
+        "net_rr": 1.48,
+        "suggested_shares": 13,
+        "capital_required": 211008.2,
+        "capital_pct": 0.211,
+        "rupee_risk": 9765.6,
+        "sizing_warning": null
+      },
+      "portfolio_rating": {
+        "health_score": 60,
+        "status": "WARNING_WATCH",
+        "recommended_action": "HOLD ON TIGHT LEASH",
+        "exit_reasons": [],
+        "warnings": [
+          "Trading below 50-DMA (17106.34); tighten stop to 15324.62",
+          "Short-term 1M relative return lagging (-13.2%)"
+        ],
+        "above_sma50": false,
+        "above_sma200": true,
+        "dist_from_20ema_pct": -3.2,
+        "dist_from_50sma_pct": -8.35,
+        "behavior_bands": {
+          "behavior_profile": "High-Beta Momentum",
+          "atr14_pct": 4.99,
+          "annualized_vol_pct": 45.6,
+          "ideal_entry_low": 16196.72,
+          "ideal_entry_high": 16601.64,
+          "max_chase_limit_pct": 12.0,
+          "trailing_stop_pct": 16.0,
+          "trailing_stop_price": 15489.6,
+          "structural_stop_price": 15324.62,
+          "trim_extension_pct": 32.4,
+          "trim_target_price": 22648.8
+        }
+      },
+      "slot_allocation": {
+        "slot_weight_pct": 5.0,
+        "slot_capital_inr": 50000.0,
+        "target_shares": 3,
+        "deployed_capital_inr": 47034.0
+      }
+    },
+    {
+      "ticker": "RRKABEL.NS",
+      "momentum_12_1_pct": 100.75,
+      "benchmark_momentum_12_1_pct": -11.1,
+      "relative_strength_12_1_pct": 111.85,
+      "relative_strength_1m_pct": -19.85,
+      "relative_strength_6m_pct": 30.45,
+      "relative_strength_date": "2026-10-30",
+      "relative_strength_benchmark_date": "2026-10-30",
+      "momentum_12_1_end_date": "2026-09-29",
+      "relative_strength_12m_coverage_pct": 100.0,
+      "relative_strength_stale_sessions": 0,
+      "relative_strength_status": "ok",
+      "last_close": 2055.7,
+      "sma200": 2029.43,
+      "above_sma200": true,
+      "traded_value_126d": 1537795071.4229038,
+      "pct_below_52w_high": 31.1,
+      "liquidity_rank": 178,
+      "leader_rank": 10,
+      "structure": {
+        "trend": "downtrend",
+        "support_level": 2000.1,
+        "support_touches": null,
+        "support_dates": [
+          "2026-05-14",
+          "2026-06-11"
+        ],
+        "support_days_ago": [
+          116,
+          97
+        ],
+        "support_quality": "Moderate",
+        "support_ladder": [
+          {
+            "level": 1893.33,
+            "touches": 1
+          },
+          {
+            "level": 1453.44,
+            "touches": 1
+          },
+          {
+            "level": 1423.77,
+            "touches": 3
+          }
+        ],
+        "resistance_ladder": [
+          {
+            "level": 2234.17,
+            "touches": 1
+          },
+          {
+            "level": 2415.0,
+            "touches": 1
+          },
+          {
+            "level": 2558.35,
+            "touches": 2
+          }
+        ],
+        "volume_ratio": 1.78,
+        "rsi": 27.53,
+        "above_sma50": false,
+        "support_weekly_confluence": false,
+        "support_role_reversal": true
+      },
+      "traded_value_cr": 153.8,
+      "plan": {
+        "fired": [],
+        "ref_close": 2055.7,
+        "atr14": 118.43,
+        "stop_if_filled_at_ref": 1818.84,
+        "risk_per_share": 236.86,
+        "risk_pct": 11.5,
+        "shares_per_1000_risk": 4,
+        "triggers": {
+          "breakout55_close_above": 2983.8,
+          "pullback20_ema20": 2351.26
+        },
+        "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+        "rr_to_next_resistance": 0.8
+      },
+      "swing_setup": {
+        "setup": "trend_continuation",
+        "actionable_now": false,
+        "reason": "Trending above 200-DMA; no specific entry trigger fired"
+      },
+      "trade_plan": {
+        "entry_buy_stop": 2119.73,
+        "stop_loss": 1990.1,
+        "target_price": 2415.0,
+        "atr14": 118.43,
+        "risk_per_share": 129.63,
+        "risk_pct": 6.12,
+        "gross_rr": 2.28,
+        "net_rr": 2.12,
+        "suggested_shares": 77,
+        "capital_required": 163219.21,
+        "capital_pct": 0.1632,
+        "rupee_risk": 9981.51,
+        "sizing_warning": null
+      },
+      "portfolio_rating": {
+        "health_score": 59,
+        "status": "EXIT_AND_REPLACE",
+        "recommended_action": "REMOVE / REPLACE",
+        "exit_reasons": [
+          "Breached 18.0% volatility trailing stop (2301.58) & 50-DMA"
+        ],
+        "warnings": [],
+        "above_sma50": false,
+        "above_sma200": true,
+        "dist_from_20ema_pct": -12.57,
+        "dist_from_50sma_pct": -19.09,
+        "behavior_bands": {
+          "behavior_profile": "High-Beta Momentum",
+          "atr14_pct": 5.76,
+          "annualized_vol_pct": 44.7,
+          "ideal_entry_low": 2351.26,
+          "ideal_entry_high": 2410.04,
+          "max_chase_limit_pct": 12.0,
+          "trailing_stop_pct": 18.0,
+          "trailing_stop_price": 2301.58,
+          "structural_stop_price": 1970.1,
+          "trim_extension_pct": 35.0,
+          "trim_target_price": 3430.09
+        }
+      },
+      "slot_allocation": {
+        "slot_weight_pct": 5.0,
+        "slot_capital_inr": 50000.0,
+        "target_shares": 24,
+        "deployed_capital_inr": 49336.8
+      }
+    }
+  ]
+}
