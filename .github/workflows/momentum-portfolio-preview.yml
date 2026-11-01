@@ -55,7 +55,7 @@ jobs:
             --state-file "$RUNNER_TEMP/ta-preview/private_state.json" \
             --gemini-out "$RUNNER_TEMP/ta-preview/private_gemini_brief.md" \
             --chatgpt-out "$RUNNER_TEMP/ta-preview/private_chatgpt_brief.md" \
-            --capital 1000000 \
+            --capital 1 \
             --force-rebalance
       - name: Export account-free review inputs
         run: |
