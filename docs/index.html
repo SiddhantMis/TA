@@ -142,10 +142,11 @@
         const months = (scorecard && scorecard.monthly) ? scorecard.monthly.filter(m => m.status !== 'pending') : [];
         const scoreHtml = scorecard
           ? `<h2>Paper-trading log</h2>
-             <p class="section-note">${esc(scorecard.summary || '')} Each month-end top-20 list is pretend-bought at the next open, equal weight, after 0.30% round-trip cost on turnover, and compared with the Nifty 50 and with all liquid names held equally. Not real money; a handful of months proves nothing.</p>
+             <p class="section-note">${esc(scorecard.summary || '')} Signals are taken only from confirmed final benchmark sessions of completed months and entered at the next session open. Each top-20 slot receives 1/20 weight; unused slots remain cash. Turnover includes weight drift between rebalances and a 0.30% round-trip cost assumption. Missing constituent prices or month-end snapshots make the affected interval incomplete rather than reweighting survivors. This is a paper experiment, not a validated live return.</p>
+             ${(scorecard.missing_month_ends || []).length ? `<p class="err">Missing month-end scans: ${(scorecard.missing_month_ends || []).map(x => esc(x.month)).join(', ')}. Cumulative returns are withheld.</p>` : ''}
              ${months.length ? `<div class="table-wrap"><table>
-               <thead><tr><th>List date</th><th>Status</th><th>Top 20 (net)</th><th>Same universe, equal weight</th><th>Nifty 50</th></tr></thead>
-               <tbody>${months.map(m => `<tr><td>${esc(m.signal_date)}</td><td>${esc(m.status)}</td><td>${pctF(m.top20_net)}</td><td>${pctF(m.same_universe_equal_weight)}</td><td>${pctF(m.nifty50)}</td></tr>`).join('')}</tbody>
+               <thead><tr><th>Signal date</th><th>Status</th><th>Top 20 (net)</th><th>Same universe, equal weight</th><th>Nifty 50</th></tr></thead>
+               <tbody>${months.map(m => `<tr><td>${esc(m.signal_date)}</td><td>${esc(m.data_status || m.status)}</td><td>${pctF(m.top20_net)}</td><td>${pctF(m.same_universe_equal_weight)}</td><td>${pctF(m.nifty50)}</td></tr>`).join('')}</tbody>
              </table></div>` : ''}`
           : '';
 
