@@ -1581,29 +1581,91 @@ def _snap(date, tickers=("A", "B")):
             "liquid": [{"ticker": t, "close": 100.0} for t in ("A", "B", "C")]}
 
 
-def test_scorecard_math_entry_after_signal_costs_and_open_period():
+def _month_end_signals(idx):
+    latest_by_month = {}
+    for day in idx:
+        latest_by_month[day.strftime("%Y-%m")] = day
+    return list(latest_by_month.values())[:-1]  # final observed month is not yet confirmed complete
+
+
+def test_scorecard_math_month_end_fixed_weights_and_drifted_turnover():
     import leaders as LD
     frames, bench, idx = _score_world()
-    d1, d2, d3 = idx[20], idx[40], idx[100]                     # three month-end style signals (distinct 'months' via the date strings)
-    snaps = [_snap(d1.date().isoformat()), _snap(d2.date().isoformat()), _snap(d3.date().isoformat())]
-    snaps[0]["as_of"], snaps[1]["as_of"], snaps[2]["as_of"] = "2026-01-30", "2026-02-27", "2026-04-30"
-    cal = bench.index
-    p = [cal.searchsorted(pd.Timestamp(s["as_of"]), side="right") for s in snaps]
+    month_ends = _month_end_signals(idx)
+    snaps = [_snap(day.date().isoformat()) for day in month_ends]
     sc = LD.build_scorecard(snaps, frames, bench, cost_pct=0.30, n_hold=2)
-    m = sc["monthly"]
-    n1 = p[1] - p[0]
-    gross1 = (1.01 ** n1 - 1 + 0.0) / 2                          # equal weight of A (+1%/day) and B (flat)
-    assert m[0]["status"] == "closed" and m[0]["entry_date"] == cal[p[0]].date().isoformat()   # first session AFTER the signal
-    assert abs(m[0]["top20_gross"] - gross1) < 1e-9
-    assert abs(m[0]["top20_net"] - (gross1 - 0.0015)) < 1e-9     # first month: all names are new, turnover 1.0 -> 0.15% of the book
-    assert abs(m[0]["nifty50"] - (1.002 ** n1 - 1)) < 1e-9
-    ew = ((1.01 ** n1 - 1) + 0.0 + (0.99 ** n1 - 1)) / 3
-    assert abs(m[0]["same_universe_equal_weight"] - ew) < 1e-9
-    assert abs(m[1]["top20_net"] - m[1]["top20_gross"]) < 1e-12  # same holdings -> no turnover -> no cost
-    assert m[2]["status"] == "open" and m[2]["exit_date"] == cal[-1].date().isoformat()        # marked to the latest close
-    assert sc["cumulative"]["months"] == 2 and "completed month" in sc["summary"]
-    assert set(sc["daily_forward"]) == {"5d", "21d", "63d"} and sc["daily_forward"]["5d"]["snapshots"] == 3
+    monthly = sc["monthly"]
+    cal = bench.index
+    first_entry_pos = cal.searchsorted(pd.Timestamp(snaps[0]["as_of"]), side="right")
+    second_entry_pos = cal.searchsorted(pd.Timestamp(snaps[1]["as_of"]), side="right")
+    first_entry, second_entry = cal[first_entry_pos], cal[second_entry_pos]
+    a_growth = frames["A"].at[second_entry, "Open"] / frames["A"].at[first_entry, "Open"]
+    gross = (a_growth - 1.0) / 2.0
+    drifted_a_weight = a_growth / (a_growth + 1.0)
+    drift_turnover = 2.0 * (drifted_a_weight - 0.5)
 
+    assert len(monthly) == len(month_ends)
+    assert monthly[0]["status"] == "closed"
+    assert monthly[0]["entry_date"] == first_entry.date().isoformat()
+    assert abs(monthly[0]["top20_gross"] - gross) < 1e-9
+    assert abs(monthly[0]["turnover_l1"] - 1.0) < 1e-12
+    assert abs(monthly[0]["top20_net"] - (gross - 0.0015)) < 1e-9
+    assert abs(monthly[0]["nifty50"] - (1.002 ** (second_entry_pos - first_entry_pos) - 1)) < 1e-9
+
+    # The second rebalance has unchanged names, but A appreciated relative to B.
+    # The portfolio must pay a cost for restoring equal weights.
+    assert abs(monthly[1]["turnover_l1"] - drift_turnover) < 1e-9
+    assert monthly[1]["turnover_l1"] > 0
+    assert monthly[1]["top20_net"] < monthly[1]["top20_gross"]
+
+    # A 2-stock selection with a 20-slot target invests only 2/20; the rest is cash.
+    fixed = LD._basket_return(["A", "B"], frames, first_entry, second_entry, "Open", denominator=20)[0]
+    assert abs(fixed - gross / 20.0) < 1e-9
+
+    assert sc["cumulative"]["status"] == "complete"
+    assert sc["cumulative"]["months"] == len(month_ends) - 1
+    assert sc["missing_month_ends"] == []
+    assert sc["monthly"][-1]["status"] == "open"
+    assert sc["monthly"][-1]["exit_date"] == cal[-1].date().isoformat()
+    assert set(sc["daily_forward"]) == {"5d", "21d", "63d"}
+    assert sc["daily_forward"]["5d"]["snapshots"] == len(snaps)
+
+
+def test_scorecard_does_not_reweight_missing_constituents_or_publish_partial_cumulative():
+    import leaders as LD
+    frames, bench, idx = _score_world()
+    signals = _month_end_signals(idx)
+    snaps = [_snap(day.date().isoformat()) for day in signals]
+    del frames["B"]
+    sc = LD.build_scorecard(snaps, frames, bench, cost_pct=0.30, n_hold=2)
+    first = sc["monthly"][0]
+    assert first["status"] == "incomplete_data"
+    assert first["data_status"] == "missing_price_or_turnover_data"
+    assert first["top20_net"] is None
+    assert "B" in first["missing_tickers"]
+    assert sc["cumulative"]["status"] == "incomplete"
+    assert sc["cumulative"]["top20_net"] is None
+    assert "Cumulative returns withheld" in sc["summary"]
+
+
+def test_scorecard_flags_missing_month_end_and_old_price_history():
+    import leaders as LD
+    frames, bench, idx = _score_world()
+    signals = _month_end_signals(idx)
+    snaps = [_snap(day.date().isoformat()) for day in signals]
+    # Remove one middle month-end scan: do not stretch the prior portfolio over two months.
+    snaps = [snap for snap in snaps if not snap["as_of"].startswith("2026-03")]
+    sc = LD.build_scorecard(snaps, frames, bench, cost_pct=0.30, n_hold=2)
+    assert any(item["month"] == "2026-03" for item in sc["missing_month_ends"])
+    assert any(item["data_status"] == "missing_month_end_snapshot" for item in sc["monthly"])
+    assert sc["cumulative"]["status"] == "incomplete"
+    assert sc["cumulative"]["top20_net"] is None
+
+    old = _snap("2025-12-31")
+    sc_old = LD.build_scorecard([old] + snaps, frames, bench, cost_pct=0.30, n_hold=2)
+    assert "2025-12-31" in sc_old["snapshots_outside_price_window"]
+    assert sc_old["cumulative"]["status"] == "incomplete"
+    assert sc_old["cumulative"]["top20_net"] is None
 
 def test_scorecard_with_no_history_says_collecting():
     import leaders as LD
