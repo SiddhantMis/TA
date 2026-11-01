@@ -375,3 +375,7 @@ def analyze_sr(
         "support_ladder": _ladder_format(supports, levels_per_side),
         "resistance_ladder": _ladder_format(resistances, levels_per_side),
     }
+
+
+analyze_sr_zones = analyze_sr
+

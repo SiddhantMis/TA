@@ -1,0 +1,1419 @@
+{
+ "as_of": "2026-10-30",
+ "benchmark": "NIFTYBEES.NS",
+ "definition": "Top 200 by 126-day traded value of the Nifty 500 list, close above 200-day average, ranked by 12-1 return relative to the benchmark (latest 21 sessions skipped).",
+ "evidence": "Backtest 2017-2026, monthly top-20 by 12-1 relative strength among the point-in-time top-200 liquid Nifty 500 names above their 200-day average: ~28%/yr vs ~15% for holding the same universe equal-weight and ~10.5% for the Nifty 50, max drawdown about -34%. Survivorship bias remains (failed companies are missing), the held-out period is 3 years, and nothing here is validated live. See results/portfolio_report_liquid500.md.",
+ "setup_record": "Setup track record inside the leaders: not yet measured, so treat every setup as unvalidated.",
+ "counts": {
+  "universe": 478,
+  "rankable": 478,
+  "liquid": 200,
+  "above_200dma": 80,
+  "failed_to_load": 23,
+  "partial_scan_time_limit": false,
+  "load_coverage_pct": 95.4
+ },
+ "failed_tickers": [
+  "BAGMANE.NS",
+  "BHARATCOAL.NS",
+  "GROWW.NS",
+  "CANHLIFE.NS",
+  "CMPDI.NS",
+  "CLEANMAX.NS",
+  "DUMMYHEG.NS",
+  "EMMVEE.NS",
+  "FRACTAL.NS",
+  "ICICIAMC.NS",
+  "LGEINDIA.NS",
+  "LENSKART.NS",
+  "MEESHO.NS",
+  "PWL.NS",
+  "PINELABS.NS",
+  "PIRAMALFIN.NS",
+  "RUBICON.NS",
+  "TMCV.NS",
+  "TENNIND.NS",
+  "VAML.NS",
+  "VISL.NS",
+  "VOGL.NS",
+  "VEDPOWER.NS"
+ ],
+ "leaders": [
+  {
+   "ticker": "STLTECH.NS",
+   "momentum_12_1_pct": 642.27,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 653.37,
+   "relative_strength_1m_pct": -6.18,
+   "relative_strength_6m_pct": 180.22,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 824.5,
+   "sma200": 476.31,
+   "above_sma200": true,
+   "traded_value_126d": 1618346884.7514093,
+   "pct_below_52w_high": 21.6,
+   "liquidity_rank": 168,
+   "leader_rank": 1,
+   "structure": {
+    "trend": "downtrend",
+    "support_level": 787.72,
+    "support_touches": 2,
+    "support_ladder": [
+     {
+      "level": 787.72,
+      "touches": 2
+     },
+     {
+      "level": 760.85,
+      "touches": 1
+     },
+     {
+      "level": 665.5,
+      "touches": 1
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 870.95,
+      "touches": 1
+     },
+     {
+      "level": 913.4,
+      "touches": 2
+     },
+     {
+      "level": 1051.1,
+      "touches": 1
+     }
+    ],
+    "volume_ratio": 0.48,
+    "rsi": 43.74,
+    "above_sma50": false
+   },
+   "traded_value_cr": 161.8,
+   "plan": {
+    "fired": [],
+    "ref_close": 824.5,
+    "atr14": 56.26,
+    "stop_if_filled_at_ref": 711.97,
+    "risk_per_share": 112.53,
+    "risk_pct": 13.6,
+    "shares_per_1000_risk": 8,
+    "triggers": {
+     "breakout55_close_above": 1051.1,
+     "pullback20_ema20": 878.3
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 0.4
+   }
+  },
+  {
+   "ticker": "CUPID.NS",
+   "momentum_12_1_pct": 474.41,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 485.52,
+   "relative_strength_1m_pct": 11.37,
+   "relative_strength_6m_pct": 183.92,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 324.55,
+   "sma200": 177.31,
+   "above_sma200": true,
+   "traded_value_126d": 6167446100.903611,
+   "pct_below_52w_high": 12.0,
+   "liquidity_rank": 18,
+   "leader_rank": 2,
+   "structure": {
+    "trend": "downtrend",
+    "support_level": 302.1,
+    "support_touches": null,
+    "support_ladder": [
+     {
+      "level": 302.3,
+      "touches": 1
+     },
+     {
+      "level": 265.98,
+      "touches": 2
+     },
+     {
+      "level": 246.0,
+      "touches": 1
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 368.95,
+      "touches": 1
+     }
+    ],
+    "volume_ratio": 0.32,
+    "rsi": 53.42,
+    "above_sma50": true
+   },
+   "traded_value_cr": 616.7,
+   "plan": {
+    "fired": [
+     "pullback20"
+    ],
+    "ref_close": 324.55,
+    "atr14": 15.64,
+    "stop_if_filled_at_ref": 293.28,
+    "risk_per_share": 31.27,
+    "risk_pct": 9.6,
+    "shares_per_1000_risk": 31,
+    "triggers": {
+     "breakout55_close_above": 368.95,
+     "pullback20_ema20": 322.09
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 1.4
+   }
+  },
+  {
+   "ticker": "MTARTECH.NS",
+   "momentum_12_1_pct": 247.07,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 258.18,
+   "relative_strength_1m_pct": -9.24,
+   "relative_strength_6m_pct": 24.64,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 6838.0,
+   "sma200": 5789.84,
+   "above_sma200": true,
+   "traded_value_126d": 5645967809.620098,
+   "pct_below_52w_high": 21.5,
+   "liquidity_rank": 26,
+   "leader_rank": 3,
+   "structure": {
+    "trend": "downtrend",
+    "support_level": 6813.0,
+    "support_touches": 1,
+    "support_ladder": [
+     {
+      "level": 6813.0,
+      "touches": 1
+     },
+     {
+      "level": 6729.33,
+      "touches": 3
+     },
+     {
+      "level": 6605.75,
+      "touches": 2
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 7135.0,
+      "touches": 1
+     },
+     {
+      "level": 7369.0,
+      "touches": 2
+     },
+     {
+      "level": 7730.0,
+      "touches": 1
+     }
+    ],
+    "volume_ratio": 2.02,
+    "rsi": 43.89,
+    "above_sma50": false
+   },
+   "traded_value_cr": 564.6,
+   "plan": {
+    "fired": [],
+    "ref_close": 6838.0,
+    "atr14": 384.46,
+    "stop_if_filled_at_ref": 6069.07,
+    "risk_per_share": 768.93,
+    "risk_pct": 11.2,
+    "shares_per_1000_risk": 1,
+    "triggers": {
+     "breakout55_close_above": 8186.5,
+     "pullback20_ema20": 7098.07
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 0.4
+   }
+  },
+  {
+   "ticker": "WELCORP.NS",
+   "momentum_12_1_pct": 235.38,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 246.49,
+   "relative_strength_1m_pct": -18.93,
+   "relative_strength_6m_pct": 89.13,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 2341.6,
+   "sma200": 1524.76,
+   "above_sma200": true,
+   "traded_value_126d": 3275057264.695335,
+   "pct_below_52w_high": 19.3,
+   "liquidity_rank": 75,
+   "leader_rank": 4,
+   "structure": {
+    "trend": "downtrend",
+    "support_level": 2315.0,
+    "support_touches": 1,
+    "support_ladder": [
+     {
+      "level": 2315.0,
+      "touches": 1
+     },
+     {
+      "level": 2240.2,
+      "touches": 1
+     },
+     {
+      "level": 1571.1,
+      "touches": 2
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 2659.75,
+      "touches": 2
+     },
+     {
+      "level": 2801.4,
+      "touches": 2
+     },
+     {
+      "level": 2900.0,
+      "touches": 1
+     }
+    ],
+    "volume_ratio": 1.21,
+    "rsi": 41.85,
+    "above_sma50": false
+   },
+   "traded_value_cr": 327.5,
+   "plan": {
+    "fired": [],
+    "ref_close": 2341.6,
+    "atr14": 149.19,
+    "stop_if_filled_at_ref": 2043.23,
+    "risk_per_share": 298.37,
+    "risk_pct": 12.7,
+    "shares_per_1000_risk": 3,
+    "triggers": {
+     "breakout55_close_above": 2900.0,
+     "pullback20_ema20": 2527.37
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 1.1
+   }
+  },
+  {
+   "ticker": "HFCL.NS",
+   "momentum_12_1_pct": 180.29,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 191.39,
+   "relative_strength_1m_pct": 5.66,
+   "relative_strength_6m_pct": 119.91,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 231.29,
+   "sma200": 158.62,
+   "above_sma200": true,
+   "traded_value_126d": 5697803853.562098,
+   "pct_below_52w_high": 18.1,
+   "liquidity_rank": 23,
+   "leader_rank": 5,
+   "structure": {
+    "trend": "downtrend",
+    "support_level": 228.51,
+    "support_touches": 1,
+    "support_ladder": [
+     {
+      "level": 228.51,
+      "touches": 1
+     },
+     {
+      "level": 217.45,
+      "touches": 1
+     },
+     {
+      "level": 204.6,
+      "touches": 3
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 255.69,
+      "touches": 2
+     },
+     {
+      "level": 275.91,
+      "touches": 1
+     },
+     {
+      "level": 282.25,
+      "touches": 1
+     }
+    ],
+    "volume_ratio": 0.29,
+    "rsi": 43.75,
+    "above_sma50": false
+   },
+   "traded_value_cr": 569.8,
+   "plan": {
+    "fired": [],
+    "ref_close": 231.29,
+    "atr14": 14.06,
+    "stop_if_filled_at_ref": 203.17,
+    "risk_per_share": 28.12,
+    "risk_pct": 12.2,
+    "shares_per_1000_risk": 35,
+    "triggers": {
+     "breakout55_close_above": 282.25,
+     "pullback20_ema20": 245.7
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 0.9
+   }
+  },
+  {
+   "ticker": "TDPOWERSYS.NS",
+   "momentum_12_1_pct": 138.98,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 150.08,
+   "relative_strength_1m_pct": -9.48,
+   "relative_strength_6m_pct": 28.41,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 713.9,
+   "sma200": 575.38,
+   "above_sma200": true,
+   "traded_value_126d": 2016340323.8686411,
+   "pct_below_52w_high": 16.6,
+   "liquidity_rank": 132,
+   "leader_rank": 6,
+   "structure": {
+    "trend": "downtrend",
+    "support_level": 680.0,
+    "support_touches": 1,
+    "support_ladder": [
+     {
+      "level": 680.0,
+      "touches": 1
+     },
+     {
+      "level": 613.45,
+      "touches": 1
+     },
+     {
+      "level": 595.92,
+      "touches": 1
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 787.88,
+      "touches": 2
+     },
+     {
+      "level": 798.85,
+      "touches": 1
+     },
+     {
+      "level": 817.55,
+      "touches": 1
+     }
+    ],
+    "volume_ratio": 0.54,
+    "rsi": 46.4,
+    "above_sma50": false
+   },
+   "traded_value_cr": 201.6,
+   "plan": {
+    "fired": [],
+    "ref_close": 713.9,
+    "atr14": 40.77,
+    "stop_if_filled_at_ref": 632.36,
+    "risk_per_share": 81.54,
+    "risk_pct": 11.4,
+    "shares_per_1000_risk": 12,
+    "triggers": {
+     "breakout55_close_above": 856.1,
+     "pullback20_ema20": 728.42
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 0.9
+   }
+  },
+  {
+   "ticker": "LAURUSLABS.NS",
+   "momentum_12_1_pct": 114.59,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 125.69,
+   "relative_strength_1m_pct": 20.23,
+   "relative_strength_6m_pct": 121.44,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 2405.5,
+   "sma200": 1449.38,
+   "above_sma200": true,
+   "traded_value_126d": 4092429965.5091176,
+   "pct_below_52w_high": 0.0,
+   "liquidity_rank": 50,
+   "leader_rank": 7,
+   "structure": {
+    "trend": "choppy",
+    "support_level": 1933.5,
+    "support_touches": null,
+    "support_ladder": [
+     {
+      "level": 1942.8,
+      "touches": 2
+     },
+     {
+      "level": 1863.5,
+      "touches": 1
+     },
+     {
+      "level": 1811.7,
+      "touches": 1
+     }
+    ],
+    "resistance_ladder": [],
+    "volume_ratio": 4.01,
+    "rsi": 78.71,
+    "above_sma50": true
+   },
+   "traded_value_cr": 409.2,
+   "plan": {
+    "fired": [
+     "breakout55"
+    ],
+    "ref_close": 2405.5,
+    "atr14": 74.21,
+    "stop_if_filled_at_ref": 2257.07,
+    "risk_per_share": 148.43,
+    "risk_pct": 6.2,
+    "shares_per_1000_risk": 6,
+    "triggers": {
+     "breakout55_close_above": 2405.5,
+     "pullback20_ema20": 2093.32
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": null
+   }
+  },
+  {
+   "ticker": "SYRMA.NS",
+   "momentum_12_1_pct": 112.95,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 124.05,
+   "relative_strength_1m_pct": -5.29,
+   "relative_strength_6m_pct": 70.44,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 1625.3,
+   "sma200": 1182.71,
+   "above_sma200": true,
+   "traded_value_126d": 2381031629.7318563,
+   "pct_below_52w_high": 10.8,
+   "liquidity_rank": 107,
+   "leader_rank": 8,
+   "structure": {
+    "trend": "downtrend",
+    "support_level": 1399.9,
+    "support_touches": null,
+    "support_ladder": [
+     {
+      "level": 1416.85,
+      "touches": 2
+     },
+     {
+      "level": 1396.25,
+      "touches": 2
+     },
+     {
+      "level": 1340.23,
+      "touches": 2
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 1660.0,
+      "touches": 1
+     },
+     {
+      "level": 1813.25,
+      "touches": 2
+     }
+    ],
+    "volume_ratio": 1.21,
+    "rsi": 51.83,
+    "above_sma50": true
+   },
+   "traded_value_cr": 238.1,
+   "plan": {
+    "fired": [],
+    "ref_close": 1625.3,
+    "atr14": 79.09,
+    "stop_if_filled_at_ref": 1467.11,
+    "risk_per_share": 158.19,
+    "risk_pct": 9.7,
+    "shares_per_1000_risk": 6,
+    "triggers": {
+     "breakout55_close_above": 1822.6,
+     "pullback20_ema20": 1600.57
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 0.2
+   }
+  },
+  {
+   "ticker": "APARINDS.NS",
+   "momentum_12_1_pct": 108.12,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 119.22,
+   "relative_strength_1m_pct": -13.25,
+   "relative_strength_6m_pct": 30.75,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 15678.0,
+   "sma200": 13271.8,
+   "above_sma200": true,
+   "traded_value_126d": 2361825158.422766,
+   "pct_below_52w_high": 18.6,
+   "liquidity_rank": 108,
+   "leader_rank": 9,
+   "structure": {
+    "trend": "downtrend",
+    "support_level": 15557.99,
+    "support_touches": 1,
+    "support_ladder": [
+     {
+      "level": 15557.99,
+      "touches": 1
+     },
+     {
+      "level": 13855.85,
+      "touches": 2
+     },
+     {
+      "level": 13250.99,
+      "touches": 3
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 17097.64,
+      "touches": 1
+     },
+     {
+      "level": 17464.37,
+      "touches": 1
+     },
+     {
+      "level": 18040.87,
+      "touches": 2
+     }
+    ],
+    "volume_ratio": 1.36,
+    "rsi": 42.42,
+    "above_sma50": false
+   },
+   "traded_value_cr": 236.2,
+   "plan": {
+    "fired": [],
+    "ref_close": 15678.0,
+    "atr14": 782.0,
+    "stop_if_filled_at_ref": 14114.0,
+    "risk_per_share": 1564.0,
+    "risk_pct": 10.0,
+    "shares_per_1000_risk": 0,
+    "triggers": {
+     "breakout55_close_above": 19265.0,
+     "pullback20_ema20": 16196.72
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 0.9
+   }
+  },
+  {
+   "ticker": "RRKABEL.NS",
+   "momentum_12_1_pct": 100.75,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 111.85,
+   "relative_strength_1m_pct": -19.85,
+   "relative_strength_6m_pct": 30.45,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 2055.7,
+   "sma200": 2029.43,
+   "above_sma200": true,
+   "traded_value_126d": 1537795071.4229038,
+   "pct_below_52w_high": 31.1,
+   "liquidity_rank": 178,
+   "leader_rank": 10,
+   "structure": {
+    "trend": "downtrend",
+    "support_level": 2000.1,
+    "support_touches": null,
+    "support_ladder": [
+     {
+      "level": 1893.33,
+      "touches": 1
+     },
+     {
+      "level": 1453.44,
+      "touches": 1
+     },
+     {
+      "level": 1423.77,
+      "touches": 3
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 2234.17,
+      "touches": 1
+     },
+     {
+      "level": 2415.0,
+      "touches": 1
+     },
+     {
+      "level": 2558.35,
+      "touches": 2
+     }
+    ],
+    "volume_ratio": 1.78,
+    "rsi": 27.53,
+    "above_sma50": false
+   },
+   "traded_value_cr": 153.8,
+   "plan": {
+    "fired": [],
+    "ref_close": 2055.7,
+    "atr14": 118.43,
+    "stop_if_filled_at_ref": 1818.84,
+    "risk_per_share": 236.86,
+    "risk_pct": 11.5,
+    "shares_per_1000_risk": 4,
+    "triggers": {
+     "breakout55_close_above": 2983.8,
+     "pullback20_ema20": 2351.26
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 0.8
+   }
+  },
+  {
+   "ticker": "CHENNPETRO.NS",
+   "momentum_12_1_pct": 93.95,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 105.05,
+   "relative_strength_1m_pct": 5.64,
+   "relative_strength_6m_pct": 44.51,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 1511.5,
+   "sma200": 1098.99,
+   "above_sma200": true,
+   "traded_value_126d": 2661268400.131364,
+   "pct_below_52w_high": 8.4,
+   "liquidity_rank": 96,
+   "leader_rank": 11,
+   "structure": {
+    "trend": "choppy",
+    "support_level": 1303.19,
+    "support_touches": null,
+    "support_ladder": [
+     {
+      "level": 1346.41,
+      "touches": 2
+     },
+     {
+      "level": 1303.19,
+      "touches": 2
+     },
+     {
+      "level": 1200.12,
+      "touches": 1
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 1546.99,
+      "touches": 1
+     },
+     {
+      "level": 1601.77,
+      "touches": 1
+     },
+     {
+      "level": 1649.76,
+      "touches": 1
+     }
+    ],
+    "volume_ratio": 0.33,
+    "rsi": 56.48,
+    "above_sma50": true
+   },
+   "traded_value_cr": 266.1,
+   "plan": {
+    "fired": [],
+    "ref_close": 1511.5,
+    "atr14": 78.37,
+    "stop_if_filled_at_ref": 1354.75,
+    "risk_per_share": 156.75,
+    "risk_pct": 10.4,
+    "shares_per_1000_risk": 6,
+    "triggers": {
+     "breakout55_close_above": 1649.76,
+     "pullback20_ema20": 1458.63
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 0.2
+   }
+  },
+  {
+   "ticker": "ACUTAAS.NS",
+   "momentum_12_1_pct": 84.87,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 95.97,
+   "relative_strength_1m_pct": 19.85,
+   "relative_strength_6m_pct": 63.86,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 4003.6,
+   "sma200": 2816.55,
+   "above_sma200": true,
+   "traded_value_126d": 1615486587.982228,
+   "pct_below_52w_high": 0.7,
+   "liquidity_rank": 169,
+   "leader_rank": 12,
+   "structure": {
+    "trend": "uptrend",
+    "support_level": 3031.1,
+    "support_touches": null,
+    "support_ladder": [
+     {
+      "level": 3353.29,
+      "touches": 2
+     },
+     {
+      "level": 3186.42,
+      "touches": 1
+     },
+     {
+      "level": 3151.33,
+      "touches": 2
+     }
+    ],
+    "resistance_ladder": [],
+    "volume_ratio": 1.33,
+    "rsi": 72.84,
+    "above_sma50": true
+   },
+   "traded_value_cr": 161.5,
+   "plan": {
+    "fired": [],
+    "ref_close": 4003.6,
+    "atr14": 186.42,
+    "stop_if_filled_at_ref": 3630.76,
+    "risk_per_share": 372.84,
+    "risk_pct": 9.3,
+    "shares_per_1000_risk": 2,
+    "triggers": {
+     "breakout55_close_above": 4032.2,
+     "pullback20_ema20": 3430.82
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": null
+   }
+  },
+  {
+   "ticker": "ATHERENERG.NS",
+   "momentum_12_1_pct": 83.72,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 94.82,
+   "relative_strength_1m_pct": 23.49,
+   "relative_strength_6m_pct": 90.88,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 1756.0,
+   "sma200": 1081.43,
+   "above_sma200": true,
+   "traded_value_126d": 5975134600.779971,
+   "pct_below_52w_high": 1.6,
+   "liquidity_rank": 22,
+   "leader_rank": 13,
+   "structure": null,
+   "traded_value_cr": 597.5,
+   "plan": {
+    "fired": [
+     "breakout55"
+    ],
+    "ref_close": 1756.0,
+    "atr14": 77.2,
+    "stop_if_filled_at_ref": 1601.6,
+    "risk_per_share": 154.4,
+    "risk_pct": 8.8,
+    "shares_per_1000_risk": 6,
+    "triggers": {
+     "breakout55_close_above": 1784.5,
+     "pullback20_ema20": 1543.67
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": null
+   }
+  },
+  {
+   "ticker": "SONACOMS.NS",
+   "momentum_12_1_pct": 77.66,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 88.76,
+   "relative_strength_1m_pct": 7.86,
+   "relative_strength_6m_pct": 52.67,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 890.5,
+   "sma200": 642.28,
+   "above_sma200": true,
+   "traded_value_126d": 1822489529.2444656,
+   "pct_below_52w_high": 0.9,
+   "liquidity_rank": 152,
+   "leader_rank": 14,
+   "structure": {
+    "trend": "choppy",
+    "support_level": 741.3,
+    "support_touches": null,
+    "support_ladder": [
+     {
+      "level": 792.5,
+      "touches": 2
+     },
+     {
+      "level": 777.18,
+      "touches": 3
+     },
+     {
+      "level": 759.05,
+      "touches": 1
+     }
+    ],
+    "resistance_ladder": [],
+    "volume_ratio": 1.06,
+    "rsi": 67.81,
+    "above_sma50": true
+   },
+   "traded_value_cr": 182.2,
+   "plan": {
+    "fired": [
+     "breakout55"
+    ],
+    "ref_close": 890.5,
+    "atr14": 30.28,
+    "stop_if_filled_at_ref": 829.95,
+    "risk_per_share": 60.55,
+    "risk_pct": 6.8,
+    "shares_per_1000_risk": 16,
+    "triggers": {
+     "breakout55_close_above": 899.0,
+     "pullback20_ema20": 818.47
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": null
+   }
+  },
+  {
+   "ticker": "BHEL.NS",
+   "momentum_12_1_pct": 76.76,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 87.86,
+   "relative_strength_1m_pct": -7.55,
+   "relative_strength_6m_pct": 16.62,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 387.6,
+   "sma200": 358.61,
+   "above_sma200": true,
+   "traded_value_126d": 5298788648.913518,
+   "pct_below_52w_high": 16.5,
+   "liquidity_rank": 30,
+   "leader_rank": 15,
+   "structure": {
+    "trend": "downtrend",
+    "support_level": 384.86,
+    "support_touches": 1,
+    "support_ladder": [
+     {
+      "level": 384.86,
+      "touches": 1
+     },
+     {
+      "level": 377.7,
+      "touches": 1
+     },
+     {
+      "level": 368.51,
+      "touches": 2
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 407.59,
+      "touches": 1
+     },
+     {
+      "level": 420.58,
+      "touches": 4
+     },
+     {
+      "level": 423.53,
+      "touches": 1
+     }
+    ],
+    "volume_ratio": 0.78,
+    "rsi": 37.81,
+    "above_sma50": false
+   },
+   "traded_value_cr": 529.9,
+   "plan": {
+    "fired": [],
+    "ref_close": 387.6,
+    "atr14": 15.63,
+    "stop_if_filled_at_ref": 356.34,
+    "risk_per_share": 31.26,
+    "risk_pct": 8.1,
+    "shares_per_1000_risk": 31,
+    "triggers": {
+     "breakout55_close_above": 464.0,
+     "pullback20_ema20": 413.62
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 0.6
+   }
+  },
+  {
+   "ticker": "MCX.NS",
+   "momentum_12_1_pct": 76.33,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 87.43,
+   "relative_strength_1m_pct": -2.65,
+   "relative_strength_6m_pct": 11.44,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 3188.8,
+   "sma200": 2840.44,
+   "above_sma200": true,
+   "traded_value_126d": 7966157931.575451,
+   "pct_below_52w_high": 8.4,
+   "liquidity_rank": 13,
+   "leader_rank": 16,
+   "structure": {
+    "trend": "downtrend",
+    "support_level": 3157.8,
+    "support_touches": 2,
+    "support_ladder": [
+     {
+      "level": 3157.8,
+      "touches": 2
+     },
+     {
+      "level": 3056.6,
+      "touches": 1
+     },
+     {
+      "level": 2985.0,
+      "touches": 1
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 3404.33,
+      "touches": 3
+     },
+     {
+      "level": 3476.45,
+      "touches": 2
+     }
+    ],
+    "volume_ratio": 1.11,
+    "rsi": 49.12,
+    "above_sma50": false
+   },
+   "traded_value_cr": 796.6,
+   "plan": {
+    "fired": [],
+    "ref_close": 3188.8,
+    "atr14": 100.25,
+    "stop_if_filled_at_ref": 2988.3,
+    "risk_per_share": 200.5,
+    "risk_pct": 6.3,
+    "shares_per_1000_risk": 4,
+    "triggers": {
+     "breakout55_close_above": 3481.4,
+     "pullback20_ema20": 3198.51
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 1.1
+   }
+  },
+  {
+   "ticker": "AZAD.NS",
+   "momentum_12_1_pct": 74.7,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 85.8,
+   "relative_strength_1m_pct": -17.41,
+   "relative_strength_6m_pct": 16.94,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 2445.3,
+   "sma200": 2148.45,
+   "above_sma200": true,
+   "traded_value_126d": 1599999046.6198313,
+   "pct_below_52w_high": 21.8,
+   "liquidity_rank": 171,
+   "leader_rank": 17,
+   "structure": {
+    "trend": "downtrend",
+    "support_level": 2414.0,
+    "support_touches": 1,
+    "support_ladder": [
+     {
+      "level": 2414.0,
+      "touches": 1
+     },
+     {
+      "level": 2312.25,
+      "touches": 2
+     },
+     {
+      "level": 2250.0,
+      "touches": 1
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 2511.95,
+      "touches": 2
+     },
+     {
+      "level": 2820.0,
+      "touches": 1
+     },
+     {
+      "level": 2906.37,
+      "touches": 3
+     }
+    ],
+    "volume_ratio": 0.58,
+    "rsi": 34.9,
+    "above_sma50": false
+   },
+   "traded_value_cr": 160.0,
+   "plan": {
+    "fired": [],
+    "ref_close": 2445.3,
+    "atr14": 116.46,
+    "stop_if_filled_at_ref": 2212.39,
+    "risk_per_share": 232.91,
+    "risk_pct": 9.5,
+    "shares_per_1000_risk": 4,
+    "triggers": {
+     "breakout55_close_above": 3127.9,
+     "pullback20_ema20": 2666.03
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 0.3
+   }
+  },
+  {
+   "ticker": "AEGISLOG.NS",
+   "momentum_12_1_pct": 62.8,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 73.9,
+   "relative_strength_1m_pct": -16.94,
+   "relative_strength_6m_pct": 59.1,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 99.6,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 1096.7,
+   "sma200": 979.17,
+   "above_sma200": true,
+   "traded_value_126d": 2211042726.563569,
+   "pct_below_52w_high": 28.3,
+   "liquidity_rank": 120,
+   "leader_rank": 18,
+   "structure": {
+    "trend": "downtrend",
+    "support_level": 1080.2,
+    "support_touches": null,
+    "support_ladder": [
+     {
+      "level": 790.83,
+      "touches": 2
+     },
+     {
+      "level": 773.25,
+      "touches": 2
+     },
+     {
+      "level": 759.92,
+      "touches": 3
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 1425.23,
+      "touches": 2
+     },
+     {
+      "level": 1449.0,
+      "touches": 1
+     },
+     {
+      "level": 1489.4,
+      "touches": 2
+     }
+    ],
+    "volume_ratio": 0.64,
+    "rsi": 32.27,
+    "above_sma50": false
+   },
+   "traded_value_cr": 221.1,
+   "plan": {
+    "fired": [],
+    "ref_close": 1096.7,
+    "atr14": 81.9,
+    "stop_if_filled_at_ref": 932.9,
+    "risk_per_share": 163.8,
+    "risk_pct": 14.9,
+    "shares_per_1000_risk": 6,
+    "triggers": {
+     "breakout55_close_above": 1528.7,
+     "pullback20_ema20": 1289.67
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 2.0
+   }
+  },
+  {
+   "ticker": "WOCKPHARMA.NS",
+   "momentum_12_1_pct": 59.85,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 70.95,
+   "relative_strength_1m_pct": -14.68,
+   "relative_strength_6m_pct": 40.35,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 100.0,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 1901.1,
+   "sma200": 1703.88,
+   "above_sma200": true,
+   "traded_value_126d": 3092075519.348251,
+   "pct_below_52w_high": 21.5,
+   "liquidity_rank": 80,
+   "leader_rank": 19,
+   "structure": {
+    "trend": "downtrend",
+    "support_level": 1901.0,
+    "support_touches": 1,
+    "support_ladder": [
+     {
+      "level": 1901.0,
+      "touches": 1
+     },
+     {
+      "level": 1826.68,
+      "touches": 5
+     },
+     {
+      "level": 1782.2,
+      "touches": 2
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 1950.0,
+      "touches": 1
+     },
+     {
+      "level": 2056.53,
+      "touches": 3
+     },
+     {
+      "level": 2120.0,
+      "touches": 1
+     }
+    ],
+    "volume_ratio": 0.8,
+    "rsi": 42.97,
+    "above_sma50": false
+   },
+   "traded_value_cr": 309.2,
+   "plan": {
+    "fired": [],
+    "ref_close": 1901.1,
+    "atr14": 68.0,
+    "stop_if_filled_at_ref": 1765.1,
+    "risk_per_share": 136.0,
+    "risk_pct": 7.2,
+    "shares_per_1000_risk": 7,
+    "triggers": {
+     "breakout55_close_above": 2360.0,
+     "pullback20_ema20": 1950.06
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 0.4
+   }
+  },
+  {
+   "ticker": "NAVINFLUOR.NS",
+   "momentum_12_1_pct": 59.13,
+   "benchmark_momentum_12_1_pct": -11.1,
+   "relative_strength_12_1_pct": 70.23,
+   "relative_strength_1m_pct": 4.09,
+   "relative_strength_6m_pct": 32.33,
+   "relative_strength_date": "2026-10-30",
+   "relative_strength_benchmark_date": "2026-10-30",
+   "momentum_12_1_end_date": "2026-09-29",
+   "relative_strength_12m_coverage_pct": 99.6,
+   "relative_strength_stale_sessions": 0,
+   "relative_strength_status": "ok",
+   "last_close": 8680.0,
+   "sma200": 7223.35,
+   "above_sma200": true,
+   "traded_value_126d": 1522120259.5695453,
+   "pct_below_52w_high": 3.0,
+   "liquidity_rank": 180,
+   "leader_rank": 20,
+   "structure": {
+    "trend": "choppy",
+    "support_level": 8275.5,
+    "support_touches": 1,
+    "support_ladder": [
+     {
+      "level": 8275.5,
+      "touches": 1
+     },
+     {
+      "level": 8083.75,
+      "touches": 4
+     },
+     {
+      "level": 7475.17,
+      "touches": 3
+     }
+    ],
+    "resistance_ladder": [
+     {
+      "level": 8757.75,
+      "touches": 2
+     },
+     {
+      "level": 8949.5,
+      "touches": 1
+     }
+    ],
+    "volume_ratio": 2.83,
+    "rsi": 58.81,
+    "above_sma50": true
+   },
+   "traded_value_cr": 152.2,
+   "plan": {
+    "fired": [
+     "pullback20"
+    ],
+    "ref_close": 8680.0,
+    "atr14": 301.61,
+    "stop_if_filled_at_ref": 8076.79,
+    "risk_per_share": 603.21,
+    "risk_pct": 6.9,
+    "shares_per_1000_risk": 1,
+    "triggers": {
+     "breakout55_close_above": 8949.5,
+     "pullback20_ema20": 8263.27
+    },
+    "exit_rule": "stop 2.0xATR under the fill; then exit at highest close - 3.0xATR; 60-session time stop",
+    "rr_to_next_resistance": 0.1
+   }
+  }
+ ]
+}

@@ -11,6 +11,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
+DEFAULT_ACCOUNT_CAPITAL = 1_000_000.0
+DEFAULT_RISK_PCT = 0.01
+DEFAULT_MAX_POSITION_PCT = 0.25
+
 
 @dataclass
 class SizingPlan:

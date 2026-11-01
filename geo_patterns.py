@@ -190,3 +190,28 @@ def detect_all(O, H, L, C) -> list:
     _lines(minor, H, L, C, atr, ev)
     _flags(O, H, L, C, atr, ev)
     return sorted(ev.values(), key=lambda e: (e["t"], e["name"]))
+
+
+def detect_patterns(df) -> list[dict]:
+    """Convenience wrapper accepting OHLC DataFrame and returning detected patterns."""
+    if df is None or len(df) < 50:
+        return []
+    o = df["Open"].values
+    h = df["High"].values
+    l = df["Low"].values
+    c = df["Close"].values
+    events = detect_all(o, h, l, c)
+    out = []
+    for e in events:
+        out.append({
+            "pattern": e.get("name"),
+            "bar": e.get("t"),
+            "breakout_level": e.get("entry"),
+            "entry": e.get("entry"),
+            "stop": e.get("stop"),
+            "target": e.get("target"),
+            "direction": e.get("dir"),
+            "status": "triggered" if e.get("t") == len(df) - 1 else "active",
+        })
+    return out
+

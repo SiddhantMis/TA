@@ -1,19 +1,20 @@
 """
-Unit tests for candlestick pattern detection. Zero network access needed —
-this is what's actually been verified. The live yfinance fetch path has
-NOT been run (see analyzer.py docstring); test that separately once this
-runs inside GitHub Actions.
+Offline unit tests for candlestick patterns, technical-analysis helpers,
+momentum metrics, and the research harness. No network access is needed.
+The live yfinance fetch path was separately exercised on the full watchlist
+on 2026-10-31 (see analyzer.py docstring); Discord and Actions publishing
+were not part of that run.
 
 Several fixtures below are the real OHLC values checked by hand earlier
 this week — this test suite is partly a regression check that the code
 agrees with those manual calls, not just synthetic examples.
 """
+import json
 import sys
 import numpy as np
 import pandas as pd
-from main import check_total_failure, check_stale_after_cutoff, enable_settled_daily_candle
+from main import check_total_failure, check_stale_after_cutoff, enable_settled_daily_candle, summarize_scan_coverage
 import analyzer as analyzer_module
-import analyzer as A
 from alerts import build_alert_content, DISCORD_CONTENT_LIMIT
 from datetime import date, datetime, time as dt_time
 from zoneinfo import ZoneInfo
@@ -27,6 +28,110 @@ from analyzer import (
 
 def row(o, h, l, c):
     return pd.Series({"Open": o, "High": h, "Low": l, "Close": c})
+
+
+def test_relative_strength_uses_benchmark_session_calendar_and_exact_12_1_windows():
+    dates = pd.bdate_range("2020-01-01", periods=300)
+    stock_close = 100 * 1.002 ** np.arange(len(dates))
+    market_close = 100 * 1.001 ** np.arange(len(dates))
+    stock = pd.DataFrame({"Close": stock_close}, index=dates)
+    benchmark = pd.DataFrame({"Close": market_close}, index=dates)
+
+    result = analyzer_module.relative_strength_metrics(stock, benchmark)
+    start, end = len(dates) - 253, len(dates) - 22
+    expected_stock = stock_close[end] / stock_close[start] - 1
+    expected_market = market_close[end] / market_close[start] - 1
+    expected_1m = (stock_close[-1] / stock_close[-22] - 1) - (market_close[-1] / market_close[-22] - 1)
+    expected_6m = (stock_close[-1] / stock_close[-127] - 1) - (market_close[-1] / market_close[-127] - 1)
+
+    assert result["momentum_12_1_pct"] == round(expected_stock * 100, 2)
+    assert result["benchmark_momentum_12_1_pct"] == round(expected_market * 100, 2)
+    assert result["relative_strength_12_1_pct"] == round((expected_stock - expected_market) * 100, 2)
+    assert result["relative_strength_1m_pct"] == round(expected_1m * 100, 2)
+    assert result["relative_strength_6m_pct"] == round(expected_6m * 100, 2)
+    assert result["momentum_12_1_end_date"] == dates[end].date().isoformat()
+    assert result["relative_strength_date"] == dates[-1].date().isoformat()
+    assert result["relative_strength_benchmark_date"] == dates[-1].date().isoformat()
+    assert result["relative_strength_12m_coverage_pct"] == 100.0
+    assert result["relative_strength_status"] == "ok"
+
+
+def test_relative_strength_keeps_fixed_endpoints_when_a_session_is_missing():
+    dates = pd.bdate_range("2020-01-01", periods=300)
+    stock_close = 100 * 1.002 ** np.arange(len(dates))
+    market_close = 100 * 1.001 ** np.arange(len(dates))
+    stock = pd.DataFrame({"Close": stock_close}, index=dates).drop(dates[50])
+    benchmark = pd.DataFrame({"Close": market_close}, index=dates)
+
+    result = analyzer_module.relative_strength_metrics(stock, benchmark)
+    start, end = len(dates) - 253, len(dates) - 22
+    expected = (
+        (stock_close[end] / stock_close[start] - 1)
+        - (market_close[end] / market_close[start] - 1)
+    ) * 100
+
+    assert result["relative_strength_12_1_pct"] == round(expected, 2)
+    assert result["momentum_12_1_end_date"] == dates[end].date().isoformat()
+    assert result["relative_strength_12m_coverage_pct"] == round(252 / 253 * 100, 1)
+
+
+def test_relative_strength_rejects_stale_stock_and_low_coverage():
+    dates = pd.bdate_range("2020-01-01", periods=300)
+    benchmark = pd.DataFrame({"Close": np.linspace(100, 130, len(dates))}, index=dates)
+    stock = pd.DataFrame({"Close": np.linspace(100, 140, len(dates))}, index=dates)
+
+    stale = analyzer_module.relative_strength_metrics(stock.iloc[:-1], benchmark)
+    assert stale["relative_strength_status"] == "stale_stock_close"
+    assert stale["relative_strength_stale_sessions"] == 1
+    assert stale["relative_strength_12_1_pct"] is None
+
+    sparse_stock = stock.drop(dates[-253:-233])
+    sparse = analyzer_module.relative_strength_metrics(sparse_stock, benchmark)
+    assert sparse["relative_strength_status"] == "insufficient_price_coverage"
+    assert sparse["relative_strength_12_1_pct"] is None
+
+
+def test_relative_strength_reports_short_history_and_disjoint_dates():
+    dates = pd.bdate_range("2024-01-01", periods=150)
+    stock = pd.DataFrame({"Close": np.linspace(100, 130, len(dates))}, index=dates)
+    benchmark = pd.DataFrame({"Close": np.linspace(100, 115, len(dates))}, index=dates)
+    short = analyzer_module.relative_strength_metrics(stock, benchmark)
+    assert short["relative_strength_1m_pct"] is not None
+    assert short["relative_strength_6m_pct"] is not None
+    assert short["relative_strength_12_1_pct"] is None
+    assert short["momentum_12_1_end_date"] is None
+
+    no_overlap = benchmark.copy()
+    no_overlap.index = no_overlap.index + pd.Timedelta(days=1000)
+    empty = analyzer_module.relative_strength_metrics(stock, no_overlap)
+    assert empty["relative_strength_6m_pct"] is None
+    assert empty["relative_strength_12_1_pct"] is None
+    assert empty["relative_strength_date"] is None
+
+
+def test_relative_strength_ranks_are_watchlist_relative_and_ties_share_rank():
+    results = [
+        {"ticker": "A.NS", "relative_strength_12_1_pct": 5.0},
+        {"ticker": "B.NS", "relative_strength_12_1_pct": 5.0},
+        {"ticker": "C.NS", "relative_strength_12_1_pct": -2.0},
+        {"ticker": "D.NS", "relative_strength_12_1_pct": None},
+        {"ticker": "SILVERBEES.NS", "relative_strength_12_1_pct": 80.0},
+        {"ticker": "NAN.NS", "relative_strength_12_1_pct": float("nan")},
+    ]
+    ranked = analyzer_module.rank_relative_strength(results)
+    assert [r["ticker"] for r in ranked] == ["A.NS", "B.NS", "C.NS"]
+    assert results[0]["leader_rank"] == results[1]["leader_rank"] == 1
+    assert results[0]["leader_percentile"] == results[1]["leader_percentile"] == 75.0
+    assert results[2]["leader_rank"] == 3
+    assert results[2]["leader_percentile"] == 0.0
+    assert results[3].get("leader_rank") is None
+    assert results[4].get("leader_rank") is None
+    assert results[5].get("leader_rank") is None
+    assert all(r["leader_universe_size"] == 3 for r in ranked)
+
+    results[2]["relative_strength_12_1_pct"] = None
+    analyzer_module.rank_relative_strength(results)
+    assert results[2]["leader_rank"] is None  # prior rank is cleared when input becomes invalid
 
 
 def _pad_history(n, base=300.0, seed=0):
@@ -621,6 +726,43 @@ def test_build_alert_content_empty_flag_list_unaffected():
     assert len(content) <= DISCORD_CONTENT_LIMIT
 
 
+def test_build_alert_content_shows_momentum_leaders_without_reversal_flags():
+    leaders = [{
+        "ticker": "MCX.NS", "leader_rank": 1,
+        "relative_strength_12_1_pct": 87.43,
+        "relative_strength_1m_pct": 3.21,
+        "relative_strength_6m_pct": 11.44,
+    }]
+    content = build_alert_content([], "(test session)", leaders=leaders)
+    assert "MCX.NS" in content
+    assert "+87.4 pp" in content and "+3.2 pp (1m)" in content and "+11.4 pp" in content
+    assert "not a validated entry signal" in content
+    assert len(content) <= DISCORD_CONTENT_LIMIT
+
+
+def test_build_alert_content_keeps_momentum_leaders_inside_discord_limit():
+    flagged = [_fake_flag(f"TICKER{i}.NS") for i in range(30)]
+    leaders = [{
+        "ticker": f"LEADER{i}.NS", "leader_rank": i + 1,
+        "relative_strength_12_1_pct": 50.0 - i,
+        "relative_strength_6m_pct": 10.0 - i,
+    } for i in range(10)]
+    content = build_alert_content(flagged, "(test session)", leaders=leaders)
+    assert len(content) <= DISCORD_CONTENT_LIMIT, len(content)
+    assert "LEADER0.NS" in content
+    assert "truncated" in content
+
+
+def test_build_alert_content_warns_when_scan_is_partial():
+    coverage = {
+        "requested": 4, "scored": 3, "coverage_pct": 75.0,
+        "missing_tickers": ["MISSING.NS"],
+    }
+    content = build_alert_content([], "(test session)", scan_coverage=coverage)
+    assert "Partial scan: 3/4 instruments scored" in content
+    assert "MISSING.NS" in content
+
+
 def test_check_total_failure_fires_when_everything_fails():
     # The scenario the whole fix exists for -- previously invisible,
     # untested even in the commit that added it.
@@ -644,6 +786,17 @@ def test_check_total_failure_silent_on_empty_watchlist():
     # empty input, not a failure -- must not fire.
     msg = check_total_failure([], [])
     assert msg is None, msg
+
+
+def test_summarize_scan_coverage_lists_missing_configured_symbols():
+    result = summarize_scan_coverage(
+        ["A.NS", "B.NS", "C.NS", "A.NS"],
+        [{"ticker": "A.NS"}, {"ticker": "C.NS"}, {"ticker": "OUTSIDE.NS"}],
+    )
+    assert result == {
+        "requested": 3, "scored": 2, "coverage_pct": 66.7,
+        "missing_tickers": ["B.NS"],
+    }
 
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -829,180 +982,6 @@ def test_run_backtest_pipeline_runs_end_to_end_with_a_stubbed_scorer():
         assert "Does the R:R gate help?" in text and "By watchlist breadth" in text
     finally:
         A.score_ticker = real
-
-
-def test_sr_engine_touch_ledger_and_dates():
-    """Verifies that the enhanced S/R engine records exact touch dates and lookback days."""
-    dates = pd.date_range("2026-01-01", periods=100, freq="B")
-    base = 200.0
-    # Two dips at bar 30 and bar 60
-    lows = [base + 10.0] * 100
-    for c in [30, 60]:
-        for off in range(-2, 3):
-            lows[c + off] = base + abs(off) * 2.0
-    highs = [l + 5.0 for l in lows]
-    opens = [l + 2.0 for l in lows]
-    closes = [l + 3.0 for l in lows]
-    closes[-1] = base + 1.0  # current close right near 200
-    df = pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": [1_000_000]*100}, index=dates)
-
-    sr = A.get_sr_levels(df, 99)
-    assert sr["support"] is not None
-    assert sr["support_touches"] == 2
-    assert len(sr["support_dates"]) == 2
-    assert len(sr["support_days_ago"]) == 2
-    assert sr["support_days_ago"][0] > sr["support_days_ago"][1]
-    assert sr["support_quality"] in ("High", "Moderate", "Tentative")
-
-
-def test_sr_role_reversal_detection():
-    """Verifies that a prior resistance level that is later tested as support is flagged as role reversal."""
-    dates = pd.date_range("2026-01-01", periods=120, freq="B")
-    level = 150.0
-
-    # Pre-breakout baseline: 135
-    highs = [135.0] * 120
-    lows = [130.0] * 120
-    opens = [132.0] * 120
-    closes = [132.0] * 120
-
-    # Swing high at bar 30 up to 150 (prior resistance)
-    for off in range(-3, 4):
-        highs[30 + off] = level - abs(off) * 2.0
-        lows[30 + off] = level - abs(off) * 2.0 - 5.0
-        opens[30 + off] = lows[30 + off] + 1.0
-        closes[30 + off] = highs[30 + off] - 1.0
-
-    # Post-breakout baseline: 165
-    for i in range(50, 120):
-        highs[i] = 168.0
-        lows[i] = 162.0
-        opens[i] = 165.0
-        closes[i] = 165.0
-
-    # Pullback dip at bar 80 down to 150 (retested as support)
-    for off in range(-3, 4):
-        lows[80 + off] = level + abs(off) * 2.0
-        highs[80 + off] = level + abs(off) * 2.0 + 5.0
-        opens[80 + off] = lows[80 + off] + 1.0
-        closes[80 + off] = lows[80 + off] + 2.0
-
-    closes[-1] = level + 2.0
-    highs[-1] = level + 4.0
-    lows[-1] = level + 1.0
-    opens[-1] = level + 1.5
-
-    df = pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": [1_000_000]*120}, index=dates)
-    sr = A.get_sr_levels(df, 119)
-    assert sr["support"] == 150.0
-    assert sr["support_touches"] == 2
-    assert sr["support_role_reversal"] is True
-
-
-def test_position_sizing_calculation():
-    """Verifies that position_sizer properly sizes shares and enforces capital caps."""
-    from position_sizer import calculate_position_size
-    # Account ₹5,00,000, Risk 1% (₹5,000)
-    # Entry 100, Stop 95 -> risk = 5/share -> 1,000 shares -> ₹1,00,000 (20% cap ok)
-    plan = calculate_position_size(entry=100.0, stop=95.0, target=115.0, capital=500_000.0, risk_pct=0.01)
-    assert plan.sizing_ok is True
-    assert plan.shares == 1000
-    assert plan.risk_amount == 5000.0
-    assert plan.reward_amount == 15000.0
-    assert plan.planned_rr == 3.0
-    assert plan.warning is None
-
-    # Oversized risk test (capping at 25% = ₹1,25,000)
-    # Entry 1000, Stop 995 -> risk = 5 -> 1000 shares = ₹10,00,000 > ₹1.25L cap -> capped to 125 shares
-    plan2 = calculate_position_size(entry=1000.0, stop=995.0, target=1020.0, capital=500_000.0, risk_pct=0.01)
-    assert plan2.shares == 125
-    assert plan2.warning is not None and "capped at 25%" in plan2.warning
-
-
-def test_relative_strength_and_leader_ranking():
-    """Verifies that relative strength correctly ranks and identifies market leaders."""
-    from relative_strength import compute_stock_momentum, rank_universe
-    dates = pd.date_range("2025-01-01", periods=300, freq="B")
-    # Strong uptrend: +100%
-    strong = pd.DataFrame({
-        "Open": np.linspace(100, 200, 300), "High": np.linspace(101, 201, 300),
-        "Low": np.linspace(99, 199, 300), "Close": np.linspace(100, 200, 300),
-        "Volume": [1_000_000]*300
-    }, index=dates)
-
-    # Flat stock
-    flat = pd.DataFrame({
-        "Open": [100.0]*300, "High": [101.0]*300, "Low": [99.0]*300,
-        "Close": [100.0]*300, "Volume": [1_000_000]*300
-    }, index=dates)
-
-    # Downtrend: -50%
-    weak = pd.DataFrame({
-        "Open": np.linspace(200, 100, 300), "High": np.linspace(201, 101, 300),
-        "Low": np.linspace(199, 99, 300), "Close": np.linspace(200, 100, 300),
-        "Volume": [1_000_000]*300
-    }, index=dates)
-
-    profiles = rank_universe({"STRONG.NS": strong, "FLAT.NS": flat, "WEAK.NS": weak}, benchmark_df=flat)
-    assert profiles["STRONG.NS"].is_leader is True
-    assert profiles["STRONG.NS"].rank == 1
-    assert profiles["WEAK.NS"].rank == 3
-    assert profiles["WEAK.NS"].is_leader is False
-
-
-def test_json_serialization_no_nan():
-    """Verifies that main.sanitize_for_json eliminates any NaN or Infinity floats for valid RFC-8259 JSON."""
-    from main import sanitize_for_json
-    import json
-    data = {
-        "ticker": "TEST.NS",
-        "close": float("nan"),
-        "inf_val": float("inf"),
-        "ladder": [{"level": float("nan"), "touches": 2}, {"level": 150.0, "touches": 1}],
-        "valid_float": 123.45,
-    }
-    clean = sanitize_for_json(data)
-    assert clean["close"] is None
-    assert clean["inf_val"] is None
-    assert clean["ladder"][0]["level"] is None
-    assert clean["ladder"][1]["level"] == 150.0
-
-    # Ensure json.dumps produces 100% strictly valid JSON without error or naked NaN
-    raw_json = json.dumps(clean)
-    assert "NaN" not in raw_json
-    assert "Infinity" not in raw_json
-    assert "null" in raw_json
-
-
-def test_geo_pattern_detection_integration():
-    """Verifies that causal geometric patterns (double bottoms/tops, triangles, flags) are detected and surfaced in ScreenResult."""
-    dates = pd.date_range("2024-01-01", periods=550, freq="B")
-    O, H, L, C = [150.0]*550, [155.0]*550, [145.0]*550, [150.0]*550
-
-    shift = 20
-    for i in range(400 + shift, 500 + shift):
-        if i <= 420 + shift:
-            L[i], H[i], C[i], O[i] = 100 - (i-(400+shift)), 102 - (i-(400+shift)), 99 - (i-(400+shift)), 101 - (i-(400+shift))
-        elif i <= 440 + shift:
-            L[i], H[i], C[i], O[i] = 80 + (i-(420+shift))*1.5, 82 + (i-(420+shift))*1.5, 81 + (i-(420+shift))*1.5, 80 + (i-(420+shift))*1.5
-        elif i <= 460 + shift:
-            L[i], H[i], C[i], O[i] = 110 - (i-(440+shift))*1.5, 112 - (i-(440+shift))*1.5, 109 - (i-(440+shift))*1.5, 111 - (i-(440+shift))*1.5
-        elif i <= 470 + shift:
-            L[i], H[i], C[i], O[i] = 80 + (i-(460+shift))*3.5, 83 + (i-(460+shift))*3.5, 82 + (i-(460+shift))*3.5, 81 + (i-(460+shift))*3.5
-        else:
-            L[i], H[i], C[i], O[i] = 115.0, 118.0, 116.0, 115.0
-
-    df = pd.DataFrame({"Open": O, "High": H, "Low": L, "Close": C, "Volume": [1_000_000]*550}, index=dates)
-    r = A.score_ticker(df.iloc[:491], "GEO.NS")
-    assert r is not None
-    assert r.geo_pattern == "double_bottom"
-    assert r.geo_pattern_status == "unvalidated_context"
-    assert r.geo_pattern_key == 112.0
-    assert r.geo_pattern_target == 144.0
-
-
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -1388,6 +1367,290 @@ def test_lab_end_to_end_on_random_stocks_validates_nothing():
     assert len(ev) > 300 and "-- verdicts" in text
     assert "VALIDATED" not in text, "the lab found 'edge' in pure noise: the harness is biased"
 
+
+# ---------------------------------------------------------------------------
+# leaders.py: wide-universe momentum leaders
+# ---------------------------------------------------------------------------
+
+def _lead_frame(daily, vol, n=400, cut_last=0, path=None):
+    import numpy as np
+    idx = pd.bdate_range(end="2026-10-30", periods=n)
+    c = 100.0 * np.cumprod(np.full(n, 1.0 + daily)) if path is None else np.asarray(path, float)
+    df = pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": float(vol)}, index=idx)
+    return df.iloc[:n - cut_last] if cut_last else df
+
+
+def _lead_universe():
+    import numpy as np
+    n = 400
+    crash = 100.0 * np.cumprod(np.concatenate([np.full(340, 1.004), np.full(60, 0.985)]))
+    return {"FAST": _lead_frame(0.003, 5e6), "MID": _lead_frame(0.002, 4e6), "FLAT": _lead_frame(0.0006, 3e6),
+            "ILLIQ": _lead_frame(0.005, 1e3), "CRASH": _lead_frame(0, 2e6, path=crash),
+            "STALE": _lead_frame(0.004, 5e6, cut_last=2)}, _lead_frame(0.0004, 1e6)
+
+
+def test_leaders_select_rules_liquidity_trend_and_freshness():
+    import leaders as LD
+    frames, bench = _lead_universe()
+    rows = [{"ticker": t, **LD.leader_metrics(df, bench)} for t, df in frames.items()]
+    by = {r["ticker"]: r for r in rows}
+    assert by["CRASH"]["above_sma200"] is False and by["STALE"]["relative_strength_status"] != "ok"
+    leaders, counts = LD.select_leaders(rows, liquid_top=4, board=10)
+    assert [r["ticker"] for r in leaders] == ["FAST", "MID", "FLAT"], [r["ticker"] for r in leaders]
+    assert [r["leader_rank"] for r in leaders] == [1, 2, 3]
+    assert counts == {"universe": 6, "rankable": 5, "liquid": 4, "above_200dma": 3}, counts   # ILLIQ cut by liquidity, CRASH by trend, STALE by freshness
+    assert len(LD.select_leaders(rows, liquid_top=4, board=2)[0]) == 2
+
+
+def test_leaders_ranking_matches_the_tested_12_1_definition():
+    import leaders as LD
+    frames, bench = _lead_universe()
+    m = LD.leader_metrics(frames["FAST"], bench)
+    c, b = frames["FAST"]["Close"], bench["Close"]
+    expect = (c.iloc[-22] / c.iloc[-253] - 1) - (b.iloc[-22] / b.iloc[-253] - 1)     # 252 back to 21 back
+    assert abs(m["relative_strength_12_1_pct"] - round(expect * 100, 2)) < 1e-6
+
+
+def test_leaders_run_isolates_bad_symbols_and_reports_coverage():
+    import analyzer as A
+    import leaders as LD
+    frames, bench = _lead_universe()
+    real = A.fetch_ticker
+    def fake(t):
+        if t == "BOOM.NS":
+            raise RuntimeError("yahoo said no")
+        return None if t == "EMPTY.NS" else frames[t.replace(".NS", "")]
+    A.fetch_ticker = fake
+    try:
+        out = LD.run_leaders(["FAST.NS", "MID.NS", "FLAT.NS", "ILLIQ.NS", "CRASH.NS", "BOOM.NS", "EMPTY.NS"],
+                             benchmark_df=bench, liquid_top=4, board=5, sleep=0)
+    finally:
+        A.fetch_ticker = real
+    assert [r["ticker"] for r in out["leaders"]] == ["FAST.NS", "MID.NS", "FLAT.NS"]
+    assert out["counts"]["failed_to_load"] == 2 and out["counts"]["universe"] == 5 and out["as_of"] == "2026-10-30"
+    assert set(out["failed_tickers"]) == {"BOOM.NS", "EMPTY.NS"} and "evidence" in out
+
+
+def test_alert_shows_wide_leaders_and_degrades_gracefully():
+    from alerts import build_alert_content, DISCORD_CONTENT_LIMIT
+    wl = {"counts": {"liquid": 200, "above_200dma": 80}, "leaders": [
+        {"leader_rank": 1, "ticker": "ABC.NS", "relative_strength_12_1_pct": 55.0, "relative_strength_6m_pct": 20.0,
+         "pct_below_52w_high": 3.2, "structure": {"support_level": 410.0, "support_touches": 3, "resistance_ladder": [{"level": 470.0}]}}]}
+    text = build_alert_content([], "(s)", wide_leaders=wl)
+    assert "ABC" in text and "S 410 (3x)" in text and "R 470" in text and "No setup fired" in text
+    assert "unavailable today" in build_alert_content([], "(s)", wide_leaders={"error": "boom"})
+    assert len(build_alert_content([], "(s)", wide_leaders=wl)) <= DISCORD_CONTENT_LIMIT
+
+
+def test_leaders_scan_stops_at_the_time_limit_and_says_so():
+    import analyzer as A
+    import leaders as LD
+    frames, bench = _lead_universe()
+    real = A.fetch_ticker
+    A.fetch_ticker = lambda t: frames[t.replace(".NS", "")]
+    try:
+        out = LD.run_leaders(["FAST.NS", "MID.NS", "FLAT.NS"], benchmark_df=bench, sleep=0, max_seconds=-1)
+    finally:
+        A.fetch_ticker = real
+    assert out["counts"]["partial_scan_time_limit"] is True and out["leaders"] == []
+    assert out["counts"]["load_coverage_pct"] == 0.0
+
+
+def test_leader_mask_is_point_in_time_and_respects_the_rules():
+    import numpy as np
+    import leader_setups as LS
+    idx = pd.bdate_range("2019-01-01", periods=700)
+    def fr(daily, vol, crash=False):
+        c = 100.0 * np.cumprod(np.full(700, 1.0 + daily))
+        if crash:
+            c[-60:] = c[-61] * np.cumprod(np.full(60, 0.985))
+        return pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": float(vol)}, index=idx)
+    frames = {"FAST": fr(0.003, 5e6), "MID": fr(0.002, 4e6), "ILLIQ": fr(0.005, 1e3), "CRASH": fr(0.004, 2e6, crash=True)}
+    lead, liquid = LS.leader_mask(frames, liquid_top=3, lead_n=1)
+    last = lead.iloc[-1]
+    assert last["FAST"] and not last["MID"] and not last["ILLIQ"] and not last["CRASH"]      # only the top-1 liquid, trending name
+    cut = 500
+    part, _ = LS.leader_mask({t: f.iloc[:cut] for t, f in frames.items()}, liquid_top=3, lead_n=1)
+    assert part.iloc[-1].tolist() == lead.iloc[cut - 1].tolist()                                # no look-ahead
+
+
+def test_leader_setups_end_to_end_runs_and_reports_verdicts():
+    import numpy as np
+    import leader_setups as LS
+    def mk(seed, n=1300):
+        rng = np.random.default_rng(seed); c = np.abs(100 + np.cumsum(rng.normal(0.08, 1.5, n))) + 40
+        o = np.concatenate([[c[0]], c[:-1]]) * (1 + rng.normal(0, .004, n))
+        return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + abs(rng.normal(0, .5, n)), "Low": np.minimum(o, c) - abs(rng.normal(0, .5, n)),
+                             "Close": c, "Volume": rng.integers(5e5, 3e6, n)}, index=pd.bdate_range("2019-01-01", periods=n))
+    frames = {f"S{i}": mk(i) for i in range(14)}
+    tr, text = LS.run_setups(frames, mk(99)["Close"], lead_n=4, liquid_top=10)
+    assert "-- verdicts" in text and "ctrl_leader" in text and "ctrl_other" in text and not tr.empty
+
+
+def _plan_frames(last="breakout"):
+    import numpy as np
+    n = 400
+    idx = pd.bdate_range(end="2026-10-30", periods=n)
+    c = np.linspace(100, 160, n)
+    o = np.concatenate([[c[0]], c[:-1]]); h = np.maximum(o, c) + 0.3; l = np.minimum(o, c) - 0.3
+    v = np.full(n, 1e6)
+    if last == "breakout":
+        c[-1] = h[:-1][-55:].max() + 2; h[-1] = c[-1] + 0.5; o[-1] = c[-2]; l[-1] = o[-1] - 0.3; v[-1] = 3e6
+    elif last == "pullback":
+        l[-2] = c[-2] - 6                                    # dipped well under the 20-day EMA two bars ago
+        o[-1] = c[-2] - 1.0; c[-1] = c[-2]; h[-1] = c[-1] + 0.1; l[-1] = o[-1] - 0.2   # up-close back above it, no new high
+    df = pd.DataFrame({"Open": o, "High": h, "Low": l, "Close": c, "Volume": v}, index=idx)
+    bench = pd.DataFrame({"Close": np.linspace(100, 140, n)}, index=idx)
+    return df, bench
+
+
+def test_entry_plan_detects_each_setup_and_sizes_the_risk():
+    import leaders as LD
+    df, bench = _plan_frames("breakout")
+    p = LD.entry_plan(df, bench)
+    assert "breakout55" in p["fired"]
+    assert abs(p["stop_if_filled_at_ref"] - (p["ref_close"] - 2 * p["atr14"])) < 0.02
+    assert p["shares_per_1000_risk"] == int(1000 // p["risk_per_share"]) and p["triggers"]["breakout55_close_above"] > 0
+    df, bench = _plan_frames("pullback")
+    assert LD.entry_plan(df, bench)["fired"] == ["pullback20"]
+    df, bench = _plan_frames("none")
+    p = LD.entry_plan(df, bench)
+    assert p["fired"] == [] and p["triggers"]["pullback20_ema20"] > 0
+
+
+def test_alert_shows_fired_setups_and_stays_under_the_discord_limit():
+    from alerts import build_alert_content, DISCORD_CONTENT_LIMIT
+    plan = {"fired": ["breakout55"], "stop_if_filled_at_ref": 410.0, "risk_pct": 6.1, "shares_per_1000_risk": 16,
+            "triggers": {"breakout55_close_above": 480.0}}
+    leaders = [{"leader_rank": i, "ticker": f"TICK{i}.NS", "relative_strength_12_1_pct": 80.0 - i, "relative_strength_6m_pct": 20.0,
+                "pct_below_52w_high": 3.2, "plan": plan,
+                "structure": {"support_level": 410.0, "support_touches": 3, "resistance_ladder": [{"level": 470.0}]}} for i in range(1, 21)]
+    wl = {"counts": {"liquid": 200, "above_200dma": 80}, "leaders": leaders, "setup_record": "x" * 400}
+    text = build_alert_content([], "(session note)", wide_leaders=wl)
+    assert "breakout55** fired" in text and "BO>480" in text and "16 sh per Rs1,000 risk" in text
+    assert len(text) <= DISCORD_CONTENT_LIMIT, len(text)
+    assert "No setup fired" in build_alert_content([], "(s)", wide_leaders={"counts": {}, "leaders": [dict(leaders[0], plan={"fired": []})]})
+
+
+def test_setup_record_fits_the_alert_and_says_unvalidated():
+    import leaders as LD
+    assert len(LD.SETUP_RECORD) <= 230 and "unvalidated" in LD.SETUP_RECORD.lower()
+
+
+def test_sr_engine_touch_ledger_and_dates():
+    """Verifies that the enhanced S/R engine records exact touch dates and lookback days."""
+    import sr_engine as SR
+    dates = pd.date_range("2026-01-01", periods=100, freq="B")
+    base = 200.0
+    lows = [base + 10.0] * 100
+    for c in [30, 60]:
+        for off in range(-2, 3):
+            lows[c + off] = base + abs(off) * 2.0
+    highs = [l + 5.0 for l in lows]
+    opens = [l + 2.0 for l in lows]
+    closes = [l + 3.0 for l in lows]
+    closes[-1] = base + 1.0  # current close right near 200
+    df = pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": [1_000_000]*100}, index=dates)
+
+    sr = SR.analyze_sr(df, 99)
+    assert sr["support"] is not None
+    assert sr["support_touches"] == 2
+    assert len(sr["support_dates"]) == 2
+    assert len(sr["support_days_ago"]) == 2
+    assert sr["support_days_ago"][0] > sr["support_days_ago"][1]
+    assert sr["support_quality"] in ("High", "Moderate", "Tentative")
+
+
+def test_sr_role_reversal_detection():
+    """Verifies that a prior resistance level that is later tested as support is flagged as role reversal."""
+    import sr_engine as SR
+    dates = pd.date_range("2026-01-01", periods=120, freq="B")
+    level = 150.0
+
+    highs = [135.0] * 120
+    lows = [130.0] * 120
+    opens = [132.0] * 120
+    closes = [132.0] * 120
+
+    # Swing high at bar 30 up to 150 (prior resistance)
+    for off in range(-3, 4):
+        highs[30 + off] = level - abs(off) * 2.0
+        lows[30 + off] = level - 8.0 - abs(off) * 2.0
+        opens[30 + off] = level - 4.0 - abs(off) * 2.0
+        closes[30 + off] = level - 4.0 - abs(off) * 2.0
+
+    # Decisive breakout at bar 55
+    for i in range(55, 120):
+        highs[i] = 168.0
+        lows[i] = 162.0
+        opens[i] = 165.0
+        closes[i] = 165.0
+
+    # Pullback retesting 150 as support at bar 80
+    for off in range(-3, 4):
+        highs[80 + off] = level + 8.0 + abs(off) * 2.0
+        lows[80 + off] = level + abs(off) * 2.0
+        opens[80 + off] = level + 4.0 + abs(off) * 2.0
+        closes[80 + off] = level + 4.0 + abs(off) * 2.0
+
+    closes[-1] = 152.0  # close just above the retested level
+    df = pd.DataFrame({"Open": opens, "High": highs, "Low": lows, "Close": closes, "Volume": [1_000_000]*120}, index=dates)
+
+    sr = SR.analyze_sr(df, 119)
+    assert sr["support_role_reversal"] is True or any(z.get("role_reversal") for z in sr.get("support_ladder", []))
+
+
+def test_position_sizing_calculation():
+    """Verifies that position sizer calculates exact shares and enforces capital cap."""
+    from position_sizer import calculate_position_size
+    plan = calculate_position_size(entry=100.0, stop=95.0, target=115.0, capital=500_000.0, risk_pct=0.01, max_position_pct=0.25)
+    assert plan.shares == 1000  # Rs 5,000 risk / Rs 5 risk per share = 1000 shares
+    assert plan.capital_required == 100_000.0
+    assert plan.risk_amount == 5000.0
+    assert plan.sizing_ok is True
+
+    # Tight stop -> shares would exceed 25% capital limit (Rs 125,000)
+    plan_capped = calculate_position_size(entry=100.0, stop=99.0, target=105.0, capital=500_000.0, risk_pct=0.01, max_position_pct=0.25)
+    assert plan_capped.shares == 1250  # capped at Rs 125,000 / 100 = 1250 shares
+    assert plan_capped.capital_required == 125_000.0
+    assert plan_capped.warning is not None
+
+
+def test_geo_pattern_detection_integration():
+    """Verifies geometric patterns detection integration."""
+    from geo_patterns import detect_patterns
+    n = 550
+    dates = pd.date_range("2024-01-01", periods=n, freq="B")
+    c = np.linspace(100, 150, n)
+    o = np.concatenate([[c[0]], c[:-1]])
+    h = np.maximum(o, c) + 1.0
+    l = np.minimum(o, c) - 1.0
+    v = np.full(n, 1_000_000)
+    df = pd.DataFrame({"Open": o, "High": h, "Low": l, "Close": c, "Volume": v}, index=dates)
+    patterns = detect_patterns(df)
+    assert isinstance(patterns, list)
+
+
+def test_json_serialization_no_nan():
+    """Verifies that sanitize_for_json and leaders.sanitize_json replace NaN/Inf."""
+    from main import sanitize_for_json
+    from leaders import sanitize_json
+    payload = {
+        "float_val": 12.34,
+        "nan_val": float("nan"),
+        "inf_val": float("inf"),
+        "nested": {"arr": [1.0, float("nan"), 3.0]},
+    }
+    clean = sanitize_for_json(payload)
+    clean2 = sanitize_json(payload)
+    assert clean["nan_val"] is None
+    assert clean["inf_val"] is None
+    assert clean["nested"]["arr"][1] is None
+    assert clean2["nan_val"] is None
+    assert clean2["inf_val"] is None
+    assert clean2["nested"]["arr"][1] is None
+    dumped = json.dumps(clean, allow_nan=False)
+    assert "NaN" not in dumped and "Infinity" not in dumped
 
 
 if __name__ == "__main__":

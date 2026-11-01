@@ -1,14 +1,34 @@
 import json
 import math
 import os
+import sys
 from datetime import date, datetime, time as dt_time
 
+import numpy as np
+
 import analyzer as analyzer_module
-from analyzer import WATCHLIST, IST, run_screen
+from analyzer import WATCHLIST, IST, RS_BENCHMARK, RS_LEADER_BOARD_SIZE, run_screen
 from alerts import send_discord_alert, send_discord_failure
+import leaders as wide
 
 OUTPUT_PATH = "docs/latest_screen.json"
 EOD_CUTOFF = dt_time(19, 0)
+
+
+def summarize_scan_coverage(watchlist: list[str], results: list[dict]) -> dict:
+    """Report configured symbols that did not produce a screen result."""
+    expected = list(dict.fromkeys(watchlist))
+    expected_set = set(expected)
+    scored = {r.get("ticker") for r in results if r.get("ticker") in expected_set}
+    missing = [ticker for ticker in expected if ticker not in scored]
+    requested = len(expected)
+    scored_count = requested - len(missing)
+    return {
+        "requested": requested,
+        "scored": scored_count,
+        "coverage_pct": round(100 * scored_count / requested, 1) if requested else None,
+        "missing_tickers": missing,
+    }
 
 
 def enable_settled_daily_candle() -> None:
@@ -21,6 +41,7 @@ def enable_settled_daily_candle() -> None:
 
 
 def check_total_failure(watchlist: list, results: list) -> str | None:
+    """Returns a failure message if every ticker in a non-empty watchlist produced zero results."""
     if watchlist and not results:
         return (
             f"0 of {len(watchlist)} tickers produced a score. Treat this as a data "
@@ -30,6 +51,7 @@ def check_total_failure(watchlist: list, results: list) -> str | None:
 
 
 def check_stale_after_cutoff(run_ts: datetime, results: list, cutoff: dt_time) -> str | None:
+    """After the EOD cutoff, today's candle should be present."""
     if run_ts.time() < cutoff or not results:
         return None
     latest_score_date = max(date.fromisoformat(r["date"]) for r in results)
@@ -42,13 +64,18 @@ def check_stale_after_cutoff(run_ts: datetime, results: list, cutoff: dt_time) -
 
 
 def sanitize_for_json(obj):
-    """Recursively converts NaN and Infinity floats to None to guarantee valid RFC-8259 JSON."""
-    if isinstance(obj, float):
-        return None if (math.isnan(obj) or math.isinf(obj)) else obj
-    elif isinstance(obj, dict):
-        return {k: sanitize_for_json(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [sanitize_for_json(v) for v in obj]
+    """Recursively converts NaN, Infinity, and numpy types to RFC-8259 compliant JSON types."""
+    if isinstance(obj, dict):
+        return {str(k): sanitize_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [sanitize_for_json(x) for x in obj]
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    if isinstance(obj, (np.floating, float)):
+        val = float(obj)
+        return val if math.isfinite(val) else None
+    if isinstance(obj, (np.bool_, bool)):
+        return bool(obj)
     return obj
 
 
@@ -69,12 +96,25 @@ if __name__ == "__main__":
         send_discord_failure(stale_message, run_timestamp=run_ts)
         raise RuntimeError(stale_message)
 
+    # flag = pattern/checklist gate; trade_ok = R:R gate (analyzer.build_trade_plan).
     flagged = [r for r in results if r["flag"] and r.get("trade_ok")]
     watch = [r for r in results if r["flag"] and not r.get("trade_ok")]
-    leaders = sorted(
-        [r for r in results if r.get("is_leader")],
-        key=lambda r: r.get("rs_rank") or 999
-    )
+    momentum_leaders = sorted(
+        (r for r in results if r.get("leader_rank") is not None),
+        key=lambda r: (r.get("leader_rank") or float("inf"), r["ticker"]),
+    )[:RS_LEADER_BOARD_SIZE]
+    scan_coverage = summarize_scan_coverage(WATCHLIST, results)
+
+    # Wide-universe leaders (the evidence-backed part).
+    wide_leaders = None
+    if os.environ.get("ENABLE_WIDE_LEADERS", "1").lower() in ("1", "true", "yes"):
+        try:
+            print("[wide] scanning liquid Nifty 500 momentum leaders...", file=sys.stderr)
+            wide_leaders = wide.run_leaders()
+        except Exception as e:
+            print(f"[wide] leader scan failed: {e}", file=sys.stderr)
+            wide_leaders = {"error": str(e)}
+
     breadth = (round(sum(1 for r in results if r["above_sma50"]) / len(results), 2)
                if results else None)
 
@@ -92,7 +132,7 @@ if __name__ == "__main__":
             "market_regime": "Favorable / Bullish" if (breadth and breadth >= 0.5) else "Defensive / Weak",
             "total_screened": len(results),
             "flagged_setups_count": len(flagged),
-            "market_leaders_count": len(leaders),
+            "market_leaders_count": len(momentum_leaders),
         },
         "flagged_candidates": [
             {
@@ -100,15 +140,15 @@ if __name__ == "__main__":
                 "close": r["close"],
                 "candlestick_pattern": r["pattern"],
                 "geometric_pattern": r.get("geo_pattern"),
-                "rs_rank": r.get("rs_rank"),
-                "rs_percentile": r.get("rs_percentile"),
-                "is_leader": r.get("is_leader"),
+                "rs_rank": r.get("leader_rank") or r.get("rs_rank"),
+                "rs_percentile": r.get("leader_percentile") or r.get("rs_percentile"),
+                "is_leader": r.get("is_leader", False),
                 "support_level": r["support_level"],
                 "support_touches": r["support_touches"],
                 "support_touch_dates": r.get("support_dates", []),
                 "support_bounce_quality": r.get("support_quality"),
-                "support_role_reversal": r.get("support_role_reversal"),
-                "support_weekly_confluence": r.get("support_weekly_confluence"),
+                "support_role_reversal": r.get("support_role_reversal", False),
+                "support_weekly_confluence": r.get("support_weekly_confluence", False),
                 "trade_plan": {
                     "entry_buy_stop": r.get("entry"),
                     "stop_loss": r.get("stop"),
@@ -128,26 +168,56 @@ if __name__ == "__main__":
             {
                 "ticker": r["ticker"],
                 "close": r["close"],
-                "rs_rank": r.get("rs_rank"),
-                "rs_percentile": r.get("rs_percentile"),
-                "rs_trend": r.get("rs_trend"),
+                "rs_rank": r.get("leader_rank"),
+                "rs_12_1": r.get("relative_strength_12_1_pct"),
+                "rs_6m": r.get("relative_strength_6m_pct"),
+                "rs_1m": r.get("relative_strength_1m_pct"),
                 "trend": r["trend"],
                 "recommendation": r["recommendation"],
             }
-            for r in leaders[:10]
-        ]
+            for r in momentum_leaders[:10]
+        ],
     }
 
     raw_payload = {
         "run_timestamp": run_ts.isoformat(),
-        "note": "Every 'date'/'close' below is the last COMPLETE session as of run_timestamp, "
-                 "never a same-day live price. A flag here is for planning tomorrow's open — "
-                 "not for acting before today's 3:30 PM close.",
+        "note": (
+            "Every 'date'/'close' below is the last COMPLETE session as of run_timestamp, "
+            "never a same-day live price. The momentum leaderboard ranks 12-1 adjusted "
+            "returns relative to NIFTYBEES within this fixed watchlist; it is descriptive "
+            "and is not a validated buy signal. It ranks equities only; commodity ETFs "
+            "are excluded. 'flagged' remains the legacy reversal "
+            "checklist and is also for manual review only."
+        ),
         "chatgpt_daily_task": chatgpt_task_payload,
         "all": results,
+        "scan_coverage": scan_coverage,
+        "momentum": {
+            "benchmark": RS_BENCHMARK,
+            "available": bool(momentum_leaders),
+            "definition": (
+                "12-1 adjusted return excess versus benchmark on benchmark sessions; "
+                "latest 21 sessions skipped. 1m and 6m excess are separate context fields; "
+                "stale and <95% coverage rows excluded"
+            ),
+            "universe": "equities in the configured watchlist; commodity ETFs excluded",
+            "leader_universe_size": sum(1 for r in results if r.get("leader_rank") is not None),
+            "status_counts": {
+                status: sum(1 for r in results if r.get("relative_strength_status") == status)
+                for status in sorted({r.get("relative_strength_status", "unavailable") for r in results})
+            },
+            "unavailable_reason": (
+                None if momentum_leaders else
+                "No equity rows passed benchmark, freshness, history, and coverage checks. See per-ticker status."
+            ),
+            "excluded_non_equity_tickers": [
+                r["ticker"] for r in results if r.get("instrument_type") != "equity"
+            ],
+        },
+        "momentum_leaders": momentum_leaders,
+        "wide_leaders": wide_leaders,
         "flagged": flagged,
         "watch": watch,
-        "leaders": leaders,
         "breadth_above_sma50": breadth,
     }
 
@@ -157,5 +227,11 @@ if __name__ == "__main__":
     with open(OUTPUT_PATH, "w") as f:
         json.dump(clean_payload, f, indent=2, default=str)
 
-    send_discord_alert(flagged, run_timestamp=run_ts, watch=watch, breadth=breadth)
-    print(f"Screened {len(results)} tickers, {len(flagged)} flagged, {len(watch)} watch-only, {len(leaders)} leaders, breadth {breadth}. Written to {OUTPUT_PATH}.")
+    send_discord_alert(flagged, run_timestamp=run_ts, watch=watch, breadth=breadth,
+                       leaders=momentum_leaders, benchmark=RS_BENCHMARK,
+                       scan_coverage=scan_coverage, wide_leaders=wide_leaders)
+    print(f"Screened {scan_coverage['scored']}/{scan_coverage['requested']} watchlist instruments, "
+          f"{len(momentum_leaders)} equity momentum leaders, "
+          f"{len(flagged)} flagged, {len(watch)} watch-only (failed R:R gate), "
+          f"breadth {breadth}. Data as of run at {run_ts.isoformat()}.")
+    print(f"Written to {OUTPUT_PATH} for the Pages site.")
