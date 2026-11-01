@@ -178,95 +178,326 @@ def _px(frames, t, kind, date):
     return float(v) if np.isfinite(v) else float("nan")
 
 
-def _basket_return(tickers, frames, entry_date, exit_date, exit_kind):
-    r = []
-    for t in tickers:
-        a, b = _px(frames, t, "Open", entry_date), _px(frames, t, exit_kind, exit_date)
-        if np.isfinite(a) and np.isfinite(b) and a > 0:
-            r.append(b / a - 1)
-    return float(np.mean(r)) if r else float("nan"), len(r)
+def _basket_return(tickers, frames, entry_date, exit_date, exit_kind, denominator=None):
+    """Return a fixed-weight basket return; never reweight surviving names when data is missing.
+
+    denominator defaults to the number of selected names. For the strategy basket pass
+    n_hold so fewer than n_hold names leave the unused allocation in zero-return cash.
+    """
+    names = list(dict.fromkeys(tickers))
+    returns, missing = {}, []
+    for ticker in names:
+        entry = _px(frames, ticker, "Open", entry_date)
+        exit_value = _px(frames, ticker, exit_kind, exit_date)
+        if not (np.isfinite(entry) and np.isfinite(exit_value) and entry > 0):
+            missing.append(ticker)
+        else:
+            returns[ticker] = exit_value / entry - 1.0
+    if missing:
+        return None, len(returns), missing
+    weight_denominator = len(names) if denominator is None else int(denominator)
+    if weight_denominator <= 0:
+        return (0.0 if not names else None), len(returns), []
+    return sum(returns.values()) / weight_denominator, len(returns), []
 
 
-def build_scorecard(snaps: list, frames: dict, benchmark_df: pd.DataFrame, cost_pct: float = 0.30, n_hold: int = BOARD_SIZE) -> dict:
-    """Pretend-trade the logged lists. Signal on a snapshot's date, enter at the NEXT session's open (as the backtests did).
-    monthly: the last snapshot of each calendar month, held until the open after the next one, equal weight, costs on turnover.
-    daily_forward: every snapshot, top-20 vs Nifty over the next 5/21/63 sessions (overlapping, so a diagnostic only)."""
-    cal = benchmark_df.index
-    bench = {"Open": benchmark_df["Open"], "Close": benchmark_df["Close"]}
-    bpx = lambda kind, d: float(bench[kind].at[d]) if d in bench[kind].index else float("nan")
-    if not snaps:
-        return {"status": "collecting", "snapshots": 0, "monthly": [], "daily_forward": {}, "summary": "Paper log: no snapshots yet."}
-    by_month = {}
-    for s in snaps:
-        by_month[s["as_of"][:7]] = s                         # later snapshot in a month replaces earlier
-    sigs = [by_month[k] for k in sorted(by_month)]
-    monthly, prev = [], set()
-    for i, s in enumerate(sigs):
-        pos = cal.searchsorted(pd.Timestamp(s["as_of"]), side="right")
-        if pos >= len(cal):
-            monthly.append({"signal_date": s["as_of"], "status": "pending"})
+def _benchmark_return(benchmark_df, entry_date, exit_date, exit_kind):
+    try:
+        entry = float(benchmark_df["Open"].at[entry_date])
+        exit_value = float(benchmark_df[exit_kind].at[exit_date])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not (np.isfinite(entry) and np.isfinite(exit_value) and entry > 0):
+        return None
+    return exit_value / entry - 1.0
+
+
+def _month_end_snapshots(snaps, calendar):
+    """Use only the actual final benchmark session of each month; never substitute an earlier scan."""
+    month_ends = {}
+    for session in calendar:
+        month_ends[session.strftime("%Y-%m")] = session
+    by_date = {str(s.get("as_of")): s for s in snaps if s.get("as_of")}
+    eligible = []
+    for signal_date, snap in sorted(by_date.items()):
+        try:
+            day = pd.Timestamp(signal_date)
+        except (TypeError, ValueError):
             continue
-        entry = cal[pos]
+        if day not in calendar:
+            continue
+        expected = month_ends.get(day.strftime("%Y-%m"))
+        if expected is not None and day == expected:
+            eligible.append(snap)
+
+    first_month = min((str(s.get("as_of"))[:7] for s in snaps if s.get("as_of")), default=None)
+    missing_month_ends = []
+    if first_month:
+        for month, session in sorted(month_ends.items()):
+            if month < first_month or session > calendar[-1]:
+                continue
+            if session.date().isoformat() not in by_date:
+                missing_month_ends.append({
+                    "month": month,
+                    "expected_signal_date": session.date().isoformat(),
+                })
+    return eligible, missing_month_ends
+
+
+def build_scorecard(snaps: list, frames: dict, benchmark_df: pd.DataFrame,
+                    cost_pct: float = 0.30, n_hold: int = BOARD_SIZE) -> dict:
+    """Score month-end leader snapshots with fixed weights and portfolio-style turnover.
+
+    Signal is the final benchmark session of a month; entry is the next session open.
+    Missing month-end snapshots are reported, not silently replaced by an earlier scan.
+    Missing security prices make the affected basket incomplete instead of reweighting
+    the remaining securities. Turnover uses the previous book's drifted weights.
+    """
+    if benchmark_df is None or benchmark_df.empty or not {"Open", "Close"}.issubset(benchmark_df.columns):
+        return {
+            "status": "unavailable", "snapshots": len(snaps), "monthly": [],
+            "daily_forward": {}, "summary": "Paper log unavailable: benchmark history is missing.",
+        }
+    calendar = pd.DatetimeIndex(benchmark_df.index).sort_values()
+    if len(calendar) < 2:
+        return {
+            "status": "unavailable", "snapshots": len(snaps), "monthly": [],
+            "daily_forward": {}, "summary": "Paper log unavailable: benchmark history is too short.",
+        }
+    if not snaps:
+        return {
+            "status": "collecting", "snapshots": 0, "monthly": [],
+            "daily_forward": {}, "missing_month_ends": [],
+            "summary": "Paper log: no snapshots yet.",
+        }
+
+    signals, missing_month_ends = _month_end_snapshots(snaps, calendar)
+    outside_window = [
+        str(s.get("as_of")) for s in snaps
+        if s.get("as_of") and pd.Timestamp(s["as_of"]) < calendar[0]
+    ]
+    non_month_end = [
+        str(s.get("as_of")) for s in snaps
+        if s.get("as_of") and pd.Timestamp(s["as_of"]) in calendar
+        and all(s.get("as_of") != x.get("as_of") for x in signals)
+        and pd.Timestamp(s["as_of"]).strftime("%Y-%m") in {
+            pd.Timestamp(x["expected_signal_date"]).strftime("%Y-%m")
+            for x in missing_month_ends
+        }
+    ]
+
+    monthly = []
+    previous_weights = {}
+    previous_entry = None
+    for i, snap in enumerate(signals):
+        signal_date = pd.Timestamp(snap["as_of"])
+        entry_pos = calendar.searchsorted(signal_date, side="right")
+        if entry_pos >= len(calendar):
+            monthly.append({
+                "signal_date": snap["as_of"], "status": "pending",
+                "data_status": "waiting_for_next_session",
+            })
+            continue
+        entry_date = calendar[entry_pos]
+
+        top = list(dict.fromkeys(x["ticker"] for x in snap.get("leaders", []) if x.get("ticker")))
+        liquid = list(dict.fromkeys(x["ticker"] for x in snap.get("liquid", []) if x.get("ticker")))
+        current_weights = {ticker: 1.0 / float(n_hold) for ticker in top} if n_hold > 0 else {}
+
+        turnover = None
+        missing_turnover = []
+        if previous_entry is None:
+            turnover = sum(current_weights.values())
+        else:
+            drift_returns, _, missing_turnover = _basket_return(
+                list(previous_weights), frames, previous_entry, entry_date, "Open",
+                denominator=max(1, len(previous_weights)),
+            )
+            # The equal-weight basket helper above is not used for drift: each old
+            # position has its own prior weight, so fetch its individual return.
+            individual, unavailable = {}, []
+            for ticker in previous_weights:
+                a = _px(frames, ticker, "Open", previous_entry)
+                b = _px(frames, ticker, "Open", entry_date)
+                if not (np.isfinite(a) and np.isfinite(b) and a > 0):
+                    unavailable.append(ticker)
+                else:
+                    individual[ticker] = b / a - 1.0
+            missing_turnover = unavailable
+            if not unavailable:
+                prior_return = sum(previous_weights[t] * individual[t] for t in previous_weights)
+                if 1.0 + prior_return > 0:
+                    drifted_weights = {
+                        t: w * (1.0 + individual[t]) / (1.0 + prior_return)
+                        for t, w in previous_weights.items()
+                    }
+                    all_names = set(drifted_weights) | set(current_weights)
+                    turnover = sum(
+                        abs(current_weights.get(t, 0.0) - drifted_weights.get(t, 0.0))
+                        for t in all_names
+                    )
+
+        next_entry = None
         closed = False
-        if i + 1 < len(sigs):
-            xpos = cal.searchsorted(pd.Timestamp(sigs[i + 1]["as_of"]), side="right")
-            if xpos < len(cal):
-                exit_date, kind, closed = cal[xpos], "Open", True
-        if not closed:
-            exit_date, kind = cal[-1], "Close"
-        top = [h["ticker"] for h in s["leaders"]]
-        liq = [x["ticker"] for x in s.get("liquid", [])]
-        r_top, n_top = _basket_return(top, frames, entry, exit_date, kind)
-        r_ew, _ = _basket_return(liq, frames, entry, exit_date, kind)
-        b0, b1 = bpx("Open", entry), bpx(kind, exit_date)
-        r_b = b1 / b0 - 1 if np.isfinite(b0) and np.isfinite(b1) and b0 > 0 else float("nan")
-        cur = set(top)
-        turnover = (len(cur - prev) + len(prev - cur)) / float(n_hold)          # sum |weight change|, equal weights of 1/n_hold
-        net = r_top - turnover * cost_pct / 200.0 if np.isfinite(r_top) else float("nan")
-        prev = cur
-        monthly.append({"signal_date": s["as_of"], "entry_date": entry.date().isoformat(), "exit_date": exit_date.date().isoformat(),
-                        "status": "closed" if closed else "open", "holdings": len(top), "priced": n_top,
-                        "top20_gross": r_top, "top20_net": net, "same_universe_equal_weight": r_ew, "nifty50": r_b,
-                        "excess_vs_universe": net - r_ew if np.isfinite(net) and np.isfinite(r_ew) else float("nan"),
-                        "excess_vs_nifty": net - r_b if np.isfinite(net) and np.isfinite(r_b) else float("nan")})
-    done = [m for m in monthly if m.get("status") == "closed" and np.isfinite(m["top20_net"])]
-    comp = lambda k: float(np.prod([1 + m[k] for m in done]) - 1) if done else float("nan")
-    cumulative = {"months": len(done), "top20_net": comp("top20_net"), "same_universe_equal_weight": comp("same_universe_equal_weight"),
-                  "nifty50": comp("nifty50")} if done else {"months": 0}
-    # diagnostic: every snapshot, fixed horizons
-    fwd = {}
-    for h in (5, 21, 63):
-        ex, fired_ex, quiet_ex = [], [], []
-        for s in snaps:
-            pos = cal.searchsorted(pd.Timestamp(s["as_of"]), side="right")
-            if pos + h - 1 >= len(cal):
+        if i + 1 < len(signals):
+            next_signal = pd.Timestamp(signals[i + 1]["as_of"])
+            next_pos = calendar.searchsorted(next_signal, side="right")
+            if next_pos < len(calendar):
+                next_entry = calendar[next_pos]
+                closed = True
+        if closed:
+            exit_date, exit_kind = next_entry, "Open"
+        else:
+            exit_date, exit_kind = calendar[-1], "Close"
+
+        top_gross, top_priced, top_missing = _basket_return(
+            top, frames, entry_date, exit_date, exit_kind, denominator=n_hold,
+        )
+        universe_gross, universe_priced, universe_missing = _basket_return(
+            liquid, frames, entry_date, exit_date, exit_kind, denominator=len(liquid),
+        )
+        benchmark_return = _benchmark_return(benchmark_df, entry_date, exit_date, exit_kind)
+        net = (
+            top_gross - turnover * cost_pct / 200.0
+            if top_gross is not None and turnover is not None else None
+        )
+        data_complete = (
+            not top_missing and not universe_missing and benchmark_return is not None
+        )
+        if not data_complete:
+            data_status = "missing_price_data"
+        elif turnover is None:
+            data_status = "turnover_unavailable"
+        else:
+            data_status = "complete"
+
+        row_status = ("closed" if closed else "open") if data_status == "complete" else (
+            "incomplete_data" if closed else "open_incomplete"
+        )
+        monthly.append({
+            "signal_date": snap["as_of"],
+            "entry_date": entry_date.date().isoformat(),
+            "exit_date": exit_date.date().isoformat(),
+            "status": row_status,
+            "data_status": data_status,
+            "holdings": len(top),
+            "priced": top_priced,
+            "expected_holdings": len(top),
+            "missing_tickers": top_missing[:20],
+            "liquid_universe_size": len(liquid),
+            "liquid_priced": universe_priced,
+            "liquid_missing_count": len(universe_missing),
+            "missing_turnover_tickers": missing_turnover[:20],
+            "turnover_l1": turnover,
+            "top20_gross": top_gross,
+            "top20_net": net,
+            "same_universe_equal_weight": universe_gross,
+            "nifty50": benchmark_return,
+            "excess_vs_universe": net - universe_gross if net is not None and universe_gross is not None else None,
+            "excess_vs_nifty": net - benchmark_return if net is not None and benchmark_return is not None else None,
+        })
+
+        # At the next signal, drift this book from its entry open to the next entry open.
+        # The next loop calculates the drifted weights from these target weights.
+        previous_weights = current_weights
+        previous_entry = entry_date
+
+    closed_rows = [m for m in monthly if m.get("status") == "closed"]
+    complete_closed = [m for m in closed_rows if m.get("data_status") == "complete"]
+    incomplete_closed = [m for m in closed_rows if m.get("data_status") != "complete"]
+    cumulative = {
+        "status": "complete" if closed_rows and not incomplete_closed else "incomplete",
+        "months": len(complete_closed),
+        "top20_net": None,
+        "same_universe_equal_weight": None,
+        "nifty50": None,
+    }
+    if closed_rows and not incomplete_closed:
+        for key in ("top20_net", "same_universe_equal_weight", "nifty50"):
+            values = [m[key] for m in closed_rows]
+            if all(v is not None and np.isfinite(v) for v in values):
+                cumulative[key] = float(np.prod([1.0 + v for v in values]) - 1.0)
+            else:
+                cumulative["status"] = "incomplete"
+
+    # Overlapping 5/21/63-session diagnostics; each basket remains fixed-weight.
+    forward = {}
+    for horizon in (5, 21, 63):
+        excess, fired_excess, quiet_excess = [], [], []
+        expected, incomplete = 0, 0
+        for snap in snaps:
+            signal_date = pd.Timestamp(snap["as_of"])
+            if signal_date < calendar[0] or signal_date >= calendar[-1]:
                 continue
-            entry, exit_date = cal[pos], cal[pos + h - 1]
-            b0, b1 = bpx("Open", entry), bpx("Close", exit_date)
-            if not (np.isfinite(b0) and np.isfinite(b1) and b0 > 0):
+            pos = calendar.searchsorted(signal_date, side="right")
+            if pos + horizon - 1 >= len(calendar):
                 continue
-            rb = b1 / b0 - 1
-            r, _ = _basket_return([x["ticker"] for x in s["leaders"]], frames, entry, exit_date, "Close")
-            if np.isfinite(r):
-                ex.append(r - rb)
-            for x in s["leaders"]:
-                rr, n = _basket_return([x["ticker"]], frames, entry, exit_date, "Close")
-                if n:
-                    (fired_ex if x.get("fired") else quiet_ex).append(rr - rb)
-        fwd[f"{h}d"] = {"snapshots": len(ex), "mean_excess_vs_nifty": float(np.mean(ex)) if ex else None,
-                        "share_positive": float(np.mean([e > 0 for e in ex])) if ex else None,
-                        "setup_fired_n": len(fired_ex), "setup_fired_mean_excess": float(np.mean(fired_ex)) if fired_ex else None,
-                        "no_setup_n": len(quiet_ex), "no_setup_mean_excess": float(np.mean(quiet_ex)) if quiet_ex else None}
-    first = snaps[0]["as_of"]
-    if done:
-        c = cumulative
-        summary = (f"Paper log since {first}: {c['months']} completed month(s): top-20 {c['top20_net'] * 100:+.1f}% vs "
-                   f"Nifty {c['nifty50'] * 100:+.1f}% vs same-universe equal-weight {c['same_universe_equal_weight'] * 100:+.1f}% "
-                   f"(after costs; far too early to judge).")
+            expected += 1
+            entry, exit_date = calendar[pos], calendar[pos + horizon - 1]
+            basket, _, missing = _basket_return(
+                [x["ticker"] for x in snap.get("leaders", [])],
+                frames, entry, exit_date, "Close", denominator=n_hold,
+            )
+            benchmark_return = _benchmark_return(benchmark_df, entry, exit_date, "Close")
+            if basket is None or benchmark_return is None:
+                incomplete += 1
+            else:
+                excess.append(basket - benchmark_return)
+            for item in snap.get("leaders", []):
+                ticker = item.get("ticker")
+                if not ticker:
+                    continue
+                single, _, missing_single = _basket_return(
+                    [ticker], frames, entry, exit_date, "Close", denominator=1,
+                )
+                if single is None:
+                    continue
+                (fired_excess if item.get("fired") else quiet_excess).append(single - benchmark_return)
+        forward[f"{horizon}d"] = {
+            "expected_snapshots": expected,
+            "snapshots": len(excess),
+            "incomplete_snapshots": incomplete,
+            "mean_excess_vs_nifty": float(np.mean(excess)) if excess else None,
+            "share_positive": float(np.mean([x > 0 for x in excess])) if excess else None,
+            "setup_fired_n": len(fired_excess),
+            "setup_fired_mean_excess": float(np.mean(fired_excess)) if fired_excess else None,
+            "no_setup_n": len(quiet_excess),
+            "no_setup_mean_excess": float(np.mean(quiet_excess)) if quiet_excess else None,
+        }
+
+    first = min((str(s.get("as_of")) for s in snaps if s.get("as_of")), default="unknown")
+    if closed_rows and not incomplete_closed and cumulative["status"] == "complete":
+        summary = (
+            f"Paper log since {first}: {len(closed_rows)} completed month(s): "
+            f"top-20 {cumulative['top20_net'] * 100:+.1f}% vs Nifty "
+            f"{cumulative['nifty50'] * 100:+.1f}% vs same-universe equal-weight "
+            f"{cumulative['same_universe_equal_weight'] * 100:+.1f}% (after costs; far too early to judge)."
+        )
+    elif incomplete_closed:
+        summary = (
+            f"Paper log since {first}: {len(complete_closed)} complete and "
+            f"{len(incomplete_closed)} incomplete closed interval(s). Cumulative returns withheld "
+            "because incomplete price coverage would bias the result."
+        )
     else:
-        summary = f"Paper log: {len(snaps)} daily snapshot(s) since {first}; first completed month appears after the next month-end list."
-    return {"status": "tracking", "snapshots": len(snaps), "first_snapshot": first, "monthly": monthly,
-            "cumulative": cumulative, "daily_forward": fwd, "summary": summary}
+        summary = (
+            f"Paper log: {len(signals)} month-end snapshot(s) since {first}; "
+            "the first completed interval is not available yet."
+        )
+
+    return {
+        "schema_version": 2,
+        "status": cumulative["status"] if closed_rows else "tracking",
+        "snapshots": len(snaps),
+        "month_end_snapshots": len(signals),
+        "first_snapshot": first,
+        "missing_month_ends": missing_month_ends,
+        "snapshots_outside_price_window": outside_window,
+        "monthly": monthly,
+        "cumulative": cumulative,
+        "daily_forward": forward,
+        "summary": summary,
+    }
 
 
 def log_and_score(payload: dict, frames: dict, benchmark_df, history_dir=SNAPSHOT_DIR, scorecard_path="docs/scorecard.json") -> dict:
