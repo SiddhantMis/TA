@@ -213,28 +213,29 @@ def _benchmark_return(benchmark_df, entry_date, exit_date, exit_kind):
 
 
 def _month_end_snapshots(snaps, calendar):
-    """Use only the actual final benchmark session of each month; never substitute an earlier scan."""
+    """Use a completed month's final session, confirmed by the next month's data."""
+    observed_months = sorted({session.strftime("%Y-%m") for session in calendar})
+    # The latest observed month may still be in progress. Exclude it: the exchange
+    # calendar cannot confirm its final session until a following-month session exists.
+    completed_months = set(observed_months[:-1])
     month_ends = {}
     for session in calendar:
-        month_ends[session.strftime("%Y-%m")] = session
+        month = session.strftime("%Y-%m")
+        if month in completed_months:
+            month_ends[month] = session
+
     by_date = {str(s.get("as_of")): s for s in snaps if s.get("as_of")}
     eligible = []
-    for signal_date, snap in sorted(by_date.items()):
-        try:
-            day = pd.Timestamp(signal_date)
-        except (TypeError, ValueError):
-            continue
-        if day not in calendar:
-            continue
-        expected = month_ends.get(day.strftime("%Y-%m"))
-        if expected is not None and day == expected:
+    for month, session in sorted(month_ends.items()):
+        snap = by_date.get(session.date().isoformat())
+        if snap is not None:
             eligible.append(snap)
 
     first_month = min((str(s.get("as_of"))[:7] for s in snaps if s.get("as_of")), default=None)
     missing_month_ends = []
     if first_month:
         for month, session in sorted(month_ends.items()):
-            if month < first_month or session > calendar[-1]:
+            if month < first_month:
                 continue
             if session.date().isoformat() not in by_date:
                 missing_month_ends.append({
@@ -242,7 +243,6 @@ def _month_end_snapshots(snaps, calendar):
                     "expected_signal_date": session.date().isoformat(),
                 })
     return eligible, missing_month_ends
-
 
 def build_scorecard(snaps: list, frames: dict, benchmark_df: pd.DataFrame,
                     cost_pct: float = 0.30, n_hold: int = BOARD_SIZE) -> dict:
