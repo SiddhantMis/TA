@@ -1436,7 +1436,7 @@ def test_alert_shows_wide_leaders_and_degrades_gracefully():
         {"leader_rank": 1, "ticker": "ABC.NS", "relative_strength_12_1_pct": 55.0, "relative_strength_6m_pct": 20.0,
          "pct_below_52w_high": 3.2, "structure": {"support_level": 410.0, "support_touches": 3, "resistance_ladder": [{"level": 470.0}]}}]}
     text = build_alert_content([], "(s)", wide_leaders=wl)
-    assert "ABC" in text and "S 410 (3x)" in text and "R 470" in text and "not an entry signal" in text
+    assert "ABC" in text and "S 410 (3x)" in text and "R 470" in text and "No setup fired" in text
     assert "unavailable today" in build_alert_content([], "(s)", wide_leaders={"error": "boom"})
     assert len(build_alert_content([], "(s)", wide_leaders=wl)) <= DISCORD_CONTENT_LIMIT
 
@@ -1484,6 +1484,51 @@ def test_leader_setups_end_to_end_runs_and_reports_verdicts():
     frames = {f"S{i}": mk(i) for i in range(14)}
     tr, text = LS.run_setups(frames, mk(99)["Close"], lead_n=4, liquid_top=10)
     assert "-- verdicts" in text and "ctrl_leader" in text and "ctrl_other" in text and not tr.empty
+
+
+def _plan_frames(last="breakout"):
+    import numpy as np
+    n = 400
+    idx = pd.bdate_range(end="2026-10-30", periods=n)
+    c = np.linspace(100, 160, n)
+    o = np.concatenate([[c[0]], c[:-1]]); h = np.maximum(o, c) + 0.3; l = np.minimum(o, c) - 0.3
+    v = np.full(n, 1e6)
+    if last == "breakout":
+        c[-1] = h[:-1][-55:].max() + 2; h[-1] = c[-1] + 0.5; o[-1] = c[-2]; l[-1] = o[-1] - 0.3; v[-1] = 3e6
+    elif last == "pullback":
+        l[-2] = c[-2] - 6                                    # dipped well under the 20-day EMA two bars ago
+        o[-1] = c[-2] - 1.0; c[-1] = c[-2]; h[-1] = c[-1] + 0.1; l[-1] = o[-1] - 0.2   # up-close back above it, no new high
+    df = pd.DataFrame({"Open": o, "High": h, "Low": l, "Close": c, "Volume": v}, index=idx)
+    bench = pd.DataFrame({"Close": np.linspace(100, 140, n)}, index=idx)
+    return df, bench
+
+
+def test_entry_plan_detects_each_setup_and_sizes_the_risk():
+    import leaders as LD
+    df, bench = _plan_frames("breakout")
+    p = LD.entry_plan(df, bench)
+    assert "breakout55" in p["fired"]
+    assert abs(p["stop_if_filled_at_ref"] - (p["ref_close"] - 2 * p["atr14"])) < 0.02
+    assert p["shares_per_1000_risk"] == int(1000 // p["risk_per_share"]) and p["triggers"]["breakout55_close_above"] > 0
+    df, bench = _plan_frames("pullback")
+    assert LD.entry_plan(df, bench)["fired"] == ["pullback20"]
+    df, bench = _plan_frames("none")
+    p = LD.entry_plan(df, bench)
+    assert p["fired"] == [] and p["triggers"]["pullback20_ema20"] > 0
+
+
+def test_alert_shows_fired_setups_and_stays_under_the_discord_limit():
+    from alerts import build_alert_content, DISCORD_CONTENT_LIMIT
+    plan = {"fired": ["breakout55"], "stop_if_filled_at_ref": 410.0, "risk_pct": 6.1, "shares_per_1000_risk": 16,
+            "triggers": {"breakout55_close_above": 480.0}}
+    leaders = [{"leader_rank": i, "ticker": f"TICK{i}.NS", "relative_strength_12_1_pct": 80.0 - i, "relative_strength_6m_pct": 20.0,
+                "pct_below_52w_high": 3.2, "plan": plan,
+                "structure": {"support_level": 410.0, "support_touches": 3, "resistance_ladder": [{"level": 470.0}]}} for i in range(1, 21)]
+    wl = {"counts": {"liquid": 200, "above_200dma": 80}, "leaders": leaders, "setup_record": "x" * 400}
+    text = build_alert_content([], "(session note)", wide_leaders=wl)
+    assert "breakout55** fired" in text and "BO>480" in text and "16 sh per Rs1,000 risk" in text
+    assert len(text) <= DISCORD_CONTENT_LIMIT, len(text)
+    assert "No setup fired" in build_alert_content([], "(s)", wide_leaders={"counts": {}, "leaders": [dict(leaders[0], plan={"fired": []})]})
 
 
 if __name__ == "__main__":

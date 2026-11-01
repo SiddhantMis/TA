@@ -26,6 +26,7 @@ import numpy as np
 import pandas as pd
 
 import analyzer as A
+import research as R
 
 UNIVERSE_FILE = "universe/nifty500.txt"
 LIQUID_TOP = 200
@@ -35,6 +36,35 @@ EVIDENCE = ("Backtest 2017-2026, monthly top-20 by 12-1 relative strength among 
             "Nifty 500 names above their 200-day average: ~28%/yr vs ~15% for holding the same universe equal-weight "
             "and ~10.5% for the Nifty 50, max drawdown about -34%. Survivorship bias remains (failed companies are "
             "missing), the held-out period is 3 years, and nothing here is validated live. See results/portfolio_report_liquid500.md.")
+
+
+# Track record of the two entry setups INSIDE the leaders, filled from results/leader_setups_report.md.
+# Until that test has been read, they are shown as unvalidated.
+SETUP_RECORD = "Setup track record inside the leaders: not yet measured, so treat every setup as unvalidated."
+
+
+def entry_plan(df: pd.DataFrame, benchmark_df: pd.DataFrame) -> dict:
+    """What would be a buy today, and what the risk would be. Uses research.py's rules unchanged:
+    entry next open; initial stop 2 x ATR14 below the fill; exit if price falls to the highest close minus
+    3 x ATR14 (ATR fixed at the signal); 60-session time stop. Sizing is per Rs 1,000 of risk so it scales to any account."""
+    bc = pd.to_numeric(benchmark_df["Close"], errors="coerce")
+    d = R.prep(df, bc > bc.rolling(200).mean())
+    d["rs"] = np.nan
+    sg = R.signals(d)
+    last = d.iloc[-1]
+    close, atr = float(last.Close), float(last.atr)
+    risk = R.ATR_STOP * atr
+    fired = [n for n in ("breakout55", "pullback20") if bool(sg[n].iloc[-1])]
+    return {
+        "fired": fired,
+        "ref_close": round(close, 2), "atr14": round(atr, 2),
+        "stop_if_filled_at_ref": round(close - risk, 2),
+        "risk_per_share": round(risk, 2), "risk_pct": round(100 * risk / close, 1),
+        "shares_per_1000_risk": int(1000 // round(risk, 2)) if round(risk, 2) > 0 else None,   # from the number shown
+        "triggers": {"breakout55_close_above": round(float(d.High.rolling(55).max().iloc[-1]), 2),
+                     "pullback20_ema20": round(float(last.ema20), 2)},
+        "exit_rule": f"stop {R.ATR_STOP}xATR under the fill; then exit at highest close - {R.ATR_TRAIL}xATR; 60-session time stop",
+    }
 
 
 def load_universe(path: str = UNIVERSE_FILE) -> list:
@@ -115,6 +145,14 @@ def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=B
             "trend", "support_level", "support_touches", "support_ladder", "resistance_ladder",
             "volume_ratio", "rsi", "above_sma50")}
         r["traded_value_cr"] = round(r["traded_value_126d"] / 1e7, 1)
+        try:
+            r["plan"] = entry_plan(frames[r["ticker"]], benchmark_df)
+            res = [x["level"] for x in ((r["structure"] or {}).get("resistance_ladder") or []) if x["level"] > r["plan"]["ref_close"]]
+            r["plan"]["rr_to_next_resistance"] = (round((min(res) - r["plan"]["ref_close"]) / r["plan"]["risk_per_share"], 1)
+                                                  if res and r["plan"]["risk_per_share"] else None)
+        except Exception as e:
+            r["plan"] = None
+            print(f"[plan] {r['ticker']}: {e}", file=sys.stderr)
     counts["failed_to_load"] = len(failed)
     counts["partial_scan_time_limit"] = partial
     counts["load_coverage_pct"] = round(100 * (len(universe) - len(failed)) / len(universe), 1)
@@ -122,7 +160,7 @@ def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=B
         "as_of": benchmark_df.index[-1].date().isoformat(), "benchmark": A.RS_BENCHMARK,
         "definition": (f"Top {liquid_top} by 126-day traded value of the Nifty 500 list, close above 200-day average, "
                        "ranked by 12-1 return relative to the benchmark (latest 21 sessions skipped)."),
-        "evidence": EVIDENCE, "counts": counts, "failed_tickers": failed[:60], "leaders": leaders,
+        "evidence": EVIDENCE, "setup_record": SETUP_RECORD, "counts": counts, "failed_tickers": failed[:60], "leaders": leaders,
     }
 
 

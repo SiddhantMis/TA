@@ -70,7 +70,13 @@ def build_alert_content(flagged: list[dict], session_note: str,
             leader_block += f"\n_Wide-universe leaders unavailable today: {str(wide_leaders['error'])[:120]}_"
         elif wide_leaders.get("leaders"):
             rows = []
-            for r in wide_leaders["leaders"][:8]:
+            fired_rows = []
+            for r in wide_leaders["leaders"]:
+                p = r.get("plan") or {}
+                for s in p.get("fired") or []:
+                    fired_rows.append(f"\u25b6 `{r['ticker'].replace('.NS', '')}` **{s}** fired: buy next open, stop ~{p['stop_if_filled_at_ref']:.0f} "
+                                      f"(-2 ATR, {p['risk_pct']}% risk), trail 3 ATR, {p['shares_per_1000_risk']} sh per Rs1,000 risk")
+            for r in wide_leaders["leaders"][:6]:
                 st = r.get("structure") or {}
                 lv = ""
                 if st.get("support_level") is not None:
@@ -78,12 +84,15 @@ def build_alert_content(flagged: list[dict], session_note: str,
                 res = st.get("resistance_ladder") or []
                 if res:
                     lv += f" R {res[0]['level']:.0f}"
+                trig = ((r.get("plan") or {}).get("triggers") or {}).get("breakout55_close_above")
                 rows.append(f"#{r['leader_rank']} `{r['ticker'].replace('.NS', '')}` RS {r['relative_strength_12_1_pct']:+.0f}pp"
-                            f" | 6m {r.get('relative_strength_6m_pct') or 0:+.0f} | {r.get('pct_below_52w_high')}% off high{lv}")
+                            f" | 6m {r.get('relative_strength_6m_pct') or 0:+.0f} | {r.get('pct_below_52w_high')}% off high{lv}"
+                            + (f" | BO>{trig:.0f}" if trig else ""))
             c = wide_leaders.get("counts", {})
             leader_block = (f"\n\n**Momentum leaders** (liquid Nifty 500 top {c.get('liquid')}, above 200-DMA, "
                             f"{c.get('above_200dma')} qualify; RS = 12-1 vs {benchmark}):\n" + "\n".join(rows)
-                            + "\n_Backtested ranking, not an entry signal; see results/portfolio_report_liquid500.md._")
+                            + ("\n" + "\n".join(fired_rows[:4]) if fired_rows else "\nNo setup fired today in the top 20.")
+                            + f"\n_{str(wide_leaders.get('setup_record') or '')[:230]}_")
     if not flagged:
         content = (f"EOD screen: nothing worth a manual look from the legacy reversal checklist today "
                    f"(this is a pre-filter, not a verdict). {session_note}{coverage_line}{breadth_line}{watch_line}"
