@@ -1,10 +1,33 @@
-name: Validate momentum leaderboard
+name: Validate momentum research
 
 on:
-  push:
-    branches: [codex/momentum-leader-screener]
   pull_request:
     branches: [main]
+    paths:
+      - "leaders.py"
+      - "analyzer.py"
+      - "portfolio.py"
+      - "backtest.py"
+      - "research.py"
+      - "main.py"
+      - "alerts.py"
+      - "test_patterns.py"
+      - "docs/index.html"
+      - ".github/workflows/**"
+  push:
+    branches: [main, paper-log, codex/momentum-portfolio-hardening]
+    paths:
+      - "leaders.py"
+      - "analyzer.py"
+      - "portfolio.py"
+      - "backtest.py"
+      - "research.py"
+      - "main.py"
+      - "alerts.py"
+      - "test_patterns.py"
+      - "docs/index.html"
+      - ".github/workflows/**"
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -12,13 +35,18 @@ permissions:
 jobs:
   offline-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
       - name: Install dependencies
         run: pip install -r requirements.txt
-      - name: Run offline test suite
+      - name: Run deterministic regression suite
         run: python test_patterns.py
+      - name: Run portfolio ledger tests when present
+        if: hashFiles('test_momentum_portfolio.py') != ''
+        run: python test_momentum_portfolio.py
+      - name: Compile research modules
+        run: python -m py_compile analyzer.py leaders.py portfolio.py backtest.py main.py
