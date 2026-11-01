@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     env:
-      AS_OF: \${{ inputs.as_of }}
+      AS_OF: ${{ inputs.as_of }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -65,7 +65,7 @@ jobs:
       - name: Upload account-free preview
         uses: actions/upload-artifact@v4
         with:
-          name: momentum-portfolio-preview-\${{ inputs.as_of }}
+          name: momentum-portfolio-preview-${{ inputs.as_of }}
           path: portfolio-preview/**
           if-no-files-found: error
           retention-days: 7
