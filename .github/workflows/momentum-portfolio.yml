@@ -1,0 +1,38 @@
+name: Momentum Portfolio Validation
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    branches: [main]
+    paths:
+      - "momentum_portfolio.py"
+      - "test_momentum_portfolio.py"
+      - ".github/workflows/momentum-portfolio.yml"
+      - ".gitignore"
+  push:
+    branches: [codex/momentum-portfolio-hardening]
+    paths:
+      - "momentum_portfolio.py"
+      - "test_momentum_portfolio.py"
+      - ".github/workflows/momentum-portfolio.yml"
+      - ".gitignore"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Existing regression suite
+        run: python test_patterns.py
+      - name: Portfolio state and rotation tests
+        run: python test_momentum_portfolio.py
+      - name: Compile portfolio module
+        run: python -m py_compile momentum_portfolio.py test_momentum_portfolio.py
