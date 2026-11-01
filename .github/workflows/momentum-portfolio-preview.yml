@@ -1,0 +1,71 @@
+name: Momentum Portfolio Friday Preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      as_of:
+        description: Exact exchange session to analyse
+        required: true
+        default: "2026-10-30"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: momentum-portfolio-preview
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      AS_OF: ${{ inputs.as_of }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Validate requested session
+        run: |
+          python - "$AS_OF" <<'PY'
+          from datetime import date
+          import sys
+          try:
+              parsed = date.fromisoformat(sys.argv[1])
+          except ValueError as exc:
+              raise SystemExit("as_of must be YYYY-MM-DD") from exc
+          if parsed.isoformat() != sys.argv[1]:
+              raise SystemExit("as_of must be YYYY-MM-DD")
+          PY
+      - name: Run regression and portfolio tests
+        run: |
+          python test_patterns.py
+          python test_momentum_portfolio.py
+          python -m py_compile momentum_portfolio.py scripts/export_portfolio_preview.py
+      - name: Run exact-session market preview
+        run: |
+          mkdir -p "$RUNNER_TEMP/ta-preview"
+          python momentum_portfolio.py \
+            --as-of "$AS_OF" \
+            --state-file "$RUNNER_TEMP/ta-preview/private_state.json" \
+            --gemini-out "$RUNNER_TEMP/ta-preview/private_gemini_brief.md" \
+            --chatgpt-out "$RUNNER_TEMP/ta-preview/private_chatgpt_brief.md" \
+            --capital 1 \
+            --force-rebalance
+      - name: Export account-free review inputs
+        run: |
+          python scripts/export_portfolio_preview.py \
+            --state-file "$RUNNER_TEMP/ta-preview/private_state.json" \
+            --outdir "$GITHUB_WORKSPACE/portfolio-preview"
+      - name: Upload account-free preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: momentum-portfolio-preview-${{ inputs.as_of }}
+          path: portfolio-preview/**
+          if-no-files-found: error
+          retention-days: 7

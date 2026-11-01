@@ -5,3 +5,4 @@ __pycache__/
 data_cache/
 results/*.csv
 data_cache/
+.local/
