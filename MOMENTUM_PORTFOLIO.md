@@ -52,4 +52,4 @@ Both briefs are generated from one portfolio-state snapshot and saved under .loc
 
 ## Privacy and automation
 
-This repository is public. Do not commit the state file, execution history, account balance or AI briefs. Defaults write to .local/, which is git-ignored. The GitHub Actions workflow only runs tests and compilation; it does not run a scheduled live scan, upload state as an artifact, or publish private portfolio data. Scheduled hosted scans should be enabled only after a private state store is configured.
+This repository is public. Do not commit the state file, execution history, account balance or AI briefs. Defaults write to .local/, which is git-ignored. GitHub Actions runs validation and offers the manually triggered, account-free historical preview described above. The preview keeps the temporary state and internal briefs in the runner and uploads only the filtered strategy candidates and review inputs. It does not persist an account ledger or publish private portfolio data. A persistent hosted portfolio requires a separate private state store; do not add that state to this public repository.
