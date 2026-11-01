@@ -11,6 +11,8 @@ on:
       - ".gitignore"
       - "scripts/export_portfolio_preview.py"
       - ".github/workflows/momentum-portfolio-preview.yml"
+      - "scripts/export_portfolio_preview.py"
+      - ".github/workflows/momentum-portfolio-preview.yml"
   push:
     branches: [codex/momentum-portfolio-hardening]
     paths:
@@ -18,6 +20,8 @@ on:
       - "test_momentum_portfolio.py"
       - ".github/workflows/momentum-portfolio.yml"
       - ".gitignore"
+      - "scripts/export_portfolio_preview.py"
+      - ".github/workflows/momentum-portfolio-preview.yml"
 
 permissions:
   contents: read
@@ -37,4 +41,4 @@ jobs:
       - name: Portfolio state and rotation tests
         run: python test_momentum_portfolio.py
       - name: Compile portfolio and preview modules
-        run: python -m py_compile momentum_portfolio.py test_momentum_portfolio.py scripts/export_portfolio_preview.py
+        run: python -m py_compile momentum_portfolio.py test_momentum_portfolio.py scripts/export_portfolio_preview.py scripts/export_portfolio_preview.py
