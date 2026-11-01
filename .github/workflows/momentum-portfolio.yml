@@ -1,0 +1,62 @@
+name: Momentum Portfolio & Rotation Engine
+
+on:
+  schedule:
+    - cron: '45 13 * * 1-5'   # 13:45 UTC = 7:15 PM IST (weekdays)
+  workflow_dispatch: {}
+  push:
+    branches: [gemini/leaders-swing-scanner]
+    paths:
+      - 'momentum_portfolio.py'
+      - '.github/workflows/momentum-portfolio.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  portfolio:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run verification test suite
+        run: python test_patterns.py
+
+      - name: Run Momentum Portfolio Engine
+        run: python momentum_portfolio.py --capital 1000000
+
+      - name: Commit portfolio state and AI briefs to docs/
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f docs/momentum_portfolio_state.json docs/gemini_gem_brief.md docs/chatgpt_task_brief.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Update momentum portfolio state and AI briefs [skip ci]"
+            for attempt in 1 2 3 4 5; do
+              if git pull -q --rebase origin "${{ github.ref_name }}" && git push; then
+                echo "Pushed portfolio update on attempt $attempt"
+                exit 0
+              fi
+              sleep $((attempt * 3))
+            done
+            exit 1
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Upload AI briefs as artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-briefs
+          path: |
+            docs/gemini_gem_brief.md
+            docs/chatgpt_task_brief.md
+            docs/momentum_portfolio_state.json

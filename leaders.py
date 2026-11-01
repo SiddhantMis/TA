@@ -86,10 +86,10 @@ def load_universe(path: str = UNIVERSE_FILE) -> list[str]:
 def evaluate_benchmark_regime(benchmark_df: pd.DataFrame) -> dict:
     """Evaluates whether the market regime filter (>200-DMA) from mom12_1+mkt is active."""
     if benchmark_df is None or benchmark_df.empty:
-        return {"regime_ok": False, "benchmark": A.RS_BENCHMARK, "reason": "No benchmark data"}
+        return {"regime_ok": False, "above_sma200": False, "benchmark": A.RS_BENCHMARK, "reason": "No benchmark data"}
     close = pd.to_numeric(benchmark_df["Close"], errors="coerce").dropna()
     if len(close) < 200:
-        return {"regime_ok": False, "benchmark": A.RS_BENCHMARK, "reason": "Benchmark history < 200 bars"}
+        return {"regime_ok": False, "above_sma200": False, "benchmark": A.RS_BENCHMARK, "reason": "Benchmark history < 200 bars"}
     sma200 = float(close.rolling(200).mean().iloc[-1])
     last_close = float(close.iloc[-1])
     is_bull = last_close > sma200
@@ -97,6 +97,7 @@ def evaluate_benchmark_regime(benchmark_df: pd.DataFrame) -> dict:
         "benchmark": A.RS_BENCHMARK,
         "last_close": round(last_close, 2),
         "sma200": round(sma200, 2),
+        "above_sma200": is_bull,
         "regime": "bull" if is_bull else "bear",
         "regime_ok": is_bull,
         "filter_active": is_bull,
@@ -278,7 +279,7 @@ def build_leader_trade_plan(
     }
 
 
-def leader_metrics(df: pd.DataFrame, benchmark_df: pd.DataFrame) -> dict:
+def leader_metrics(df: pd.DataFrame, benchmark_df: pd.DataFrame, ticker: str = "") -> dict:
     """Relative strength (analyzer's stale/coverage-gated version) plus liquidity and trend for one stock."""
     m = A.relative_strength_metrics(df, benchmark_df)
     close = pd.to_numeric(df["Close"], errors="coerce")
@@ -295,6 +296,43 @@ def leader_metrics(df: pd.DataFrame, benchmark_df: pd.DataFrame) -> dict:
         "pct_below_52w_high": round(100 * (1 - last / float(hi252)), 1) if np.isfinite(hi252) and hi252 > 0 else None,
     })
     return m
+
+
+def enrich_leader_with_swing_plan(
+    r: dict,
+    df: pd.DataFrame,
+    benchmark_df: pd.DataFrame,
+    account_capital: float = DEFAULT_ACCOUNT_CAPITAL,
+    risk_pct: float = DEFAULT_RISK_PCT,
+) -> dict:
+    """Enriches a leader row dictionary with structure, research entry plan, swing setup, and trade plan."""
+    t = r.get("ticker", "")
+    s = None
+    if df is not None:
+        try:
+            res = A.score_ticker(df, t, benchmark_df)
+            s = A.asdict(res) if res else None
+        except Exception as e:
+            print(f"[structure] {t}: {e}", file=sys.stderr)
+    r["structure"] = None if s is None else {k: s.get(k) for k in (
+        "trend", "support_level", "support_touches", "support_dates", "support_days_ago",
+        "support_quality", "support_ladder", "resistance_ladder",
+        "volume_ratio", "rsi", "above_sma50", "support_weekly_confluence", "support_role_reversal")}
+    r["traded_value_cr"] = round(r["traded_value_126d"] / 1e7, 1) if r.get("traded_value_126d") else None
+    if df is not None:
+        try:
+            r["plan"] = entry_plan(df, benchmark_df)
+            res_levels = [x["level"] for x in ((r["structure"] or {}).get("resistance_ladder") or []) if x["level"] > r["plan"]["ref_close"]]
+            r["plan"]["rr_to_next_resistance"] = (round((min(res_levels) - r["plan"]["ref_close"]) / r["plan"]["risk_per_share"], 1)
+                                                  if res_levels and r["plan"]["risk_per_share"] else None)
+            r["swing_setup"] = classify_swing_setup(df, r["structure"], r["plan"].get("atr14"))
+            r["trade_plan"] = build_leader_trade_plan(df, r["structure"], capital=account_capital, risk_pct=risk_pct)
+        except Exception as e:
+            r["plan"] = None
+            r["swing_setup"] = None
+            r["trade_plan"] = None
+            print(f"[plan] {t}: {e}", file=sys.stderr)
+    return r
 
 
 def select_leaders(rows: list, liquid_top: int = LIQUID_TOP, board: int = BOARD_SIZE):
@@ -341,34 +379,10 @@ def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=B
             print(f"[error] {t}: {e}", file=sys.stderr)
         time.sleep(sleep)
     leaders, counts = select_leaders(rows, liquid_top, board)
-    for r in leaders:                                            # structure read for the leaders only
-        s = None
+    for r in leaders:
         t = r["ticker"]
         df_t = frames.get(t)
-        if df_t is not None:
-            try:
-                res = A.score_ticker(df_t, t, benchmark_df)
-                s = A.asdict(res) if res else None
-            except Exception as e:
-                print(f"[structure] {t}: {e}", file=sys.stderr)
-        r["structure"] = None if s is None else {k: s.get(k) for k in (
-            "trend", "support_level", "support_touches", "support_dates", "support_days_ago",
-            "support_quality", "support_ladder", "resistance_ladder",
-            "volume_ratio", "rsi", "above_sma50", "support_weekly_confluence", "support_role_reversal")}
-        r["traded_value_cr"] = round(r["traded_value_126d"] / 1e7, 1) if r.get("traded_value_126d") else None
-        if df_t is not None:
-            try:
-                r["plan"] = entry_plan(df_t, benchmark_df)
-                res_levels = [x["level"] for x in ((r["structure"] or {}).get("resistance_ladder") or []) if x["level"] > r["plan"]["ref_close"]]
-                r["plan"]["rr_to_next_resistance"] = (round((min(res_levels) - r["plan"]["ref_close"]) / r["plan"]["risk_per_share"], 1)
-                                                      if res_levels and r["plan"]["risk_per_share"] else None)
-                r["swing_setup"] = classify_swing_setup(df_t, r["structure"], r["plan"].get("atr14"))
-                r["trade_plan"] = build_leader_trade_plan(df_t, r["structure"], capital=capital, risk_pct=risk_pct)
-            except Exception as e:
-                r["plan"] = None
-                r["swing_setup"] = None
-                r["trade_plan"] = None
-                print(f"[plan] {t}: {e}", file=sys.stderr)
+        enrich_leader_with_swing_plan(r, df_t, benchmark_df, account_capital=capital, risk_pct=risk_pct)
     counts["failed_to_load"] = len(failed)
     counts["partial_scan_time_limit"] = partial
     counts["load_coverage_pct"] = round(100 * (len(universe) - len(failed)) / len(universe), 1) if universe else 0.0

@@ -1653,6 +1653,155 @@ def test_json_serialization_no_nan():
     assert "NaN" not in dumped and "Infinity" not in dumped
 
 
+def test_behavior_bands_classification_and_limits():
+    """Verifies that behavior bands adapt trailing stop and trim target based on volatility."""
+    import momentum_portfolio as MP
+    dates = pd.date_range("2024-01-01", periods=300, freq="B")
+    c = 100 * np.cumprod(np.full(300, 1.001))
+    df = pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": [1e6] * 300}, index=dates)
+    bands = MP.compute_stock_behavior_bands(df)
+    assert bands["behavior_profile"] in ("Low-Beta Steady", "Core Trend", "High-Beta Momentum")
+    assert 8.0 <= bands["trailing_stop_pct"] <= 18.0
+    assert 18.0 <= bands["trim_extension_pct"] <= 35.0
+    assert bands["ideal_entry_low"] <= bands["ideal_entry_high"]
+
+
+def test_rate_momentum_stock_healthy_leader():
+    """Verifies that a top leader with consistent multi-horizon RS gets high health score and HOLD_STRONG."""
+    import momentum_portfolio as MP
+    dates = pd.date_range("2024-01-01", periods=300, freq="B")
+    c = 100 * np.cumprod(np.full(300, 1.002))
+    df = pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": [1e6] * 300}, index=dates)
+    row = {
+        "ticker": "LEAD.NS", "leader_rank": 3,
+        "relative_strength_12_1_pct": 45.0, "relative_strength_6m_pct": 20.0,
+        "relative_strength_3m_pct": 10.0, "relative_strength_1m_pct": 2.0,
+        "last_close": float(c[-1]),
+    }
+    rating = MP.rate_momentum_stock(row, df, is_current_holding=True)
+    assert rating["health_score"] >= 85
+    assert rating["status"] == "HOLD_STRONG"
+    assert rating["recommended_action"] == "HOLD"
+
+
+def test_rate_momentum_stock_exit_triggers():
+    """Verifies that breakdown below 200-DMA or rank decay triggers EXIT_AND_REPLACE."""
+    import momentum_portfolio as MP
+    dates = pd.date_range("2024-01-01", periods=300, freq="B")
+    c = 100 * np.cumprod(np.full(300, 1.002))
+    df = pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": [1e6] * 300}, index=dates)
+    # Rank decayed past buffer (> 30)
+    row_decayed = {
+        "ticker": "DECAY.NS", "leader_rank": 35,
+        "relative_strength_12_1_pct": 5.0, "relative_strength_6m_pct": 2.0,
+        "relative_strength_3m_pct": -2.0, "relative_strength_1m_pct": -4.0,
+        "last_close": float(c[-1]),
+    }
+    r = MP.rate_momentum_stock(row_decayed, df, is_current_holding=True, hysteresis_rank=30)
+    assert r["status"] == "EXIT_AND_REPLACE"
+    assert any("buffer" in reason for reason in r["exit_reasons"])
+
+
+def test_rate_momentum_stock_hysteresis_buffer_and_warning():
+    """Verifies anti-churn hysteresis: an existing holding slipping to #23 is kept on warning, not dumped."""
+    import momentum_portfolio as MP
+    dates = pd.date_range("2024-01-01", periods=300, freq="B")
+    c = 100 * np.cumprod(np.full(300, 1.002))
+    df = pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": [1e6] * 300}, index=dates)
+    row_buffer = {
+        "ticker": "SLIP.NS", "leader_rank": 23,
+        "relative_strength_12_1_pct": 25.0, "relative_strength_6m_pct": 10.0,
+        "relative_strength_3m_pct": 4.0, "relative_strength_1m_pct": 1.0,
+        "last_close": float(c[-1]),
+    }
+    r = MP.rate_momentum_stock(row_buffer, df, is_current_holding=True, hysteresis_rank=30, board_size=20)
+    assert r["status"] != "EXIT_AND_REPLACE"
+    assert any("hysteresis" in w for w in r["warnings"])
+
+
+def test_evaluate_portfolio_rotation_initial_build():
+    """Verifies initial portfolio build selects target count of leaders."""
+    import momentum_portfolio as MP
+    dates = pd.date_range("2024-01-01", periods=300, freq="B")
+    bench_c = 100 * np.cumprod(np.full(300, 1.001))
+    bench_df = pd.DataFrame({"Open": bench_c, "High": bench_c * 1.01, "Low": bench_c * 0.99, "Close": bench_c, "Volume": [1e7] * 300}, index=dates)
+
+    frames = {}
+    for i in range(1, 25):
+        rate = 1.0005 + i * 0.0001
+        c = 100 * np.cumprod(np.full(300, rate))
+        df = pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": [2e6] * 300}, index=dates)
+        frames[f"STK{i}.NS"] = df
+
+    res = MP.evaluate_portfolio_rotation(frames, bench_df, current_holdings=None, portfolio_size=5, hysteresis_rank=10)
+    assert len(res["holdings"]) == 5
+    assert res["summary"]["cash_slots"] == 0
+    assert res["summary"]["mode"] == "INITIAL_BUILD"
+
+
+def test_evaluate_portfolio_rotation_replaces_decayed_holding():
+    """Verifies that an existing holding that collapses is replaced by an eligible unheld candidate."""
+    import momentum_portfolio as MP
+    dates = pd.date_range("2024-01-01", periods=300, freq="B")
+    bench_c = 100 * np.cumprod(np.full(300, 1.001))
+    bench_df = pd.DataFrame({"Open": bench_c, "High": bench_c * 1.01, "Low": bench_c * 0.99, "Close": bench_c, "Volume": [1e7] * 300}, index=dates)
+
+    frames = {}
+    for i in range(1, 15):
+        rate = 1.0005 + i * 0.0002
+        c = 100 * np.cumprod(np.full(300, rate))
+        if i == 1:
+            c[-60:] = c[-61] * np.cumprod(np.full(60, 0.985))  # collapse below 200-DMA
+        df = pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": [2e6] * 300}, index=dates)
+        frames[f"STK{i}.NS"] = df
+
+    holdings = ["STK1.NS", "STK14.NS", "STK13.NS"]
+    res = MP.evaluate_portfolio_rotation(frames, bench_df, current_holdings=holdings, portfolio_size=3, hysteresis_rank=6)
+    exits = [e["ticker"] for e in res["flagged_exits"]]
+    assert "STK1.NS" in exits
+    assert any(a["action_type"] == "REPLACE" and a["exit_ticker"] == "STK1.NS" for a in res["rotation_actions"])
+
+
+def test_evaluate_portfolio_rotation_regime_cash_fallback():
+    """Verifies that when market benchmark is under 200-DMA, all slots are rotated to cash (mom12_1+mkt)."""
+    import momentum_portfolio as MP
+    dates = pd.date_range("2024-01-01", periods=300, freq="B")
+    bear_c = 100 * np.cumprod(np.concatenate([np.full(240, 1.002), np.full(60, 0.98)]))
+    bear_bench = pd.DataFrame({"Open": bear_c, "High": bear_c * 1.01, "Low": bear_c * 0.99, "Close": bear_c, "Volume": [1e7] * 300}, index=dates)
+
+    frames = {}
+    for i in range(1, 10):
+        c = 100 * np.cumprod(np.full(300, 1.001 + i * 0.0001))
+        df = pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": [2e6] * 300}, index=dates)
+        frames[f"STK{i}.NS"] = df
+
+    holdings = ["STK9.NS", "STK8.NS", "STK7.NS"]
+    res = MP.evaluate_portfolio_rotation(frames, bear_bench, current_holdings=holdings, portfolio_size=3, hysteresis_rank=6)
+    assert res["summary"]["cash_slots"] == 3
+    assert all(a["action_type"] == "REMOVE_TO_CASH" for a in res["rotation_actions"])
+
+
+def test_ai_briefs_generation_format():
+    """Verifies Gemini Gem and ChatGPT task markdown briefs generation."""
+    import momentum_portfolio as MP
+    dates = pd.date_range("2024-01-01", periods=300, freq="B")
+    bench_c = 100 * np.cumprod(np.full(300, 1.001))
+    bench_df = pd.DataFrame({"Open": bench_c, "High": bench_c * 1.01, "Low": bench_c * 0.99, "Close": bench_c, "Volume": [1e7] * 300}, index=dates)
+
+    frames = {}
+    for i in range(1, 10):
+        c = 100 * np.cumprod(np.full(300, 1.001 + i * 0.0002))
+        df = pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": [2e6] * 300}, index=dates)
+        frames[f"STK{i}.NS"] = df
+
+    res = MP.evaluate_portfolio_rotation(frames, bench_df, current_holdings=None, portfolio_size=3, hysteresis_rank=6)
+    gem_brief = MP.generate_gemini_gem_brief(res)
+    gpt_brief = MP.generate_chatgpt_task_brief(res)
+
+    assert "Gemini Gem Task" in gem_brief and "Section A" in gem_brief
+    assert "ChatGPT Scheduled Task" in gpt_brief and "Priority Audit List" in gpt_brief
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0
