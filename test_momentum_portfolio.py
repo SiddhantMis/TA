@@ -5,6 +5,7 @@ from momentum_portfolio import (
     apply_scan_result, build_target_holdings, generate_chatgpt_brief,
     generate_gemini_brief, is_rebalance_due, market_regime_from_closes,
     monitor_actual_holdings, new_state, record_execution_fill, relative_context,
+    scan_market,
 )
 
 
@@ -185,6 +186,69 @@ class PortfolioStateTests(unittest.TestCase):
         self.assertIn("S21", result["target_holdings"])
         self.assertEqual(result["actual_holdings"]["S21"]["quantity"], 7)
         self.assertFalse(any(x["side"] == "SELL" and x["ticker"] == "S21" for x in result["proposed_changes"]))
+
+
+    def test_scan_market_freezes_every_series_at_requested_friday_session(self):
+        import numpy as np
+        import pandas as pd
+        from unittest.mock import patch
+        import analyzer as A
+        import leaders as LD
+
+        dates = pd.bdate_range(end="2026-11-03", periods=300)
+        benchmark = pd.DataFrame({
+            "Open": np.linspace(100, 130, len(dates)),
+            "High": np.linspace(101, 131, len(dates)),
+            "Low": np.linspace(99, 129, len(dates)),
+            "Close": np.linspace(100, 130, len(dates)),
+            "Volume": 1_000_000,
+        }, index=dates)
+        stock = pd.DataFrame({
+            "Open": np.linspace(80, 120, len(dates)),
+            "High": np.linspace(81, 121, len(dates)),
+            "Low": np.linspace(79, 119, len(dates)),
+            "Close": np.linspace(80, 120, len(dates)),
+            "Volume": 2_000_000,
+        }, index=dates)
+        frames = {"NIFTYBEES.NS": benchmark, "AAA.NS": stock, "BBB.NS": stock * 1.01}
+        observed = []
+
+        def fake_metrics(frame, benchmark_frame):
+            observed.append((frame.index[-1].date().isoformat(), benchmark_frame.index[-1].date().isoformat()))
+            return {
+                "relative_strength_status": "ok",
+                "relative_strength_12_1_pct": 15.0,
+                "relative_strength_6m_pct": 10.0,
+                "traded_value_126d": 1e8,
+                "above_sma200": True,
+            }
+
+        with patch.object(A, "fetch_ticker", side_effect=lambda ticker: frames[ticker]), \
+             patch.object(A, "YF_SLEEP_SECONDS", 0), \
+             patch.object(LD, "load_universe", return_value=["AAA.NS", "BBB.NS"]), \
+             patch.object(LD, "leader_metrics", side_effect=fake_metrics):
+            as_of, regime, rows, ranked, quality = scan_market(as_of="2026-10-30")
+
+        self.assertEqual(as_of, "2026-10-30")
+        self.assertEqual(regime["as_of"], "2026-10-30")
+        self.assertEqual(len(observed), 2)
+        self.assertTrue(all(stock_date == "2026-10-30" and bench_date == "2026-10-30"
+                            for stock_date, bench_date in observed))
+        self.assertTrue(all(row["data_as_of"] == "2026-10-30" for row in rows.values()))
+        self.assertEqual(quality["coverage_pct"], 100.0)
+        self.assertEqual(len(ranked), 2)
+
+    def test_scan_market_rejects_requested_date_without_benchmark_session(self):
+        import numpy as np
+        import pandas as pd
+        from unittest.mock import patch
+        import analyzer as A
+
+        dates = pd.bdate_range(end="2026-10-30", periods=260)
+        benchmark = pd.DataFrame({"Close": np.linspace(100, 120, len(dates))}, index=dates)
+        with patch.object(A, "fetch_ticker", return_value=benchmark):
+            with self.assertRaisesRegex(RuntimeError, "Requested benchmark session"):
+                scan_market(universe_path="unused", as_of="2026-11-01")
 
 
 if __name__ == "__main__":
