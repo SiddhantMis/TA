@@ -40,7 +40,8 @@ EVIDENCE = ("Backtest 2017-2026, monthly top-20 by 12-1 relative strength among 
 
 # Track record of the two entry setups INSIDE the leaders, filled from results/leader_setups_report.md.
 # Until that test has been read, they are shown as unvalidated.
-SETUP_RECORD = "Setup track record inside the leaders: not yet measured, so treat every setup as unvalidated."
+SETUP_RECORD = ("Tested 2017-26 inside the leaders: breakout55 and pullback20 did not beat entering on any leader day "
+                "(last 3 yrs avg R -0.06 / -0.04 vs -0.02, all within noise). Both are unvalidated; the plan is a risk calculator.")
 
 
 def entry_plan(df: pd.DataFrame, benchmark_df: pd.DataFrame) -> dict:

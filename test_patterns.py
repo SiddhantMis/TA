@@ -1531,6 +1531,11 @@ def test_alert_shows_fired_setups_and_stays_under_the_discord_limit():
     assert "No setup fired" in build_alert_content([], "(s)", wide_leaders={"counts": {}, "leaders": [dict(leaders[0], plan={"fired": []})]})
 
 
+def test_setup_record_fits_the_alert_and_says_unvalidated():
+    import leaders as LD
+    assert len(LD.SETUP_RECORD) <= 230 and "unvalidated" in LD.SETUP_RECORD.lower()
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0
