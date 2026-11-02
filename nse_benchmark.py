@@ -97,7 +97,7 @@ def _request_chunk(session, start, end, timeout, retries):
 
 
 def _row_date(row: dict[str, Any]) -> pd.Timestamp:
-    value = row.get("CH_TIMESTAMP") or row.get("mTIMESTAMP") or row.get("Date")
+    value = row.get("CH_TIMESTAMP") or row.get("chTimestamp") or row.get("mTIMESTAMP") or row.get("mtimestamp") or row.get("Date") or row.get("date")
     if value is None:
         raise ValueError("NSE row is missing its trade date")
     parsed = pd.to_datetime(value, format="%Y-%m-%d", errors="coerce")
@@ -123,14 +123,14 @@ def parse_nse_rows(rows: list[dict[str, Any]], start: date, end: date) -> pd.Dat
     for row in rows:
         # NSE can include non-trade metadata rows in the response envelope.
         # Ignore those only when they carry neither a symbol nor any trade date.
-        has_trade_date = any(row.get(key) for key in ("CH_TIMESTAMP", "mTIMESTAMP", "Date"))
-        has_symbol = any(row.get(key) for key in ("CH_SYMBOL", "symbol"))
+        has_trade_date = any(row.get(key) for key in ("CH_TIMESTAMP", "chTimestamp", "mTIMESTAMP", "mtimestamp", "Date", "date"))
+        has_symbol = any(row.get(key) for key in ("CH_SYMBOL", "chSymbol", "symbol"))
         if not has_trade_date and not has_symbol:
             continue
-        symbol_value = row.get("CH_SYMBOL", row.get("symbol"))
+        symbol_value = row.get("CH_SYMBOL", row.get("chSymbol", row.get("symbol")))
         if symbol_value is None:
             continue
-        series_value = row.get("CH_SERIES", row.get("series", "EQ"))
+        series_value = row.get("CH_SERIES", row.get("chSeries", row.get("series", "EQ")))
         symbol = str(symbol_value).upper()
         series = str(series_value).upper()
         if symbol != "NIFTYBEES" or series != "EQ":
@@ -140,11 +140,11 @@ def parse_nse_rows(rows: list[dict[str, Any]], start: date, end: date) -> pd.Dat
             continue
         records.append({
             "Date": day,
-            "Open": _number(row, "CH_OPENING_PRICE", "Open", "open"),
-            "High": _number(row, "CH_TRADE_HIGH_PRICE", "High", "high"),
-            "Low": _number(row, "CH_TRADE_LOW_PRICE", "Low", "low"),
-            "Close": _number(row, "CH_CLOSING_PRICE", "Close", "close"),
-            "Volume": _number(row, "CH_TOT_TRADED_QTY", "Volume", "volume"),
+            "Open": _number(row, "CH_OPENING_PRICE", "chOpeningPrice", "Open", "open"),
+            "High": _number(row, "CH_TRADE_HIGH_PRICE", "chTradeHighPrice", "High", "high"),
+            "Low": _number(row, "CH_TRADE_LOW_PRICE", "chTradeLowPrice", "Low", "low"),
+            "Close": _number(row, "CH_CLOSING_PRICE", "chClosingPrice", "Close", "close"),
+            "Volume": _number(row, "CH_TOT_TRADED_QTY", "chTotTradedQty", "Volume", "volume"),
         })
     if not records:
         raise RuntimeError(f"NSE returned no parseable NIFTYBEES EQ rows; sample={rows[:3]!r}")

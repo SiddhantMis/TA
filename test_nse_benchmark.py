@@ -46,6 +46,27 @@ def test_nse_parser_ignores_metadata_rows_without_trading_fields():
     assert len(frame) == 1
     assert frame.iloc[0]["Close"] == 130.20
 
+
+def test_nse_parser_accepts_actual_lower_camel_case_api_rows():
+    row = {
+        "chClosingPrice": 894.36,
+        "chLastTradedPrice": 894.69,
+        "chOpeningPrice": 895.04,
+        "chPreviousClsPrice": 894.36,
+        "chSeries": "EQ",
+        "chSymbol": "NIFTYBEES",
+        "chTotTradedQty": 18590,
+        "chTradeHighPrice": 899.00,
+        "chTradeLowPrice": 889.05,
+        "mtimestamp": "09-Feb-2017",
+    }
+    frame = parse_nse_rows([row], date(2017, 2, 9), date(2017, 2, 9))
+    assert frame.iloc[0]["Open"] == 895.04
+    assert frame.iloc[0]["High"] == 899.00
+    assert frame.iloc[0]["Low"] == 889.05
+    assert frame.iloc[0]["Close"] == 894.36
+    assert frame.iloc[0]["Volume"] == 18590
+
 def test_split_adjustment_converts_only_pre_ex_date_prices_and_volume():
     rows = [
         _row("2019-12-18", 1289.95, 1294.32, 1282.10, 1292.54, 21946),
