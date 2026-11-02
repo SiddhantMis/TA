@@ -819,8 +819,8 @@ def main(argv=None):
             f"({index_coverage:.3%} comparison-session coverage), extra NIFTY50 index={len(extra_index)}, "
             f"off-calendar stock dates={len(extra_stock)}, "
             f"zero-stock sessions excluded={len(excluded_zero_stock_sessions)}; "
-            f"first missing index dates={missing_index.strftime("%Y-%m-%d").tolist()[:10]}, "
-            f"first missing benchmark dates={missing_benchmark.strftime("%Y-%m-%d").tolist()[:10]}, "
+            f"first missing index dates={missing_index.strftime('%Y-%m-%d').tolist()[:10]}, "
+            f"first missing benchmark dates={missing_benchmark.strftime('%Y-%m-%d').tolist()[:10]}, "
             f"first stock dates={extra_stock[:10]}"
         )
     bench.index = normalise_session_index(bench.index)
@@ -840,7 +840,7 @@ def main(argv=None):
         "comparison_excluded_zero_stock_session_count": int(len(excluded_zero_stock_sessions)),
         "comparison_excluded_zero_stock_session_dates": excluded_zero_stock_sessions.strftime("%Y-%m-%d").tolist(),
         "index_missing_official_sessions": int(len(missing_index)),
-        "index_missing_official_dates": missing_index.strftime("%Y-%m-%d").tolist()[:20],
+        "index_missing_official_dates": missing_index.strftime('%Y-%m-%d').tolist()[:20],
         "index_missing_excluded_sessions": int(session_audit.loc[~session_audit["comparison_included"], "missing_index_bar"].sum()),
         "index_session_coverage_pct": float(index_coverage * 100),
         "benchmark_missing_official_sessions": int(len(missing_benchmark)),
