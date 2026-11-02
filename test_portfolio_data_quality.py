@@ -8,6 +8,7 @@ import pandas as pd
 from portfolio_rules import (
     build_daily_coverage_audit,
     build_missing_history_audit,
+    build_session_calendar_audit,
     prepare,
     simulate,
 )
@@ -46,6 +47,7 @@ class PortfolioMissingBarTests(unittest.TestCase):
         )
         self.assertTrue(np.isnan(prepared["O"][self.missing_pos, 0]))
         self.assertTrue(np.isnan(prepared["C_raw"][self.missing_pos, 0]))
+        self.assertFalse(prepared["univ"][self.missing_pos, 0])
         self.assertAlmostEqual(
             prepared["C"][self.missing_pos, 0],
             self.frame["Close"].loc[self.idx[self.missing_pos - 1]],
@@ -115,6 +117,23 @@ class PortfolioMissingBarTests(unittest.TestCase):
         self.assertGreaterEqual(result["max_stale_sessions"], 1)
         self.assertAlmostEqual(result["equity"][256], result["equity"][255])
         self.assertLess(result["equity"][257], result["equity"][256])
+
+
+    def test_session_calendar_audit_flags_zero_bars_and_off_calendar_dates(self):
+        nse_sessions = pd.DatetimeIndex(["2024-01-02", "2024-01-03"])
+        benchmark_sessions = nse_sessions
+        index_sessions = pd.DatetimeIndex(["2024-01-02", "2024-01-03", "2024-01-04"])
+        stock = pd.DataFrame(
+            {"Close": [100.0, 101.0]},
+            index=pd.DatetimeIndex(["2024-01-02", "2024-01-04"]),
+        )
+        audit = build_session_calendar_audit(
+            nse_sessions, benchmark_sessions, index_sessions, {"AAA.NS": stock}
+        ).set_index("date")
+        self.assertEqual(int(audit.loc["2024-01-03", "stock_symbol_bars"]), 0)
+        self.assertTrue(bool(audit.loc["2024-01-03", "zero_stock_bar_session"]))
+        self.assertTrue(bool(audit.loc["2024-01-04", "extra_index_session"]))
+        self.assertTrue(bool(audit.loc["2024-01-04", "extra_stock_session"]))
 
 
 if __name__ == "__main__":

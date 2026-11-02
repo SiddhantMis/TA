@@ -49,6 +49,21 @@ def build_symbol_chains(history: pd.DataFrame) -> pd.DataFrame:
     out["valid_to"] = pd.to_datetime(out["valid_to"], errors="coerce").dt.normalize()
     if out["symbol"].eq("").any() or out["valid_from"].isna().any():
         raise RuntimeError("TejHQ symbol_history contains blank symbols or invalid valid_from")
+    bad_range = out["valid_to"].notna() & out["valid_to"].lt(out["valid_from"])
+    if bad_range.any():
+        raise RuntimeError("TejHQ symbol_history contains reversed validity intervals")
+    for symbol, group in out.groupby("symbol", sort=True):
+        ordered = group.sort_values(["valid_from", "valid_to"], na_position="last")
+        previous = None
+        for row in ordered.itertuples():
+            if previous is not None and previous.isin != row.isin:
+                overlaps = pd.isna(previous.valid_to) or row.valid_from <= previous.valid_to
+                if overlaps:
+                    raise RuntimeError(
+                        f"TejHQ symbol_history has overlapping ISIN intervals for {symbol}: "
+                        f"{previous.isin} and {row.isin}"
+                    )
+            previous = row
 
     parent = list(range(len(out)))
 
@@ -202,6 +217,16 @@ def load_adjusted_frames(
         if part.empty:
             continue
 
+        duplicate_rows = part.loc[part.duplicated(["symbol", "date"], keep=False)]
+        if not duplicate_rows.empty:
+            conflicting = duplicate_rows.groupby(["symbol", "date"])["isin"].nunique().gt(1)
+            if conflicting.any():
+                sample_keys = conflicting.loc[conflicting].index.tolist()[:5]
+                sample = duplicate_rows.set_index(["symbol", "date"]).loc[sample_keys].reset_index()
+                raise RuntimeError(
+                    f"{filename} has ambiguous same-symbol/session rows across ISINs: "
+                    f"{sample[['symbol', 'date', 'isin']].to_dict('records')}"
+                )
         part["_series_priority"] = part["series"].map({"EQ": 0, "BE": 1, "BZ": 2})
         part = part.sort_values(["symbol", "date", "_series_priority"])
         part = part.drop_duplicates(["symbol", "date"], keep="first").drop(columns="_series_priority")
@@ -305,6 +330,11 @@ def load_adjusted_frames(
         "adjustment_scope": "splits, bonuses and dividends; mergers, demergers, rights and buybacks are not scaled",
         "adjustment_validation": "passed: adj_close equals raw close multiplied by cumulative factor; adjusted OHLC checked",
         "liquidity_basis": "raw bhavcopy turnover; volume remains raw",
+        "symbol_history_valid_to": "inclusive last trading day; PIT membership valid_to is exclusive",
+        "instrument_chain_rule": "same ISIN is continuous; a new ISIN joins only when the same symbol resumes within 30 calendar days",
+        "data_terms_url": "https://tejhq.dev/data-terms",
+        "data_terms_as_of": "2026-10-30",
+        "data_terms_summary": "personal research/backtesting permitted; TejHQ holds no NSE/BSE data licence; MIT covers code, not data; exchange terms still apply to commercial use and redistribution",
         "price_rows_loaded": int(row_count),
         "instrument_chains": int(len(selected_chains)),
         "isins_loaded": int(len(isins)),

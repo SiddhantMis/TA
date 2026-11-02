@@ -4,12 +4,12 @@ name: Portfolio rules test
 on:
   push:
     branches: [rules-test, pit-nifty500-membership, research/pit-data-quality]
-    paths: ['portfolio_rules.py', 'test_patterns.py', 'pattern_lab.py', 'portfolio.py', 'nifty500_pit.py', 'universe/nifty500_membership_history.csv', 'test_pit_membership.py', 'nse_benchmark.py', 'bench_check.py', 'test_nse_benchmark.py', 'test_tejhq_data.py', 'test_portfolio_data_quality.py', 'scripts/probe_tejhq_history.py', 'tejhq_data.py', 'requirements.txt', '.github/workflows/rules-test.yml']
+    paths: ['portfolio_rules.py', 'test_patterns.py', 'pattern_lab.py', 'portfolio.py', 'nifty500_pit.py', 'universe/nifty500_membership_history.csv', 'universe/NIFTY500_PIT_DATA.md', 'test_pit_membership.py', 'nse_benchmark.py', 'bench_check.py', 'test_nse_benchmark.py', 'test_tejhq_data.py', 'test_portfolio_data_quality.py', 'scripts/probe_tejhq_history.py', 'tejhq_data.py', 'requirements.txt', '.github/workflows/rules-test.yml']
   workflow_dispatch:
 
 concurrency:
   group: pit-data-quality-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -47,10 +47,39 @@ jobs:
         with:
           path: data_cache
           key: tejhq-frames-v1-${{ github.run_id }}
+      - name: Upload PIT data quality reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pit-data-quality-${{ github.run_id }}
+          path: |
+            results/bench_check.md
+            results/portfolio_rules_report.md
+            results/pit_price_history_audit.csv
+            results/pit_daily_coverage_audit.csv
+            results/pit_tejhq_coverage_audit.csv
+            results/pit_tejhq_initial_coverage_probe.csv
+            results/tejhq_source_metadata.md
+            results/tejhq_symbol_continuity_audit.csv
+            results/pit_session_calendar_audit.csv
+          if-no-files-found: warn
+          retention-days: 30
       - name: Commit report back to the branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f results/bench_check.md results/portfolio_rules_report.md results/pit_price_history_audit.csv results/pit_daily_coverage_audit.csv results/pit_tejhq_coverage_audit.csv results/tejhq_source_metadata.md results/tejhq_symbol_continuity_audit.csv results/pit_session_calendar_audit.csv
-          git commit -m "Portfolio rules report [skip ci]" || echo "nothing to commit"
-          for i in 1 2 3 4; do git pull -q --rebase origin "${{ github.ref_name }}" && git push && break; sleep 8; done
+          git add -f results/bench_check.md results/portfolio_rules_report.md results/pit_price_history_audit.csv results/pit_daily_coverage_audit.csv results/pit_tejhq_coverage_audit.csv results/pit_tejhq_initial_coverage_probe.csv results/tejhq_source_metadata.md results/tejhq_symbol_continuity_audit.csv results/pit_session_calendar_audit.csv
+          if git diff --cached --quiet; then
+            echo "No generated report changes."
+            exit 0
+          fi
+          git commit -m "Portfolio rules report [skip ci]"
+          for i in 1 2 3 4; do
+            if git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME"; then
+              exit 0
+            fi
+            git rebase --abort || true
+            if [ "$i" -lt 4 ]; then sleep 8; fi
+          done
+          echo "::error::Failed to publish generated reports to $GITHUB_REF_NAME"
+          exit 1

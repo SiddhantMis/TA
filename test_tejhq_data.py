@@ -122,6 +122,22 @@ class TejHQAdjustedLoaderTests(unittest.TestCase):
         mapping = map_symbol_chains(["REUSED"], chained, membership)
         self.assertEqual(mapping["REUSED"], {chained.iloc[0]["chain_id"]})
 
+    def test_same_symbol_new_isin_within_30_days_is_one_chain(self):
+        history = pd.DataFrame([
+            ("INE000F01006", "CONTINUOUS", "2025-01-01", "2025-01-31"),
+            ("INE000G01007", "CONTINUOUS", "2025-02-10", "2025-03-01"),
+        ], columns=["isin", "symbol", "valid_from", "valid_to"])
+        chained = build_symbol_chains(history)
+        self.assertEqual(chained.iloc[0]["chain_id"], chained.iloc[1]["chain_id"])
+
+    def test_overlapping_different_isin_intervals_are_rejected(self):
+        history = pd.DataFrame([
+            ("INE000H01008", "AMBIGUOUS", "2025-01-01", "2025-01-31"),
+            ("INE000I01009", "AMBIGUOUS", "2025-01-31", "2025-02-15"),
+        ], columns=["isin", "symbol", "valid_from", "valid_to"])
+        with self.assertRaisesRegex(RuntimeError, "overlapping ISIN intervals"):
+            build_symbol_chains(history)
+
 
 if __name__ == "__main__":
     unittest.main()

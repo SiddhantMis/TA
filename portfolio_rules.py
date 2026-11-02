@@ -394,6 +394,61 @@ def build_daily_coverage_audit(prepared, frames, start_pos=START):
     return daily.iloc[start_pos:].reset_index(drop=True)
 
 
+def normalise_session_index(values) -> pd.DatetimeIndex:
+    """Normalize exchange-session timestamps to unique, timezone-naive trading dates."""
+    idx = pd.DatetimeIndex(pd.to_datetime(values))
+    if idx.tz is not None:
+        idx = idx.tz_localize(None)
+    idx = idx.normalize()
+    if idx.has_duplicates:
+        duplicates = idx[idx.duplicated()].strftime("%Y-%m-%d").tolist()
+        raise RuntimeError(f"Duplicate sessions after date normalization: {duplicates[:8]}")
+    return idx.sort_values()
+
+
+def build_session_calendar_audit(
+    nse_sessions, benchmark_sessions, index_sessions, frames: dict
+) -> pd.DataFrame:
+    """Compare stock, ETF benchmark and NIFTY 50 index dates without dropping gaps."""
+    nse = normalise_session_index(nse_sessions)
+    benchmark = normalise_session_index(benchmark_sessions)
+    index = normalise_session_index(index_sessions)
+    stock_counts: dict[pd.Timestamp, int] = {}
+    for ticker, frame in frames.items():
+        dates = normalise_session_index(frame.index)
+        for day in dates:
+            stock_counts[day] = stock_counts.get(day, 0) + 1
+    stock_dates = pd.DatetimeIndex(sorted(stock_counts))
+    all_dates = nse.union(benchmark).union(index).union(stock_dates).sort_values()
+    nse_set, benchmark_set, index_set = set(nse), set(benchmark), set(index)
+    stock_set = set(stock_dates)
+    return pd.DataFrame({
+        "date": all_dates.strftime("%Y-%m-%d"),
+        "nse_niftybees_session": [day in nse_set for day in all_dates],
+        "adjusted_benchmark_bar": [day in benchmark_set for day in all_dates],
+        "nifty50_index_bar": [day in index_set for day in all_dates],
+        "stock_symbol_bars": [int(stock_counts.get(day, 0)) for day in all_dates],
+        "zero_stock_bar_session": [
+            day in nse_set and stock_counts.get(day, 0) == 0 for day in all_dates
+        ],
+        "missing_benchmark_bar": [
+            day in nse_set and day not in benchmark_set for day in all_dates
+        ],
+        "missing_index_bar": [
+            day in nse_set and day not in index_set for day in all_dates
+        ],
+        "extra_benchmark_session": [
+            day in benchmark_set and day not in nse_set for day in all_dates
+        ],
+        "extra_index_session": [
+            day in index_set and day not in nse_set for day in all_dates
+        ],
+        "extra_stock_session": [
+            day in stock_set and day not in nse_set for day in all_dates
+        ],
+    })
+
+
 def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30,
               index_df: pd.DataFrame | None = None,
               membership_df: pd.DataFrame | None = None,
@@ -483,6 +538,9 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     zero_rows = daily_coverage_audit.loc[
         daily_coverage_audit["active_member_coverage_pct"].eq(0)
     ]
+    zero_stock_rows = daily_coverage_audit.loc[
+        daily_coverage_audit["all_loaded_symbol_bars"].eq(0)
+    ]
     worst_rows = daily_coverage_audit.dropna(
         subset=["active_member_coverage_pct"]
     ).nsmallest(8, "active_member_coverage_pct")
@@ -508,7 +566,9 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     if len(missing_test_window):
         quality_issues.append(f"{len(missing_test_window)} active-window symbols lack a full 253-bar history")
     if len(zero_rows):
-        quality_issues.append(f"{len(zero_rows)} official sessions have zero stock bars")
+        quality_issues.append(f"{len(zero_rows)} official sessions have zero active-member bars")
+    if len(zero_stock_rows):
+        quality_issues.append(f"{len(zero_stock_rows)} official sessions have zero bars across the loaded stock universe")
     if max_stale > 5:
         quality_issues.append(f"a held position had up to {max_stale} consecutive sessions without an actual close")
     if source_metadata and any(term in adjustment_scope.lower() for term in ("merger", "demerger", "rights", "buyback")):
@@ -526,7 +586,8 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
            f"Missing histories overlapping test window: {len(missing_test_window)}/{len(test_window_symbols)} active-window symbols; {len(missing_outside_window)} additional missing symbols have no overlap with this backtest window",
            f"Active-window missing load outcomes: {load_status_counts}; first 20: {missing_active_sample}",
            f"Daily active-member bars covered: min {coverage_stats[0]:.1f}%, p10 {coverage_stats[1]:.1f}%, median {coverage_stats[2]:.1f}%; {coverage_stats[3]:.1f}% of sessions below 90% coverage",
-           f"Zero-coverage sessions: {len(zero_rows)}; dates: {zero_rows['date'].tolist()[:20]}",
+           f"Zero active-member-coverage sessions: {len(zero_rows)}; dates: {zero_rows['date'].tolist()[:20]}",
+           f"Zero-stock-bar sessions: {len(zero_stock_rows)}; dates: {zero_stock_rows['date'].tolist()[:20]}",
            f"Worst coverage sessions (date: active bars/expected, coverage, all loaded-symbol bars): {worst_detail}",
            "Missing opens are never forward-filled; close carry-forward is used only to value existing holdings, while eligibility, returns and stops use observed closes.",
            f"Stale-close diagnostics: {stale_days} held-position stale-close days across variants; maximum consecutive stale sessions={max_stale}.",
@@ -616,79 +677,47 @@ def main(argv=None):
         sys.exit("could not fetch ^NSEI")
     index = index.loc[index.index <= MEMBERSHIP_COVERAGE_THROUGH]
 
-    load_tickers = tickers + (["NIFTYBEES.NS"] if a.data_source == "tejhq" else [])
     frames, loader_diagnostics = PL.load_frames(
-        load_tickers, a.years, a.cache, a.refresh, min_bars=253,
+        tickers, a.years, a.cache, a.refresh, min_bars=253,
         return_diagnostics=True, source=a.data_source, membership_df=membership,
     )
     source_metadata = loader_diagnostics.pop("_source", {})
     symbol_audit = loader_diagnostics.pop("_symbol_audit", [])
-    if a.data_source == "tejhq":
-        tej_etf = frames.pop("NIFTYBEES.NS", None)
-        loader_diagnostics.pop("NIFTYBEES.NS", None)
-        if tej_etf is None:
-            sys.exit("TejHQ adjusted NIFTYBEES history is unavailable; refusing a mixed-basis benchmark")
-        bench = tej_etf[["Open", "Close"]].copy()
-        bench = bench.loc[bench.index <= MEMBERSHIP_COVERAGE_THROUGH]
-        official_returns = official_bench["Close"].pct_change()
-        tej_returns = bench["Close"].pct_change()
-        compared = pd.concat([tej_returns.rename("tej"), official_returns.rename("nse")], axis=1).dropna()
-        etf_source_corr = float(compared.corr().iloc[0, 1]) if len(compared) > 100 else float("nan")
-        if not etf_source_corr >= 0.95:
-            sys.exit(
-                f"TejHQ adjusted NIFTYBEES does not reconcile with official NSE split-adjusted history "
-                f"(daily-return correlation {etf_source_corr:.3f}); refusing metrics"
-            )
-        validate_benchmark(bench, "TejHQ corporate-action-adjusted NIFTYBEES")
-    else:
-        bench = official_bench[["Open", "Close"]].copy()
-        etf_source_corr = None
-
     if not frames:
         sys.exit(f"no stock histories loaded from {a.data_source}")
 
-    # Use the independently fetched official NSE NIFTYBEES sessions as the master
-    # exchange calendar. Never intersect with observed stock bars: doing so would
-    # silently erase sessions where the stock source has a market-wide data gap.
-    official_sessions = pd.DatetimeIndex(official_bench.index)
-    if official_sessions.tz is not None:
-        official_sessions = official_sessions.tz_localize(None)
-    bench_sessions = pd.DatetimeIndex(bench.index)
-    if bench_sessions.tz is not None:
-        bench_sessions = bench_sessions.tz_localize(None)
-    missing_benchmark_sessions = official_sessions.difference(bench_sessions)
-    extra_benchmark_sessions = bench_sessions.difference(official_sessions)
-    def _has_session(frame, date):
-        frame_idx = pd.DatetimeIndex(frame.index)
-        if frame_idx.tz is not None:
-            frame_idx = frame_idx.tz_localize(None)
-        return date in frame_idx
-
-    session_audit = pd.DataFrame({
-        "date": official_sessions.strftime("%Y-%m-%d"),
-        "official_nse_session": True,
-        "adjusted_benchmark_bar": official_sessions.isin(bench_sessions),
-        "stock_symbol_bars": [
-            sum(1 for frame in frames.values() if _has_session(frame, date))
-            for date in official_sessions
-        ],
-    })
-    if len(missing_benchmark_sessions):
-        session_audit.to_csv(os.path.join(a.outdir, "pit_session_calendar_audit.csv"), index=False)
-        missing_dates = [x.date().isoformat() for x in missing_benchmark_sessions[:20]]
+    # Use the official NSE NIFTYBEES trade dates as the master calendar. The ETF
+    # benchmark is independently split-adjusted by nse_benchmark.py; stock bars
+    # never define the calendar, and off-calendar stock rows are rejected.
+    bench = official_bench[["Open", "Close"]].copy()
+    official_sessions = normalise_session_index(official_bench.index)
+    benchmark_sessions = normalise_session_index(bench.index)
+    index_sessions = normalise_session_index(index.index)
+    session_audit = build_session_calendar_audit(
+        official_sessions, benchmark_sessions, index_sessions, frames
+    )
+    session_audit.to_csv(
+        os.path.join(a.outdir, "pit_session_calendar_audit.csv"), index=False
+    )
+    missing_benchmark = official_sessions.difference(benchmark_sessions)
+    extra_benchmark = benchmark_sessions.difference(official_sessions)
+    missing_index = official_sessions.difference(index_sessions)
+    extra_index = index_sessions.difference(official_sessions)
+    extra_stock = session_audit.loc[
+        session_audit["extra_stock_session"], "date"
+    ].tolist()
+    if len(missing_benchmark) or len(extra_benchmark) or len(missing_index) or len(extra_index) or extra_stock:
         sys.exit(
-            f"TejHQ adjusted NIFTYBEES misses {len(missing_benchmark_sessions)} official NSE sessions "
-            f"(first dates: {missing_dates}); refusing to forward-fill the benchmark"
+            "NSE session alignment failed: "
+            f"missing benchmark={len(missing_benchmark)}, extra benchmark={len(extra_benchmark)}, "
+            f"missing NIFTY50 index={len(missing_index)}, extra NIFTY50 index={len(extra_index)}, "
+            f"off-calendar stock dates={len(extra_stock)}; "
+            f"first stock dates={extra_stock[:10]}"
         )
-    bench.index = pd.DatetimeIndex(bench.index)
-    if bench.index.tz is not None:
-        bench.index = bench.index.tz_localize(None)
-    bench = bench.loc[bench.index.isin(official_sessions)].copy().reindex(official_sessions)
-    if bench["Close"].isna().any():
-        sys.exit("Adjusted benchmark has missing closes after official NSE session alignment")
-    index.index = pd.DatetimeIndex(index.index).tz_localize(None) if pd.DatetimeIndex(index.index).tz is not None else pd.DatetimeIndex(index.index)
+    bench.index = normalise_session_index(bench.index)
+    bench = bench.reindex(official_sessions)
+    index.index = normalise_session_index(index.index)
     index = index.reindex(official_sessions)
-
     corr = cross_check_benchmark(bench, index)
     audit_outputs = {}
     _, text = run_rules(
@@ -698,10 +727,18 @@ def main(argv=None):
     )
     daily_audit = audit_outputs.get("pit_daily_coverage_audit", pd.DataFrame()).copy()
     if not daily_audit.empty:
-        daily_audit["official_nse_session"] = True
-        daily_audit["adjusted_benchmark_bar"] = True
-        daily_audit["zero_stock_bar_session"] = daily_audit["all_loaded_symbol_bars"].eq(0)
-        audit_outputs["pit_session_calendar_audit"] = daily_audit
+        session_audit = session_audit.merge(daily_audit, on="date", how="left")
+        aligned = session_audit.dropna(subset=["all_loaded_symbol_bars"])
+        if (
+            aligned["stock_symbol_bars"].astype(int)
+            != aligned["all_loaded_symbol_bars"].astype(int)
+        ).any():
+            sys.exit("Session audit stock-bar counts do not reconcile with the daily coverage audit")
+        session_audit["zero_active_member_bar_session"] = (
+            session_audit["nse_niftybees_session"]
+            & session_audit["active_member_bars"].fillna(0).eq(0)
+        )
+    audit_outputs["pit_session_calendar_audit"] = session_audit
     for audit_name, audit_frame in audit_outputs.items():
         audit_frame.to_csv(os.path.join(a.outdir, f"{audit_name}.csv"), index=False)
     if symbol_audit:
@@ -713,14 +750,17 @@ def main(argv=None):
             fh.write("\n".join(f"- {key}: {value}" for key, value in source_metadata.items()) + "\n")
 
     source_note = (
-        f"TejHQ adjusted NSE prices (dataset revision {source_metadata.get('dataset_revision', 'unknown')}): "
-        "stock OHLC and NIFTYBEES back-adjusted for splits, bonuses and dividends; raw exchange "
-        "volume/turnover retained; mergers/demergers/rights/buybacks are not scaled. "
-        f"ETF daily-return correlation vs official NSE split-adjusted series {etf_source_corr:.4f}. "
-        "Official NSE NIFTYBEES sessions are retained as the master calendar; stock-only gaps are audited. "
-        "Missing opens are never forward-filled.\n"
+        f"Stock universe: TejHQ adjusted NSE OHLC (dataset revision {source_metadata.get('dataset_revision', 'unknown')}), "
+        "back-adjusted for splits, bonuses and dividends; raw exchange volume/turnover retained; "
+        "mergers/demergers/rights/buybacks are not scaled. "
+        "Benchmark: official NSE NIFTYBEES traded OHLC, adjusted for the 10:1 face-value split effective "
+        "2019-12-19; ETF NAV reflects dividends received from its underlying holdings. "
+        "NSE NIFTYBEES sessions are the master calendar; missing/extra benchmark or index sessions and "
+        "off-calendar stock dates are rejected. Missing opens are never forward-filled; close carry-forward "
+        "is used only to mark existing holdings to market.\n"
         if a.data_source == "tejhq" else
-        "Yahoo Finance auto-adjusted OHLCV; official NSE NIFTYBEES sessions retained as the master calendar.\n"
+        "Yahoo Finance auto-adjusted stock OHLCV; official NSE NIFTYBEES benchmark is split-adjusted and "
+        "its sessions are retained as the master calendar. Off-calendar stock dates are rejected.\n"
     )
     text = (source_note + f"Daily-return correlation benchmark vs ^NSEI {corr:.3f}\n") + text
     with open(os.path.join(a.outdir, "portfolio_rules_report.md"), "w", encoding="utf-8") as fh:

@@ -1749,8 +1749,11 @@ def test_rules_engine_entry_cost_and_no_cost_when_nothing_changes():
     r = PR.simulate(P, {299}, buffer=False, size=1, start=250, cost_pct=0.30)
     eq = r["equity"]
     assert np.allclose(eq[250:300], 1.0)                                  # in cash before the first signal
-    assert abs(eq[300] - (1 - 0.0015)) < 1e-12                            # all-in at the open, half the round trip paid
-    assert abs(eq[301] - (-0.0015 + 1.003)) < 1e-12 and r["turnover"] == [1.0]
+    side = 0.30 / 200.0
+    entry_notional = 1.0 / (1.0 + side)
+    assert abs(eq[300] - entry_notional) < 1e-12                          # cash reserved for the 0.15% buy-side fee
+    assert abs(eq[301] - entry_notional * 1.003) < 1e-12
+    assert abs(r["turnover"][0] - entry_notional) < 1e-12
     r2 = PR.simulate(P, {299, 309}, buffer=False, size=1, start=250, cost_pct=0.30)   # same holding re-selected: no turnover
     assert len(r2["turnover"]) == 2 and r2["turnover"][1] < 0.01 and abs(r2["equity"][310] - r["equity"][310]) < 1e-5   # only the 0.15% entry-cost overdraft is repaid
 
@@ -1762,7 +1765,9 @@ def test_rules_trailing_stop_sells_next_open_and_stays_in_cash():
     P = _rules_panel({"A": px})
     r = PR.simulate(P, {259}, buffer=False, size=1, start=250, cost_pct=0.30, trail=0.20)
     assert r["stops"] == 1 and r["cash_days"] > 30
-    assert abs(r["equity"][-1] - 0.987015) < 1e-9, r["equity"][-1]        # bought at 100, trigger close 103 (<= 0.8 x 130), sold at the next open 99
+    side = 0.30 / 200.0
+    expected_final = (1.0 / (1.0 + side)) * 0.99 * (1.0 - side)
+    assert abs(r["equity"][-1] - expected_final) < 1e-12, r["equity"][-1] # buy and sell fees apply to actual traded notional
     assert np.allclose(r["equity"][-30:], r["equity"][-1])                  # flat afterwards: no re-entry before the next signal
     nostop = PR.simulate(P, {259}, buffer=False, size=1, start=250, cost_pct=0.30)
     assert nostop["stops"] == 0 and nostop["equity"][-1] < 1.0 and nostop["cash_days"] == 10   # only the 10 days before the first entry
@@ -1778,7 +1783,8 @@ def test_rules_market_filter_cash_half_and_off():
     half = PR.simulate(bear, {299}, size=1, start=250, regime="half", cost_pct=0.30)["equity"]
     assert abs(half[300] - (1 - 0.5 * 0.0015)) < 1e-12 and half[310] > 1.0                    # half exposure
     off = PR.simulate(bear, {299}, size=1, start=250, regime="off", cost_pct=0.30)["equity"]
-    assert abs(off[300] - (1 - 0.0015)) < 1e-12
+    side = 0.30 / 200.0
+    assert abs(off[300] - (1.0 / (1.0 + side))) < 1e-12
     unknown = _rules_panel(prices, bull=True); unknown["bull_known"][:] = False
     assert np.allclose(PR.simulate(unknown, {299}, size=1, start=250)["equity"][250:], 1.0)      # unknown regime is treated as no-go
 
