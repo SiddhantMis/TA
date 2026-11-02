@@ -147,7 +147,7 @@ def parse_nse_rows(rows: list[dict[str, Any]], start: date, end: date) -> pd.Dat
             "Volume": _number(row, "CH_TOT_TRADED_QTY", "Volume", "volume"),
         })
     if not records:
-        raise RuntimeError("NSE returned no parseable NIFTYBEES EQ rows")
+        raise RuntimeError(f"NSE returned no parseable NIFTYBEES EQ rows; sample={rows[:3]!r}")
     frame = pd.DataFrame.from_records(records).set_index("Date").sort_index()
     if frame.index.has_duplicates:
         dates = frame.index[frame.index.duplicated()].strftime("%Y-%m-%d").tolist()
@@ -177,14 +177,22 @@ def fetch_niftybees_history(
     try:
         _bootstrap(client, timeout)
         chunks = date_chunks(start_date, end_date)
-        all_rows = []
+        parsed_chunks = []
         for position, (chunk_start, chunk_end) in enumerate(chunks):
-            all_rows.extend(_request_chunk(
-                client, chunk_start, chunk_end, timeout, retries
-            ))
+            rows = _request_chunk(client, chunk_start, chunk_end, timeout, retries)
+            try:
+                parsed_chunks.append(parse_nse_rows(rows, chunk_start, chunk_end))
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Could not parse NSE NIFTYBEES response for "
+                    f"{chunk_start} through {chunk_end}: {exc}"
+                ) from exc
             if position < len(chunks) - 1 and pause_seconds > 0:
                 sleep(pause_seconds)
-        frame = parse_nse_rows(all_rows, start_date, end_date)
+        frame = pd.concat(parsed_chunks).sort_index()
+        if frame.index.has_duplicates:
+            duplicates = frame.index[frame.index.duplicated()].strftime("%Y-%m-%d").tolist()
+            raise RuntimeError(f"Duplicate NIFTYBEES sessions across NSE chunks: {duplicates[:8]}")
         frame.attrs.update({
             "source": SOURCE_NAME,
             "raw_exchange_prices": True,
