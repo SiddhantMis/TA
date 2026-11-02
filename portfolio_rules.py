@@ -30,8 +30,9 @@ Decision rules:
   stop helps    if max drawdown improves by >= 5 points (full AND out-of-sample) and CAGR falls by <= 2 points (IS AND OOS)
   buffer helps  if turnover falls >= 20% and CAGR does not fall by more than 1 point
   live rules ~ baseline if CAGR is within 2 points (IS and OOS) and max drawdown no more than 3 points worse
-Biases that flatter results: today's constituents (survivorship), flat costs, no taxes, cash at 0% (understates cash),
-trades on different names can overlap. First split: first (1 - oos_frac) of the calendar is in-sample.
+Biases that remain: incomplete/misaligned source membership history, unavailable delisted price histories, flat costs,
+no taxes, and cash at 0%. Membership is point-in-time filtered, but this is not a fully survivorship-free reconstruction.
+First split: first (1 - oos_frac) of the calendar is in-sample.
 """
 from __future__ import annotations
 
@@ -46,6 +47,11 @@ import backtest as B
 import leaders as LD
 from nse_benchmark import load_niftybees_history
 import pattern_lab as PL
+from nifty500_pit import (
+    DEFAULT_MEMBERSHIP_FILE, MEMBERSHIP_COVERAGE_THROUGH,
+    build_membership_mask, expected_member_counts, load_membership_calendar,
+    normalise_symbol, validate_membership_calendar,
+)
 
 SIZE, RETAIN, LIQUID_TOP = 20, 30, 200
 START = 253
@@ -53,19 +59,37 @@ START = 253
 
 # ------------------------------------------------------------------- data ---
 def prepare(frames: dict, bench_df: pd.DataFrame, liquid_top: int = LIQUID_TOP,
-            index_df: pd.DataFrame | None = None) -> dict:
+            index_df: pd.DataFrame | None = None,
+            membership_df: pd.DataFrame | None = None,
+            membership_path: str = DEFAULT_MEMBERSHIP_FILE) -> dict:
     idx = bench_df.index
     cols = list(frames)
+    if membership_df is None:
+        membership_df = load_membership_calendar(membership_path)
+    calendar = validate_membership_calendar(membership_df)
+    pit_mask = build_membership_mask(idx, cols, calendar)
+
     O = pd.concat({t: frames[t].Open for t in cols}, axis=1).reindex(idx)
     C = pd.concat({t: frames[t].Close for t in cols}, axis=1).reindex(idx)
     V = pd.concat({t: frames[t].Volume for t in cols}, axis=1).reindex(idx)
     sma200 = C.rolling(200, min_periods=200).mean()
     tv = (C * V).rolling(126, min_periods=100).mean()
-    liquid = tv.rank(axis=1, ascending=False) <= liquid_top
+    # Both the liquidity ranking and the strategy eligibility are restricted
+    # to the Nifty 500 members on that exact signal date.
+    liquid = tv.where(pit_mask).rank(axis=1, ascending=False) <= liquid_top
     mom = C.shift(21) / C.shift(252) - 1
-    valid = C.notna() & sma200.notna() & mom.notna()
+    valid = C.notna() & sma200.notna() & mom.notna() & pit_mask
     elig = valid & liquid & (C > sma200)
     rank = mom.where(elig).rank(axis=1, ascending=False, method="first")
+
+    expected = expected_member_counts(idx, calendar)
+    available = (pit_mask & C.notna()).sum(axis=1).to_numpy(dtype=int)
+    coverage_pct = np.divide(
+        available * 100.0, expected,
+        out=np.full(len(expected), np.nan, dtype=float),
+        where=expected > 0,
+    )
+
     bc = pd.to_numeric(bench_df["Close"], errors="coerce").reindex(idx)
     bsma = bc.rolling(200, min_periods=200).mean()
     if index_df is not None:
@@ -75,6 +99,9 @@ def prepare(frames: dict, bench_df: pd.DataFrame, liquid_top: int = LIQUID_TOP,
     isma = ic.rolling(200, min_periods=200).mean()
     return {"idx": idx, "cols": cols, "O": O.ffill(limit=5).to_numpy(float), "C": C.ffill(limit=5).to_numpy(float),
             "rank": rank.to_numpy(float), "univ": (valid & liquid).to_numpy(bool),
+            "pit_mask": pit_mask.to_numpy(bool), "pit_expected_count": expected,
+            "pit_available_count": available, "pit_coverage_pct": coverage_pct,
+            "membership_calendar": calendar,
             "bull": (bc > bsma).fillna(False).to_numpy(bool), "bull_known": bsma.notna().to_numpy(bool),
             "bull_index": (ic > isma).fillna(False).to_numpy(bool), "bull_index_known": isma.notna().to_numpy(bool),
             "bench_close": bc.to_numpy(float), "index_close": ic.to_numpy(float),
@@ -232,13 +259,16 @@ def compare_stop(base, stop):
 
 
 def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30,
-              index_df: pd.DataFrame | None = None):
+              index_df: pd.DataFrame | None = None,
+              membership_df: pd.DataFrame | None = None,
+              membership_path: str = DEFAULT_MEMBERSHIP_FILE):
     quality = validate_benchmark(bench_df, "NSE split-adjusted NIFTYBEES")
     index_quality = (
         validate_benchmark(index_df, "NIFTY 50 price index")
         if index_df is not None else None
     )
-    P = prepare(frames, bench_df, index_df=index_df)
+    P = prepare(frames, bench_df, index_df=index_df,
+                membership_df=membership_df, membership_path=membership_path)
     idx = P["idx"]
     me, r28 = month_end_signals(idx), rule28_signals(idx)
     cfg = {"V1_baseline": dict(signals=me, buffer=False),
@@ -272,7 +302,25 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     spans = {"FULL": (START, n - 1), "IS": (START, split), "OOS": (split, n - 1)}
     M = {(k, p): metrics(e, a, b) for k, e in series.items() for p, (a, b) in spans.items()}
     d0, d1, ds = idx[START].date(), idx[-1].date(), idx[split].date()
-    out = [f"Portfolio rules: {len(frames)} stocks, daily engine {d0} to {d1}, IS/OOS split {ds}, cost {cost_pct}% round trip, cash 0%",
+    calendar = P["membership_calendar"]
+    source_counts = calendar["source"].value_counts().to_dict()
+    calendar_symbols = set(calendar["symbol"])
+    loaded_symbols = {normalise_symbol(t) for t in frames}
+    missing_symbols = sorted(calendar_symbols - loaded_symbols)
+    coverage = P["pit_coverage_pct"][START:]
+    coverage = coverage[np.isfinite(coverage)]
+    active_counts = P["pit_expected_count"][START:]
+    if len(coverage):
+        coverage_stats = (float(np.min(coverage)), float(np.percentile(coverage, 10)),
+                          float(np.median(coverage)), float(np.mean(coverage < 90) * 100))
+    else:
+        coverage_stats = (float("nan"),) * 4
+    out = [f"Portfolio rules: {len(frames)} loaded price histories for PIT Nifty 500, daily engine {d0} to {d1}, IS/OOS split {ds}, cost {cost_pct}% round trip, cash 0%",
+           f"PIT calendar: {len(calendar)} intervals / {len(calendar_symbols)} symbols; source coverage through {MEMBERSHIP_COVERAGE_THROUGH.date()}; source categories {source_counts}",
+           f"PIT active-member count during test: {int(np.min(active_counts))}–{int(np.max(active_counts))} (nominal index size {500}; source documents historical count drift and a 499-name 2026 snapshot)",
+           f"Price-history coverage: {len(calendar_symbols) - len(missing_symbols)}/{len(calendar_symbols)} distinct calendar symbols loaded; {len(missing_symbols)} missing/unusable (first 20: {missing_symbols[:20]})",
+           f"Daily active-member bars covered: min {coverage_stats[0]:.1f}%, p10 {coverage_stats[1]:.1f}%, median {coverage_stats[2]:.1f}%; {coverage_stats[3]:.1f}% of sessions below 90% coverage",
+           "WARNING: missing/delisted-symbol history and source calendar gaps can still bias results; see universe/NIFTY500_PIT_DATA.md.",
            f"Benchmark: official NSE NIFTYBEES traded closes, split-adjusted to current Rs 1 face-value units; {quality['bars']} bars; max abs daily move {quality['max_abs_daily_return_pct']:.2f}%",
            *([f"Regime diagnostic: ^NSEI price index quality gate passed; {index_quality['bars']} bars; max abs daily move {index_quality['max_abs_daily_return_pct']:.2f}%"] if index_quality else []),
            "NIFTY50_price_index is a PRICE index (not a total-return index).",
@@ -337,20 +385,29 @@ def main(argv=None):
     ap.add_argument("--oos-frac", type=float, default=0.35)
     ap.add_argument("--cost-pct", type=float, default=0.30)
     ap.add_argument("--cache", default="data_cache/frames_10y.pkl")
+    ap.add_argument("--membership-file", default=DEFAULT_MEMBERSHIP_FILE)
     ap.add_argument("--refresh", action="store_true")
     ap.add_argument("--outdir", default="results")
     a = ap.parse_args(argv)
     os.makedirs(a.outdir, exist_ok=True)
+    membership = load_membership_calendar(a.membership_file)
+    tickers = [f"{symbol}.NS" for symbol in sorted(membership["symbol"].unique())]
     bench = load_niftybees_history(a.years)
     if bench is None:
         sys.exit("could not fetch NIFTYBEES.NS")
+    # Do not extrapolate a historical constituent calendar beyond its stated coverage.
+    bench = bench.loc[bench.index <= MEMBERSHIP_COVERAGE_THROUGH]
+    if bench.empty:
+        sys.exit("NIFTYBEES history does not overlap the PIT membership calendar coverage")
     validate_benchmark(bench, "NSE split-adjusted NIFTYBEES")
     index = B.load_history("^NSEI", a.years)
     if index is None:
         sys.exit("could not fetch ^NSEI")
-    frames = PL.load_frames(LD.load_universe(), a.years, a.cache, a.refresh)
+    index = index.loc[index.index <= MEMBERSHIP_COVERAGE_THROUGH]
+    frames = PL.load_frames(tickers, a.years, a.cache, a.refresh, min_bars=253)
     corr = cross_check_benchmark(bench, index)
-    _, text = run_rules(frames, bench, a.oos_frac, a.cost_pct, index_df=index)
+    _, text = run_rules(frames, bench, a.oos_frac, a.cost_pct, index_df=index,
+                        membership_df=membership)
     actions = bench.attrs.get("corporate_actions") or []
     text = (f"NSE corporate-action adjustments: {actions or 'none'}; "
             f"daily-return correlation NSE NIFTYBEES vs ^NSEI {corr:.3f}\n") + text
