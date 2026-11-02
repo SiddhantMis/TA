@@ -104,26 +104,25 @@ def month_end_signals(idx) -> set:
 
 
 def rule28_signals(idx) -> set:
-    """First observed session on/after the 28th; if none, use the last session of a completed month.
+    """First available exchange session on/after each month's calendar 28th.
 
-    The final observed month is not assumed complete: a mid-month download must not
-    create a premature signal. A completed February whose final session is the 27th
-    therefore rebalances on the 27th, once a following-month session is present.
+    If the 28th is a weekend/holiday and the month has no session at or after it,
+    the signal moves to the first session in the next month. This matches the live
+    manager's first-scan catch-up. The final observed month is skipped when its
+    28th has not yet arrived, avoiding a partial-month lookahead.
     """
-    s = pd.Series(np.arange(len(idx)), index=idx)
-    if len(s) == 0:
+    idx = pd.DatetimeIndex(idx)
+    if len(idx) == 0:
         return set()
-    last_month = (idx[-1].year, idx[-1].month)
-    first_month = (idx[0].year, idx[0].month)
     signals = set()
-    for (year, month), group in s.groupby([s.index.year, s.index.month]):
-        late = group[group.index.day >= 28]
-        if not late.empty:
-            signals.add(int(late.iloc[0]))
-        elif (int(year), int(month)) != last_month and (
-            (int(year), int(month)) != first_month or idx[0].day == 1
-        ):
-            signals.add(int(group.iloc[-1]))
+    months = sorted(set(zip(idx.year, idx.month)))
+    for year, month in months:
+        trigger = pd.Timestamp(int(year), int(month), 28)
+        if idx[-1] < trigger:
+            continue
+        pos = int(idx.searchsorted(trigger, side="left"))
+        if pos < len(idx):
+            signals.add(pos)
     return signals
 
 
