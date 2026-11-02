@@ -225,7 +225,34 @@ def run_lab(frames: dict, oos_frac=0.35, cost_pct=0.30, liquid_top=200):
 
 
 # ----------------------------------------------------------------------- main --
-def load_frames(tickers, years, cache, refresh, min_bars=401, return_diagnostics=False):
+def load_frames(tickers, years, cache, refresh, min_bars=401, return_diagnostics=False, source="yahoo"):
+    if source not in {"yahoo", "tejhq"}:
+        raise ValueError(f"unknown price source: {source}")
+    if source == "tejhq":
+        from tejhq_data import load_adjusted_frames
+
+        if cache and os.path.exists(cache) and not refresh:
+            with open(cache, "rb") as fh:
+                frames = pickle.load(fh)
+            diagnostics = {
+                t: {"status": "cached", "bars": int(len(frames[t])), "detail": "TejHQ adjusted frame cache"}
+                for t in tickers if t in frames
+            }
+            print(f"[cache] {len(frames)} TejHQ adjusted frames from {cache}", file=sys.stderr)
+        else:
+            end = pd.Timestamp.now().normalize()
+            start = end - pd.DateOffset(years=years)
+            frames, diagnostics = load_adjusted_frames(
+                tickers, start.date().isoformat(), end.date().isoformat(),
+                cache_dir=os.path.join(os.path.dirname(cache) or "data_cache", "tejhq_parquet"),
+                refresh=refresh,
+            )
+            if cache:
+                os.makedirs(os.path.dirname(cache) or ".", exist_ok=True)
+                with open(cache, "wb") as fh:
+                    pickle.dump(frames, fh)
+        return (frames, diagnostics) if return_diagnostics else frames
+
     if cache and os.path.exists(cache) and not refresh:
         with open(cache, "rb") as fh:
             store = pickle.load(fh)
