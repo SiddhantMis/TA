@@ -782,8 +782,8 @@ def main(argv=None):
         current_gap = current_gap + 1 if missing else 0
         max_benchmark_gap = max(max_benchmark_gap, current_gap)
     if (
-        extra_benchmark or extra_index or extra_stock or max_benchmark_gap > 1
-        or index_coverage < 0.99
+        not extra_benchmark.empty or not extra_index.empty or bool(extra_stock)
+        or max_benchmark_gap > 1 or index_coverage < 0.99
     ):
         sys.exit(
             "NSE session alignment failed: "
