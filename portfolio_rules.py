@@ -11,7 +11,7 @@ Questions, answered with the same data, costs and a DAILY engine (stops need dai
   help?  4. What does the market filter protect against, and what does it cost?  Is half exposure in a weak market better?
 
 Pre-registered (nothing is tuned after seeing results):
-  universe  Nifty 500 list; point-in-time top-200 by 126-day traded value; close above own 200-day average
+  universe  historical Nifty 500 membership; top-200 by 126-day traded value among members on each signal date
   rank      12-1 return (252 sessions back to 21 back), highest first;  20 slots, equal weight of current equity
   filter    BULL = NSE NIFTYBEES split-adjusted traded close above its 200-day average
   diagnostic compare: ^NSEI 200-DMA regime as a separate variant; it does not replace the live ETF rule
@@ -44,11 +44,10 @@ import numpy as np
 import pandas as pd
 
 import backtest as B
-import leaders as LD
 from nse_benchmark import load_niftybees_history
 import pattern_lab as PL
 from nifty500_pit import (
-    DEFAULT_MEMBERSHIP_FILE, MEMBERSHIP_COVERAGE_THROUGH,
+    DEFAULT_MEMBERSHIP_FILE, EXPECTED_INDEX_SIZE, MEMBERSHIP_COVERAGE_THROUGH,
     build_membership_mask, expected_member_counts, load_membership_calendar,
     normalise_symbol, validate_membership_calendar,
 )
@@ -317,7 +316,7 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
         coverage_stats = (float("nan"),) * 4
     out = [f"Portfolio rules: {len(frames)} loaded price histories for PIT Nifty 500, daily engine {d0} to {d1}, IS/OOS split {ds}, cost {cost_pct}% round trip, cash 0%",
            f"PIT calendar: {len(calendar)} intervals / {len(calendar_symbols)} symbols; source coverage through {MEMBERSHIP_COVERAGE_THROUGH.date()}; source categories {source_counts}",
-           f"PIT active-member count during test: {int(np.min(active_counts))}–{int(np.max(active_counts))} (nominal index size {500}; source documents historical count drift and a 499-name 2026 snapshot)",
+           f"PIT active-member count during test: {int(np.min(active_counts))}–{int(np.max(active_counts))} (nominal index size {EXPECTED_INDEX_SIZE}; source documents historical count drift and a 499-name 2026 snapshot)",
            f"Price-history coverage: {len(calendar_symbols) - len(missing_symbols)}/{len(calendar_symbols)} distinct calendar symbols loaded; {len(missing_symbols)} missing/unusable (first 20: {missing_symbols[:20]})",
            f"Daily active-member bars covered: min {coverage_stats[0]:.1f}%, p10 {coverage_stats[1]:.1f}%, median {coverage_stats[2]:.1f}%; {coverage_stats[3]:.1f}% of sessions below 90% coverage",
            "WARNING: missing/delisted-symbol history and source calendar gaps can still bias results; see universe/NIFTY500_PIT_DATA.md.",
