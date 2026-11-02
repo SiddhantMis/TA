@@ -42,7 +42,7 @@ def validate_membership_calendar(calendar: pd.DataFrame) -> pd.DataFrame:
     for symbol, group in out.groupby("symbol", sort=False):
         previous_end = None
         for i, row in enumerate(group.itertuples(index=False)):
-            if i > 0 and previous_end is None:
+            if i > 0 and (previous_end is None or pd.isna(previous_end)):
                 raise ValueError(f"{symbol} has an open-ended interval followed by another interval")
             if i > 0 and row.valid_from < previous_end:
                 raise ValueError(f"{symbol} has overlapping membership intervals")
