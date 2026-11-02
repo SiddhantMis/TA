@@ -601,26 +601,28 @@ def main(argv=None):
     membership = load_membership_calendar(a.membership_file)
     tickers = [f"{symbol}.NS" for symbol in sorted(membership["symbol"].unique())]
     official_bench = load_niftybees_history(a.years)
-    bench = official_bench
-    if bench is None:
-        sys.exit("could not fetch NIFTYBEES.NS")
-    # Do not extrapolate a historical constituent calendar beyond its stated coverage.
-    bench = bench.loc[bench.index <= MEMBERSHIP_COVERAGE_THROUGH]
-    if bench.empty:
-        sys.exit("NIFTYBEES history does not overlap the PIT membership calendar coverage")
-    validate_benchmark(bench, "NSE split-adjusted NIFTYBEES")
+    if official_bench is None:
+        sys.exit("could not fetch NIFTYBEES.NS official NSE session calendar")
+    official_bench = official_bench.loc[official_bench.index <= MEMBERSHIP_COVERAGE_THROUGH]
+    if official_bench.empty:
+        sys.exit("official NSE NIFTYBEES history does not overlap PIT membership coverage")
+    validate_benchmark(official_bench, "official NSE NIFTYBEES session calendar")
+
     index = B.load_history("^NSEI", a.years)
     if index is None:
         sys.exit("could not fetch ^NSEI")
     index = index.loc[index.index <= MEMBERSHIP_COVERAGE_THROUGH]
+
     load_tickers = tickers + (["NIFTYBEES.NS"] if a.data_source == "tejhq" else [])
     frames, loader_diagnostics = PL.load_frames(
         load_tickers, a.years, a.cache, a.refresh, min_bars=253,
-        return_diagnostics=True, source=a.data_source,
+        return_diagnostics=True, source=a.data_source, membership_df=membership,
     )
+    source_metadata = loader_diagnostics.pop("_source", {})
+    symbol_audit = loader_diagnostics.pop("_symbol_audit", [])
     if a.data_source == "tejhq":
         tej_etf = frames.pop("NIFTYBEES.NS", None)
-        loader_diagnostics.pop("NIFTYBEES.NS", None)
+        loader_diagnostics.pop("NIFTYBEES", None)
         if tej_etf is None:
             sys.exit("TejHQ adjusted NIFTYBEES history is unavailable; refusing a mixed-basis benchmark")
         bench = tej_etf[["Open", "Close"]].copy()
@@ -636,37 +638,88 @@ def main(argv=None):
             )
         validate_benchmark(bench, "TejHQ corporate-action-adjusted NIFTYBEES")
     else:
+        bench = official_bench[["Open", "Close"]].copy()
         etf_source_corr = None
+
     if not frames:
         sys.exit(f"no stock histories loaded from {a.data_source}")
-    # Use the actual NSE cash-equity session calendar from the same source.
-    # Index/ETF-only dates with no stock bhavcopy are not backtest sessions.
-    stock_sessions = pd.DatetimeIndex(sorted(set().union(*[
-        set(pd.DatetimeIndex(frame.index).tz_localize(None) if pd.DatetimeIndex(frame.index).tz is not None
-            else pd.DatetimeIndex(frame.index)) for frame in frames.values()
-    ])))
-    bench = bench.loc[bench.index.isin(stock_sessions)]
-    index = index.loc[index.index.isin(stock_sessions)]
+
+    # Use the independently fetched official NSE NIFTYBEES sessions as the master
+    # exchange calendar. Never intersect with observed stock bars: doing so would
+    # silently erase sessions where the stock source has a market-wide data gap.
+    official_sessions = pd.DatetimeIndex(official_bench.index)
+    if official_sessions.tz is not None:
+        official_sessions = official_sessions.tz_localize(None)
+    bench_sessions = pd.DatetimeIndex(bench.index)
+    if bench_sessions.tz is not None:
+        bench_sessions = bench_sessions.tz_localize(None)
+    missing_benchmark_sessions = official_sessions.difference(bench_sessions)
+    extra_benchmark_sessions = bench_sessions.difference(official_sessions)
+    session_audit = pd.DataFrame({
+        "date": official_sessions.strftime("%Y-%m-%d"),
+        "official_nse_session": True,
+        "adjusted_benchmark_bar": official_sessions.isin(bench_sessions),
+        "stock_symbol_bars": [
+            sum(
+                1 for frame in frames.values()
+                if pd.Timestamp(date) in pd.DatetimeIndex(frame.index).tz_localize(None)
+                if pd.DatetimeIndex(frame.index).tz is not None
+            ) if any(pd.DatetimeIndex(frame.index).tz is not None for frame in frames.values()) else
+            sum(1 for frame in frames.values() if pd.Timestamp(date) in pd.DatetimeIndex(frame.index))
+            for date in official_sessions
+        ],
+    })
+    if len(missing_benchmark_sessions):
+        session_audit.to_csv(os.path.join(a.outdir, "pit_session_calendar_audit.csv"), index=False)
+        missing_dates = [x.date().isoformat() for x in missing_benchmark_sessions[:20]]
+        sys.exit(
+            f"TejHQ adjusted NIFTYBEES misses {len(missing_benchmark_sessions)} official NSE sessions "
+            f"(first dates: {missing_dates}); refusing to forward-fill the benchmark"
+        )
+    bench = bench.loc[bench.index.isin(official_sessions)].copy()
+    bench.index = pd.DatetimeIndex(bench.index).tz_localize(None) if pd.DatetimeIndex(bench.index).tz is not None else pd.DatetimeIndex(bench.index)
+    bench = bench.reindex(official_sessions)
+    if bench["Close"].isna().any():
+        sys.exit("Adjusted benchmark has missing closes after official NSE session alignment")
+    index.index = pd.DatetimeIndex(index.index).tz_localize(None) if pd.DatetimeIndex(index.index).tz is not None else pd.DatetimeIndex(index.index)
+    index = index.reindex(official_sessions)
+
     corr = cross_check_benchmark(bench, index)
     audit_outputs = {}
     _, text = run_rules(
         frames, bench, a.oos_frac, a.cost_pct, index_df=index,
         membership_df=membership, loader_diagnostics=loader_diagnostics,
-        audit_outputs=audit_outputs,
+        audit_outputs=audit_outputs, source_metadata=source_metadata,
     )
+    daily_audit = audit_outputs.get("pit_daily_coverage_audit", pd.DataFrame()).copy()
+    if not daily_audit.empty:
+        daily_audit["official_nse_session"] = True
+        daily_audit["adjusted_benchmark_bar"] = True
+        daily_audit["zero_stock_bar_session"] = daily_audit["all_loaded_symbol_bars"].eq(0)
+        audit_outputs["pit_session_calendar_audit"] = daily_audit
     for audit_name, audit_frame in audit_outputs.items():
         audit_frame.to_csv(os.path.join(a.outdir, f"{audit_name}.csv"), index=False)
-    actions = bench.attrs.get("corporate_actions") or []
+    if symbol_audit:
+        pd.DataFrame(symbol_audit).to_csv(
+            os.path.join(a.outdir, "tejhq_symbol_continuity_audit.csv"), index=False
+        )
+    if source_metadata:
+        with open(os.path.join(a.outdir, "tejhq_source_metadata.md"), "w", encoding="utf-8") as fh:
+            fh.write("\n".join(f"- {key}: {value}" for key, value in source_metadata.items()) + "\n")
+
     source_note = (
-        "TejHQ adjusted NSE bhavcopy prices: stock OHLC and NIFTYBEES back-adjusted for splits, bonuses and dividends; "
-        f"raw exchange volume/turnover retained; ETF daily-return correlation vs official NSE split-adjusted series "
-        f"{etf_source_corr:.4f}; missing opens are never forward-filled.\n"
+        f"TejHQ adjusted NSE prices (dataset revision {source_metadata.get('dataset_revision', 'unknown')}): "
+        "stock OHLC and NIFTYBEES back-adjusted for splits, bonuses and dividends; raw exchange "
+        "volume/turnover retained; mergers/demergers/rights/buybacks are not scaled. "
+        f"ETF daily-return correlation vs official NSE split-adjusted series {etf_source_corr:.4f}. "
+        "Official NSE NIFTYBEES sessions are retained as the master calendar; stock-only gaps are audited. "
+        "Missing opens are never forward-filled.\n"
         if a.data_source == "tejhq" else
-        "Yahoo Finance auto-adjusted OHLCV; legacy source path with split-adjusted NSE NIFTYBEES benchmark.\n"
+        "Yahoo Finance auto-adjusted OHLCV; official NSE NIFTYBEES sessions retained as the master calendar.\n"
     )
-    text = (source_note + f"NSE corporate-action adjustments: {actions or 'none'}; "
-            f"daily-return correlation NSE NIFTYBEES vs ^NSEI {corr:.3f}\n") + text
-    open(os.path.join(a.outdir, "portfolio_rules_report.md"), "w").write("```\n" + text + "\n```\n")
+    text = (source_note + f"Daily-return correlation benchmark vs ^NSEI {corr:.3f}\n") + text
+    with open(os.path.join(a.outdir, "portfolio_rules_report.md"), "w", encoding="utf-8") as fh:
+        fh.write("```\n" + text + "\n```\n")
     print(text)
 
 
