@@ -9,7 +9,7 @@ import pandas as pd
 import backtest as B
 from nse_benchmark import (
     apply_niftybees_split_adjustments, load_niftybees_raw_history,
-    load_nifty50_index_history, reconcile_niftybees_sources,
+    load_nifty50_index_history, merge_niftybees_sources,
 )
 from nifty500_pit import MEMBERSHIP_COVERAGE_THROUGH
 from tejhq_data import get_dataset_revision, load_niftybees_raw_frame
@@ -28,15 +28,30 @@ tej_raw, _ = load_niftybees_raw_frame(
     START.isoformat(), END.isoformat(),
     cache_dir="data_cache/tejhq_parquet", revision=get_dataset_revision(),
 )
-nse = apply_niftybees_split_adjustments(nse_raw)
-nse_quality = validate_benchmark(nse, "NSE split-adjusted NIFTYBEES")
-reconciliation = reconcile_niftybees_sources(nse_raw, tej_raw)
-tej = apply_niftybees_split_adjustments(tej_raw)
-tej_quality = validate_benchmark(tej, "TejHQ raw NIFTYBEES, split-adjusted")
-quality = nse_quality
 nifty = load_nifty50_index_history(
     START, END, cache_path="data_cache/nifty50_index.csv"
 )
+official_sessions = pd.DatetimeIndex(pd.to_datetime(nifty.index))
+if official_sessions.tz is not None:
+    official_sessions = official_sessions.tz_localize(None)
+official_sessions = official_sessions.normalize().sort_values()
+calendar_start, calendar_end = official_sessions.min(), official_sessions.max()
+nse_raw.index = pd.DatetimeIndex(pd.to_datetime(nse_raw.index)).normalize()
+tej_raw.index = pd.DatetimeIndex(pd.to_datetime(tej_raw.index)).normalize()
+nse_raw = nse_raw.loc[
+    (nse_raw.index >= calendar_start) & (nse_raw.index <= calendar_end)
+].copy()
+tej_raw = tej_raw.loc[
+    (tej_raw.index >= calendar_start) & (tej_raw.index <= calendar_end)
+].copy()
+benchmark_raw, reconciliation = merge_niftybees_sources(
+    nse_raw, tej_raw, allowed_extra_sessions=official_sessions,
+)
+nse = apply_niftybees_split_adjustments(benchmark_raw)
+nse_quality = validate_benchmark(nse, "NSE/TejHQ split-adjusted NIFTYBEES")
+tej = apply_niftybees_split_adjustments(tej_raw)
+tej_quality = validate_benchmark(tej, "TejHQ raw NIFTYBEES, split-adjusted")
+quality = nse_quality
 index_quality = validate_benchmark(nifty, "official NSE NIFTY 50 price index")
 corr = cross_check_benchmark(nse, nifty)
 
@@ -46,6 +61,7 @@ out = [
     f"NSE bars: {quality['bars']}; max absolute daily return: {quality['max_abs_daily_return_pct']:.2f}%",
     f"TejHQ cross-check bars: {tej_quality['bars']}; max abs daily move: {tej_quality['max_abs_daily_return_pct']:.2f}%",
     f"NSE / TejHQ reconciliation: {reconciliation}",
+    f"TejHQ-only bars accepted as supplements on official NSE sessions: {reconciliation['tejhq_only_dates']}",
     f"Official NSE NIFTY 50 sessions: {index_quality['bars']}; source={nifty.attrs.get('source')}",
     f"Daily-return correlation of split-adjusted NIFTYBEES vs official NIFTY 50: {corr:.4f}",
     "Corporate action: 10:1 face-value split effective 2019-12-19; pre-ex-date OHLC x0.1, volume x10.",

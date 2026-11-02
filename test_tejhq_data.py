@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import hashlib
+import json
+import pickle
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,6 +12,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+import pattern_lab as PL
 from tejhq_data import (
     REPO_ID,
     build_symbol_chains,
@@ -174,6 +178,75 @@ class TejHQAdjustedLoaderTests(unittest.TestCase):
         ], columns=["isin", "symbol", "valid_from", "valid_to"])
         with self.assertRaisesRegex(RuntimeError, "overlapping ISIN intervals"):
             build_symbol_chains(history)
+
+    def test_cached_frames_are_clipped_to_requested_window(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "frames.pkl"
+            membership = pd.DataFrame([{
+                "symbol": "AAA",
+                "valid_from": pd.Timestamp("2016-01-01"),
+                "valid_to": pd.NaT,
+                "source": "fixture",
+                "source_url": "fixture",
+                "notes": "",
+            }])
+            membership_hash = hashlib.sha256(
+                pd.util.hash_pandas_object(membership, index=True).values.tobytes()
+            ).hexdigest()
+            index = pd.to_datetime([
+                "2016-12-30", "2017-01-02", "2026-10-13", "2026-10-14",
+            ])
+            cached_frame = pd.DataFrame({
+                "Open": [10.0, 11.0, 12.0, 13.0],
+                "High": [11.0, 12.0, 13.0, 14.0],
+                "Low": [9.0, 10.0, 11.0, 12.0],
+                "Close": [10.5, 11.5, 12.5, 13.5],
+                "Volume": [100.0, 100.0, 100.0, 100.0],
+                "Turnover": [1050.0, 1150.0, 1250.0, 1350.0],
+            }, index=index)
+            with open(cache, "wb") as handle:
+                pickle.dump({"AAA.NS": cached_frame}, handle)
+            meta = {
+                "requested_tickers": ["AAA.NS"],
+                "membership_hash": membership_hash,
+                "years": 10,
+                "start_date": "2016-01-01",
+                "end_date": "2026-12-31",
+                "source": {
+                    "dataset_revision": "fixture",
+                    "start_date": "2016-01-01",
+                    "end_date": "2026-12-31",
+                },
+                "diagnostics": {
+                    "AAA.NS": {"status": "loaded", "bars": 4, "detail": "cached fixture"},
+                },
+                "symbol_audit": [{
+                    "symbol": "AAA", "bars": 4, "first_date": "2016-12-30",
+                    "last_date": "2026-10-14", "status": "loaded",
+                }],
+            }
+            with open(f"{cache}.meta.json", "w", encoding="utf-8") as handle:
+                json.dump(meta, handle)
+
+            with patch("tejhq_data.get_dataset_revision", return_value="fixture"):
+                frames, diagnostics = PL.load_frames(
+                    ["AAA.NS"], 10, str(cache), False,
+                    min_bars=1, return_diagnostics=True, source="tejhq",
+                    membership_df=membership,
+                    start_date="2017-01-01", end_date="2026-10-13",
+                )
+
+            self.assertEqual(
+                frames["AAA.NS"].index.tolist(),
+                [pd.Timestamp("2017-01-02"), pd.Timestamp("2026-10-13")],
+            )
+            self.assertEqual(diagnostics["AAA.NS"]["bars"], 2)
+            self.assertEqual(diagnostics["_symbol_audit"][0]["bars"], 2)
+            self.assertEqual(diagnostics["_symbol_audit"][0]["first_date"], "2017-01-02")
+            self.assertEqual(diagnostics["_symbol_audit"][0]["last_date"], "2026-10-13")
+            self.assertEqual(diagnostics["_source"]["start_date"], "2017-01-01")
+            self.assertEqual(diagnostics["_source"]["end_date"], "2026-10-13")
+            self.assertTrue(diagnostics["_source"]["cache_reused"])
 
 
 if __name__ == "__main__":

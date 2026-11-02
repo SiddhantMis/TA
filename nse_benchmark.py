@@ -407,53 +407,129 @@ def load_nifty50_index_history(
     return frame
 
 
+def _normalise_niftybees_frame(frame: pd.DataFrame, label: str) -> pd.DataFrame:
+    if frame is None or frame.empty:
+        raise RuntimeError(f"{label} NIFTYBEES history is empty")
+    out = frame.copy()
+    idx = pd.DatetimeIndex(pd.to_datetime(out.index))
+    if idx.tz is not None:
+        idx = idx.tz_localize(None)
+    idx = idx.normalize()
+    if idx.has_duplicates:
+        dates = idx[idx.duplicated()].strftime("%Y-%m-%d").tolist()
+        raise RuntimeError(f"{label} NIFTYBEES history has duplicate sessions: {dates[:8]}")
+    out.index = idx
+    return out.sort_index()
+
+
 def reconcile_niftybees_sources(
     nse_raw: pd.DataFrame, tejhq_raw: pd.DataFrame, *,
     absolute_tolerance: float = 0.05, relative_tolerance: float = 0.0005,
     min_common_fraction: float = 0.98,
+    allowed_extra_sessions: pd.DatetimeIndex | None = None,
 ) -> dict[str, Any]:
-    """Cross-check TejHQ raw NIFTYBEES bars against NSE; NSE-only dates remain usable."""
-    if nse_raw is None or nse_raw.empty or tejhq_raw is None or tejhq_raw.empty:
-        raise RuntimeError("NIFTYBEES source reconciliation requires both non-empty histories")
-    nse_dates = pd.DatetimeIndex(pd.to_datetime(nse_raw.index)).normalize()
-    tej_dates = pd.DatetimeIndex(pd.to_datetime(tejhq_raw.index)).normalize()
-    nse_only = nse_dates.difference(tej_dates)
-    tejhq_only = tej_dates.difference(nse_dates)
+    """Cross-check common raw bars; permit TejHQ-only bars only on official NSE sessions."""
+    nse = _normalise_niftybees_frame(nse_raw, "NSE NextApi")
+    tej = _normalise_niftybees_frame(tejhq_raw, "TejHQ")
+    nse_dates, tej_dates = pd.DatetimeIndex(nse.index), pd.DatetimeIndex(tej.index)
+    nse_only, tejhq_only = nse_dates.difference(tej_dates), tej_dates.difference(nse_dates)
+
     if len(tejhq_only):
-        sample = tejhq_only.strftime("%Y-%m-%d").tolist()[:8]
-        raise RuntimeError(
-            f"TejHQ has {len(tejhq_only)} NIFTYBEES dates absent from NSE NextApi: {sample}"
-        )
+        if allowed_extra_sessions is None:
+            sample = tejhq_only.strftime("%Y-%m-%d").tolist()[:8]
+            raise RuntimeError(
+                f"TejHQ has {len(tejhq_only)} NIFTYBEES dates absent from NSE NextApi "
+                f"without an official-session allowlist: {sample}"
+            )
+        allowed = pd.DatetimeIndex(pd.to_datetime(allowed_extra_sessions))
+        if allowed.tz is not None:
+            allowed = allowed.tz_localize(None)
+        unsupported = tejhq_only.difference(allowed.normalize())
+        if len(unsupported):
+            sample = unsupported.strftime("%Y-%m-%d").tolist()[:8]
+            raise RuntimeError(
+                f"TejHQ has {len(unsupported)} NIFTYBEES dates absent from NSE NextApi "
+                f"and outside the official NSE session calendar: {sample}"
+            )
+
     common = nse_dates.intersection(tej_dates).sort_values()
-    common_fraction = len(common) / len(nse_dates)
-    if len(common) == 0 or common_fraction < min_common_fraction:
+    common_nse = len(common) / len(nse_dates)
+    common_tej = len(common) / len(tej_dates)
+    if len(common) == 0 or min(common_nse, common_tej) < min_common_fraction:
         raise RuntimeError(
             f"NIFTYBEES source overlap is insufficient: {len(common)}/{len(nse_dates)} "
-            f"NSE bars ({common_fraction:.2%}); required {min_common_fraction:.0%}"
+            f"NSE bars ({common_nse:.2%}) and {len(common)}/{len(tej_dates)} "
+            f"TejHQ bars ({common_tej:.2%}); required {min_common_fraction:.0%}"
         )
-    left, right = nse_raw.reindex(common), tejhq_raw.reindex(common)
+    left, right = nse.reindex(common), tej.reindex(common)
     max_abs, max_rel = 0.0, 0.0
     for column in PRICE_COLUMNS:
+        if column not in left or column not in right:
+            raise RuntimeError(f"NIFTYBEES reconciliation is missing {column}")
         a = pd.to_numeric(left[column], errors="coerce").to_numpy(float)
         b = pd.to_numeric(right[column], errors="coerce").to_numpy(float)
         if not (pd.Series(a).notna().all() and pd.Series(b).notna().all()):
             raise RuntimeError(f"NIFTYBEES reconciliation has missing {column} values")
         absolute = abs(a - b)
         relative = absolute / pd.Series(abs(a)).clip(lower=1e-12).to_numpy(float)
-        max_abs, max_rel = max(max_abs, float(absolute.max())), max(max_rel, float(relative.max()))
+        max_abs = max(max_abs, float(absolute.max()))
+        max_rel = max(max_rel, float(relative.max()))
     if max_abs > absolute_tolerance or max_rel > relative_tolerance:
         raise RuntimeError(
             f"NIFTYBEES source reconciliation failed: max absolute OHLC difference={max_abs:.4f}, "
             f"max relative={max_rel:.6%}"
         )
     return {
-        "nse_api_bars": int(len(nse_dates)), "tejhq_bars": int(len(tej_dates)),
-        "common_bars": int(len(common)), "nse_api_only_bars": int(len(nse_only)),
+        "nse_api_bars": int(len(nse_dates)),
+        "tejhq_bars": int(len(tej_dates)),
+        "common_bars": int(len(common)),
+        "nse_api_only_bars": int(len(nse_only)),
         "tejhq_only_bars": int(len(tejhq_only)),
-        "common_fraction_of_nse": float(common_fraction),
-        "max_abs_ohlc_diff": max_abs, "max_rel_ohlc_diff": max_rel,
+        "common_fraction_of_nse": float(common_nse),
+        "common_fraction_of_tejhq": float(common_tej),
+        "max_abs_ohlc_diff": max_abs,
+        "max_rel_ohlc_diff": max_rel,
         "nse_api_only_dates": nse_only.strftime("%Y-%m-%d").tolist()[:20],
+        "tejhq_only_dates": tejhq_only.strftime("%Y-%m-%d").tolist()[:20],
     }
+
+
+def merge_niftybees_sources(
+    nse_raw: pd.DataFrame, tejhq_raw: pd.DataFrame, *,
+    allowed_extra_sessions: pd.DatetimeIndex | None = None,
+    absolute_tolerance: float = 0.05, relative_tolerance: float = 0.0005,
+    min_common_fraction: float = 0.98,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Keep NSE bars and supplement only missing dates validated by the NSE index calendar."""
+    nse = _normalise_niftybees_frame(nse_raw, "NSE NextApi")
+    tej = _normalise_niftybees_frame(tejhq_raw, "TejHQ")
+    audit = reconcile_niftybees_sources(
+        nse, tej,
+        absolute_tolerance=absolute_tolerance,
+        relative_tolerance=relative_tolerance,
+        min_common_fraction=min_common_fraction,
+        allowed_extra_sessions=allowed_extra_sessions,
+    )
+    extra = pd.DatetimeIndex(pd.to_datetime(audit["tejhq_only_dates"]))
+    if len(extra):
+        missing = [column for column in nse.columns if column not in tej.columns]
+        if missing:
+            raise RuntimeError(f"TejHQ NIFTYBEES supplement is missing columns: {missing}")
+        merged = pd.concat([nse, tej.loc[extra, nse.columns]]).sort_index()
+    else:
+        merged = nse.copy()
+    if merged.index.has_duplicates:
+        raise RuntimeError("Merged NIFTYBEES benchmark contains duplicate sessions")
+    merged.attrs.update(nse_raw.attrs)
+    merged.attrs.update({
+        "source": "NSE NextApi raw NIFTYBEES with official-session TejHQ bhavcopy supplements",
+        "supplemental_source": "TejHQ raw NSE bhavcopy fields",
+        "supplemental_dates": audit["tejhq_only_dates"],
+        "raw_exchange_prices": True,
+        "split_adjusted": False,
+        "source_reconciliation": audit,
+    })
+    return merged, audit
 
 
 def apply_niftybees_split_adjustments(frame: pd.DataFrame) -> pd.DataFrame:

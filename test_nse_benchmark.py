@@ -171,6 +171,45 @@ def test_niftybees_source_reconciliation_accepts_nse_only_bars_but_rejects_tejhq
         reconcile_niftybees_sources(common, tej_extra)
 
 
+
+def test_tejq_only_benchmark_bars_are_supplemented_only_on_official_sessions():
+    from nse_benchmark import merge_niftybees_sources
+    import pytest
+
+    common_index = pd.DatetimeIndex(["2024-01-02", "2024-01-03"])
+    common = pd.DataFrame({
+        "Open": [100.0, 101.0], "High": [102.0, 103.0],
+        "Low": [99.0, 100.0], "Close": [101.0, 102.0], "Volume": [1000, 1100],
+    }, index=common_index)
+    tejhq_extra = pd.concat([
+        common,
+        pd.DataFrame(
+            {"Open": [102.0], "High": [104.0], "Low": [101.0], "Close": [103.0], "Volume": [1200]},
+            index=pd.DatetimeIndex(["2024-01-05"]),
+        ),
+    ])
+    allowed_sessions = common_index.append(pd.DatetimeIndex(["2024-01-05"]))
+
+    merged, audit = merge_niftybees_sources(
+        common, tejhq_extra,
+        allowed_extra_sessions=allowed_sessions,
+        min_common_fraction=0.5,
+    )
+    assert audit["tejhq_only_dates"] == ["2024-01-05"]
+    assert merged.index.tolist() == [
+        pd.Timestamp("2024-01-02"), pd.Timestamp("2024-01-03"), pd.Timestamp("2024-01-05"),
+    ]
+    assert merged.loc["2024-01-05", "Close"] == 103.0
+    assert merged.attrs["supplemental_dates"] == ["2024-01-05"]
+
+    with pytest.raises(RuntimeError, match="outside the official NSE session calendar"):
+        merge_niftybees_sources(
+            common, tejhq_extra,
+            allowed_extra_sessions=common_index,
+            min_common_fraction=0.5,
+        )
+
+
 def test_index_chunk_accepts_nse_flattened_list_and_legacy_envelope():
     from nse_benchmark import _request_index_chunk
     import pytest

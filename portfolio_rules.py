@@ -45,7 +45,7 @@ import pandas as pd
 
 from nse_benchmark import (
     apply_niftybees_split_adjustments, load_niftybees_raw_history,
-    load_nifty50_index_history, reconcile_niftybees_sources,
+    load_nifty50_index_history, merge_niftybees_sources,
 )
 from tejhq_data import load_niftybees_raw_frame
 import pattern_lab as PL
@@ -730,17 +730,31 @@ def main(argv=None):
         cache_dir="data_cache/tejhq_parquet", refresh=a.refresh,
         revision=source_metadata.get("dataset_revision"),
     )
-    benchmark_reconciliation = reconcile_niftybees_sources(nse_benchmark_raw, tej_benchmark_raw)
-    official_bench = apply_niftybees_split_adjustments(nse_benchmark_raw)
-    validate_benchmark(official_bench, "NSE NextApi raw NIFTYBEES, split-adjusted")
+    official_sessions = normalise_session_index(index.index)
+    calendar_start, calendar_end = official_sessions.min(), official_sessions.max()
+    nse_benchmark_raw.index = normalise_session_index(nse_benchmark_raw.index)
+    tej_benchmark_raw.index = normalise_session_index(tej_benchmark_raw.index)
+    nse_benchmark_raw = nse_benchmark_raw.loc[
+        (nse_benchmark_raw.index >= calendar_start)
+        & (nse_benchmark_raw.index <= calendar_end)
+    ].copy()
+    tej_benchmark_raw = tej_benchmark_raw.loc[
+        (tej_benchmark_raw.index >= calendar_start)
+        & (tej_benchmark_raw.index <= calendar_end)
+    ].copy()
+    benchmark_raw, benchmark_reconciliation = merge_niftybees_sources(
+        nse_benchmark_raw, tej_benchmark_raw,
+        allowed_extra_sessions=official_sessions,
+    )
+    official_bench = apply_niftybees_split_adjustments(benchmark_raw)
+    validate_benchmark(official_bench, "NSE/TejHQ raw NIFTYBEES, split-adjusted")
 
     # Official NSE NIFTY 50 index dates define the exchange-session calendar.
     # NIFTYBEES is the live regime instrument; it may have no trade on an official
     # session, in which case only its last observed regime state is carried.
     bench = official_bench[["Open", "Close"]].copy()
-    official_sessions = normalise_session_index(index.index)
     benchmark_sessions = normalise_session_index(bench.index)
-    index_sessions = normalise_session_index(index.index)
+    index_sessions = official_sessions
     session_audit = build_session_calendar_audit(
         official_sessions, benchmark_sessions, index_sessions, frames
     )
@@ -771,7 +785,7 @@ def main(argv=None):
     index = index.reindex(official_sessions)
     corr = cross_check_benchmark(bench, index)
     source_metadata.update({
-        "benchmark_source": "NSE NextApi raw NIFTYBEES OHLC, split-adjusted; cross-checked against TejHQ raw bars on common dates",
+        "benchmark_source": "NSE NextApi raw NIFTYBEES OHLC, supplemented only by TejHQ raw NSE bhavcopy bars on official NIFTY 50 sessions absent from NextApi; common dates reconciled",
         "benchmark_adjustment_scope": "10:1 face-value split only; no dividend adjustment applied to the ETF",
         **{f"benchmark_{key}": value for key, value in benchmark_reconciliation.items()},
         "session_calendar_source": index.attrs.get("source", "NSE historicalOR/indicesHistory"),
@@ -817,7 +831,7 @@ def main(argv=None):
         f"Stock universe: TejHQ adjusted NSE OHLC (dataset revision {source_metadata.get('dataset_revision', 'unknown')}), "
         "back-adjusted for splits, bonuses and dividends; raw exchange volume/turnover retained; "
         "mergers/demergers/rights/buybacks are not scaled. "
-        "Benchmark: NSE NextApi raw NIFTYBEES OHLC, split-adjusted for the 10:1 face-value split "
+        "Benchmark: NSE NextApi raw NIFTYBEES OHLC, supplemented only with TejHQ raw NSE bhavcopy bars on official NIFTY 50 sessions absent from NextApi, split-adjusted for the 10:1 face-value split "
         "effective 2019-12-19 and cross-checked against TejHQ raw bars on common dates; the ETF is not dividend-adjusted. "
         "Session calendar: official NSE NIFTY 50 index history (historicalOR/indicesHistory), independent "
         "of ETF trade dates. Missing NIFTYBEES bars are never price-filled; only the last observed ETF "

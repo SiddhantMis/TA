@@ -274,7 +274,25 @@ def load_frames(tickers, years, cache, refresh, min_bars=401, return_diagnostics
                 )
                 if cache_matches:
                     with open(cache, "rb") as fh:
-                        frames = pickle.load(fh)
+                        cached_frames = pickle.load(fh)
+                    frames = {}
+                    for ticker in requested:
+                        frame = cached_frames.get(ticker)
+                        if frame is None:
+                            continue
+                        frame_index = pd.DatetimeIndex(pd.to_datetime(frame.index))
+                        if frame_index.tz is not None:
+                            frame_index = frame_index.tz_localize(None)
+                        frame_index = frame_index.normalize()
+                        if frame_index.has_duplicates:
+                            raise ValueError(f"cached TejHQ frame has duplicate sessions: {ticker}")
+                        keep = (frame_index >= start) & (frame_index <= end)
+                        clipped = frame.loc[keep].copy()
+                        clipped.index = frame_index[keep]
+                        clipped.attrs.update(frame.attrs)
+                        if not clipped.empty:
+                            frames[ticker] = clipped.sort_index()
+
                     diagnostics = meta.get("diagnostics", {})
                     for ticker in requested:
                         if ticker in frames:
@@ -283,26 +301,40 @@ def load_frames(tickers, years, cache, refresh, min_bars=401, return_diagnostics
                                 "status": "loaded" if bars >= min_bars else "insufficient_history",
                                 "bars": bars,
                                 "detail": diagnostics.get(ticker, {}).get(
-                                    "detail", "TejHQ adjusted frame cache"
+                                    "detail", "TejHQ adjusted frame cache clipped to requested window"
                                 ),
                             }
                         else:
                             diagnostics[ticker] = {
                                 "status": "no_history", "bars": 0,
                                 "detail": diagnostics.get(ticker, {}).get(
-                                    "detail", "No TejHQ adjusted rows in cached date range"
+                                    "detail", "No TejHQ adjusted rows in requested cached window"
                                 ),
                             }
-                    diagnostics["_source"] = meta.get("source", {})
+
+                    source_meta = dict(meta.get("source", {}))
+                    source_meta["cached_start_date"] = source_meta.get("start_date", meta.get("start_date"))
+                    source_meta["cached_end_date"] = source_meta.get("end_date", meta.get("end_date"))
+                    source_meta["start_date"] = start.date().isoformat()
+                    source_meta["end_date"] = end.date().isoformat()
+                    source_meta["cache_reused"] = True
+                    source_meta["price_rows_loaded"] = int(sum(len(frame) for frame in frames.values()))
+                    diagnostics["_source"] = source_meta
+
                     symbol_audit = meta.get("symbol_audit", [])
                     for row in symbol_audit:
-                        bars = int(row.get("bars", 0))
+                        ticker = f"{str(row.get('symbol', '')).strip().upper()}.NS"
+                        frame = frames.get(ticker)
+                        bars = int(len(frame)) if frame is not None else 0
+                        row["bars"] = bars
                         row["status"] = (
                             "loaded" if bars >= min_bars else
                             "insufficient_history" if bars else "no_history"
                         )
+                        row["first_date"] = frame.index.min().date().isoformat() if bars else ""
+                        row["last_date"] = frame.index.max().date().isoformat() if bars else ""
                     diagnostics["_symbol_audit"] = symbol_audit
-                    print(f"[cache] {len(frames)} pinned TejHQ adjusted frames from {cache}", file=sys.stderr)
+                    print(f"[cache] {len(frames)} pinned TejHQ adjusted frames clipped to {start.date()}..{end.date()} from {cache}", file=sys.stderr)
             except (OSError, ValueError, KeyError, TypeError):
                 frames = None
                 diagnostics = {}
