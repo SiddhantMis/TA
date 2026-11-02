@@ -30,6 +30,8 @@ Biases that flatter results: today's constituents (survivorship), daily bars, fl
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import os
 import pickle
 import sys
@@ -230,36 +232,92 @@ def run_lab(frames: dict, oos_frac=0.35, cost_pct=0.30, liquid_top=200):
 
 
 # ----------------------------------------------------------------------- main --
-def load_frames(tickers, years, cache, refresh, min_bars=401, return_diagnostics=False, source="yahoo"):
+def load_frames(tickers, years, cache, refresh, min_bars=401, return_diagnostics=False,
+                source="yahoo", membership_df=None):
     if source not in {"yahoo", "tejhq"}:
         raise ValueError(f"unknown price source: {source}")
     if source == "tejhq":
-        from tejhq_data import load_adjusted_frames
+        from tejhq_data import get_dataset_revision, load_adjusted_frames
 
-        if cache and os.path.exists(cache) and not refresh:
-            with open(cache, "rb") as fh:
-                frames = pickle.load(fh)
-            diagnostics = {
-                t: (
-                    {"status": "cached", "bars": int(len(frames[t])), "detail": "TejHQ adjusted frame cache"}
-                    if t in frames else
-                    {"status": "no_history", "bars": 0, "detail": "No TejHQ adjusted NSE rows in cached date range"}
+        end = pd.Timestamp.now().normalize()
+        start = end - pd.DateOffset(years=years)
+        requested = sorted(set(tickers))
+        membership_hash = (
+            hashlib.sha256(
+                pd.util.hash_pandas_object(membership_df, index=True).values.tobytes()
+            ).hexdigest()
+            if membership_df is not None else ""
+        )
+        revision = get_dataset_revision()
+        meta_path = f"{cache}.meta.json" if cache else None
+        frames = None
+        diagnostics = {}
+        if cache and os.path.exists(cache) and meta_path and os.path.exists(meta_path) and not refresh:
+            try:
+                with open(meta_path, "r", encoding="utf-8") as fh:
+                    meta = json.load(fh)
+                cache_matches = (
+                    meta.get("requested_tickers") == requested
+                    and meta.get("membership_hash", "") == membership_hash
+                    and meta.get("years") == int(years)
+                    and meta.get("source", {}).get("dataset_revision") == revision
+                    and pd.Timestamp(meta.get("start_date")) <= start
+                    and pd.Timestamp(meta.get("end_date")) >= end
                 )
-                for t in tickers
-            }
-            print(f"[cache] {len(frames)} TejHQ adjusted frames from {cache}", file=sys.stderr)
-        else:
-            end = pd.Timestamp.now().normalize()
-            start = end - pd.DateOffset(years=years)
+                if cache_matches:
+                    with open(cache, "rb") as fh:
+                        frames = pickle.load(fh)
+                    diagnostics = meta.get("diagnostics", {})
+                    for ticker in requested:
+                        if ticker in frames:
+                            bars = int(len(frames[ticker]))
+                            diagnostics[ticker] = {
+                                "status": "loaded" if bars >= min_bars else "insufficient_history",
+                                "bars": bars,
+                                "detail": diagnostics.get(ticker, {}).get(
+                                    "detail", "TejHQ adjusted frame cache"
+                                ),
+                            }
+                        else:
+                            diagnostics[ticker] = {
+                                "status": "no_history", "bars": 0,
+                                "detail": diagnostics.get(ticker, {}).get(
+                                    "detail", "No TejHQ adjusted rows in cached date range"
+                                ),
+                            }
+                    diagnostics["_source"] = meta.get("source", {})
+                    diagnostics["_symbol_audit"] = meta.get("symbol_audit", [])
+                    print(f"[cache] {len(frames)} pinned TejHQ adjusted frames from {cache}", file=sys.stderr)
+            except (OSError, ValueError, KeyError, TypeError):
+                frames = None
+                diagnostics = {}
+        if frames is None:
             frames, diagnostics = load_adjusted_frames(
-                tickers, start.date().isoformat(), end.date().isoformat(),
+                requested, start.date().isoformat(), end.date().isoformat(),
                 cache_dir=os.path.join(os.path.dirname(cache) or "data_cache", "tejhq_parquet"),
-                refresh=refresh,
+                refresh=refresh, membership_df=membership_df,
+                min_bars=min_bars, revision=revision,
             )
+            source_meta = diagnostics.pop("_source", {})
+            symbol_audit = diagnostics.pop("_symbol_audit", [])
             if cache:
                 os.makedirs(os.path.dirname(cache) or ".", exist_ok=True)
                 with open(cache, "wb") as fh:
                     pickle.dump(frames, fh)
+                meta = {
+                    "requested_tickers": requested,
+                    "membership_hash": membership_hash,
+                    "years": int(years),
+                    "start_date": start.date().isoformat(),
+                    "end_date": end.date().isoformat(),
+                    "source": source_meta,
+                    "diagnostics": diagnostics,
+                    "symbol_audit": symbol_audit,
+                }
+                with open(meta_path, "w", encoding="utf-8") as fh:
+                    json.dump(meta, fh, indent=2, sort_keys=True)
+            diagnostics["_source"] = source_meta
+            diagnostics["_symbol_audit"] = symbol_audit
         return (frames, diagnostics) if return_diagnostics else frames
 
     if cache and os.path.exists(cache) and not refresh:
@@ -275,7 +333,6 @@ def load_frames(tickers, years, cache, refresh, min_bars=401, return_diagnostics
             pickle.dump(store, fh)
     frames = {t: store[t] for t in tickers if t in store}
     return (frames, diagnostics) if return_diagnostics else frames
-
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
