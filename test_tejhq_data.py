@@ -107,7 +107,7 @@ class TejHQAdjustedLoaderTests(unittest.TestCase):
             self.assertEqual(len(frames["NEW.NS"]), 4)
             self.assertEqual(frames["NEW.NS"].index.min(), pd.Timestamp("2026-01-02"))
             self.assertEqual(diagnostics["NEW.NS"]["status"], "loaded")
-            self.assertIn("OLD,NEW", diagnostics["NEW.NS"]["detail"])
+            self.assertIn("aliases=['NEW', 'OLD']", diagnostics["NEW.NS"]["detail"])
 
     def test_same_ticker_reuse_after_long_gap_is_a_separate_chain(self):
         history = pd.DataFrame([
