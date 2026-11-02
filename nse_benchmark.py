@@ -407,6 +407,41 @@ def load_nifty50_index_history(
     return frame
 
 
+def build_nse_session_calendar(
+    start_date: date, end_date: date, *,
+    index_sessions: pd.DatetimeIndex | None = None,
+) -> pd.DatetimeIndex:
+    """Use the pinned NSE holiday calendar plus observed NIFTY 50 special sessions."""
+    if start_date > end_date:
+        raise ValueError("start_date must not be after end_date")
+    try:
+        import pandas_market_calendars as mcal
+    except ImportError as exc:
+        raise RuntimeError(
+            "pandas_market_calendars==5.6.0 is required for NSE session validation"
+        ) from exc
+    calendar = mcal.get_calendar("NSE")
+    schedule = calendar.schedule(
+        start_date=pd.Timestamp(start_date).date().isoformat(),
+        end_date=pd.Timestamp(end_date).date().isoformat(),
+    )
+    sessions = pd.DatetimeIndex(pd.to_datetime(schedule.index))
+    if sessions.tz is not None:
+        sessions = sessions.tz_localize(None)
+    sessions = sessions.normalize()
+    if index_sessions is not None:
+        observed = pd.DatetimeIndex(pd.to_datetime(index_sessions))
+        if observed.tz is not None:
+            observed = observed.tz_localize(None)
+        sessions = sessions.union(observed.normalize())
+    sessions = sessions.sort_values()
+    if sessions.has_duplicates:
+        raise RuntimeError("NSE session calendar contains duplicate dates")
+    if sessions.empty:
+        raise RuntimeError(f"NSE session calendar is empty for {start_date} through {end_date}")
+    return sessions
+
+
 def _normalise_niftybees_frame(frame: pd.DataFrame, label: str) -> pd.DataFrame:
     if frame is None or frame.empty:
         raise RuntimeError(f"{label} NIFTYBEES history is empty")

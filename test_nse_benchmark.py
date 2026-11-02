@@ -210,6 +210,30 @@ def test_tejhq_only_benchmark_bars_are_supplemented_only_on_official_sessions():
         )
 
 
+
+def test_nse_session_calendar_uses_holiday_schedule_and_observed_special_sessions():
+    from datetime import date
+    from nse_benchmark import build_nse_session_calendar
+
+    may = build_nse_session_calendar(date(2020, 5, 4), date(2020, 5, 8))
+    assert pd.Timestamp("2020-05-05") in may
+    assert pd.Timestamp("2020-05-06") in may
+    assert pd.Timestamp("2020-05-07") in may
+    assert pd.Timestamp("2020-05-08") in may
+
+    holiday = build_nse_session_calendar(date(2020, 5, 22), date(2020, 5, 26))
+    assert pd.Timestamp("2020-05-25") not in holiday
+
+    august = build_nse_session_calendar(date(2020, 8, 12), date(2020, 8, 14))
+    assert pd.Timestamp("2020-08-13") in august
+
+    special = build_nse_session_calendar(
+        date(2020, 2, 1), date(2020, 2, 3),
+        index_sessions=pd.DatetimeIndex(["2020-02-01"]),
+    )
+    assert pd.Timestamp("2020-02-01") in special
+
+
 def test_index_chunk_accepts_nse_flattened_list_and_legacy_envelope():
     from nse_benchmark import _request_index_chunk
     import pytest

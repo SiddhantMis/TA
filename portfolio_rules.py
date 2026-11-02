@@ -44,8 +44,9 @@ import numpy as np
 import pandas as pd
 
 from nse_benchmark import (
-    apply_niftybees_split_adjustments, load_niftybees_raw_history,
-    load_nifty50_index_history, merge_niftybees_sources,
+    apply_niftybees_split_adjustments, build_nse_session_calendar,
+    load_niftybees_raw_history, load_nifty50_index_history,
+    merge_niftybees_sources,
 )
 from tejhq_data import load_niftybees_raw_frame
 import pattern_lab as PL
@@ -730,7 +731,14 @@ def main(argv=None):
         cache_dir="data_cache/tejhq_parquet", refresh=a.refresh,
         revision=source_metadata.get("dataset_revision"),
     )
-    official_sessions = normalise_session_index(index.index)
+    index_sessions = normalise_session_index(index.index)
+    official_sessions = build_nse_session_calendar(
+        start_date, end_date, index_sessions=index_sessions,
+    )
+    official_sessions = official_sessions[
+        (official_sessions >= index_sessions.min())
+        & (official_sessions <= index_sessions.max())
+    ]
     calendar_start, calendar_end = official_sessions.min(), official_sessions.max()
     nse_benchmark_raw.index = normalise_session_index(nse_benchmark_raw.index)
     tej_benchmark_raw.index = normalise_session_index(tej_benchmark_raw.index)
@@ -754,7 +762,6 @@ def main(argv=None):
     # NIFTYBEES is the live regime instrument; a missing bar is never synthesized.
     bench = official_bench[["Open", "Close"]].copy()
     benchmark_sessions = normalise_session_index(bench.index)
-    index_sessions = official_sessions
     session_audit = build_session_calendar_audit(
         official_sessions, benchmark_sessions, index_sessions, frames
     )
@@ -763,6 +770,10 @@ def main(argv=None):
     extra_benchmark = benchmark_sessions.difference(official_sessions)
     missing_index = official_sessions.difference(index_sessions)
     extra_index = index_sessions.difference(official_sessions)
+    index_coverage = (
+        len(index_sessions.intersection(official_sessions)) / len(official_sessions)
+        if len(official_sessions) else 0.0
+    )
     extra_stock = session_audit.loc[session_audit["extra_stock_session"], "date"].tolist()
     missing_benchmark_mask = pd.Series(official_sessions.isin(missing_benchmark), index=official_sessions)
     max_benchmark_gap = 0
@@ -770,12 +781,17 @@ def main(argv=None):
     for missing in missing_benchmark_mask.to_numpy(bool):
         current_gap = current_gap + 1 if missing else 0
         max_benchmark_gap = max(max_benchmark_gap, current_gap)
-    if extra_benchmark or missing_index or extra_index or extra_stock or max_benchmark_gap > 1:
+    if (
+        extra_benchmark or extra_index or extra_stock or max_benchmark_gap > 1
+        or index_coverage < 0.99
+    ):
         sys.exit(
             "NSE session alignment failed: "
             f"missing benchmark={len(missing_benchmark)} (max consecutive {max_benchmark_gap}), "
-            f"extra benchmark={len(extra_benchmark)}, missing NIFTY50 index={len(missing_index)}, "
-            f"extra NIFTY50 index={len(extra_index)}, off-calendar stock dates={len(extra_stock)}; "
+            f"extra benchmark={len(extra_benchmark)}, missing NIFTY50 index={len(missing_index)} "
+            f"({index_coverage:.3%} index coverage), extra NIFTY50 index={len(extra_index)}, "
+            f"off-calendar stock dates={len(extra_stock)}; "
+            f"first missing index dates={missing_index.strftime('%Y-%m-%d').tolist()[:10]}, "
             f"first missing benchmark dates={missing_benchmark.strftime('%Y-%m-%d').tolist()[:10]}, "
             f"first stock dates={extra_stock[:10]}"
         )
@@ -785,13 +801,16 @@ def main(argv=None):
     index = index.reindex(official_sessions)
     corr = cross_check_benchmark(bench, index)
     source_metadata.update({
-        "benchmark_source": "NSE NextApi raw NIFTYBEES OHLC, supplemented only by TejHQ raw NSE bhavcopy bars on official NIFTY 50 sessions absent from NextApi; common dates reconciled",
+        "benchmark_source": "NSE NextApi raw NIFTYBEES OHLC, supplemented only by TejHQ raw NSE bhavcopy bars on validated NSE-calendar sessions absent from NextApi; common dates reconciled",
         "benchmark_adjustment_scope": "10:1 face-value split only; no dividend adjustment applied to the ETF",
         **{f"benchmark_{key}": value for key, value in benchmark_reconciliation.items()},
-        "session_calendar_source": index.attrs.get("source", "NSE historicalOR/indicesHistory"),
-        "session_calendar_start": start_date.isoformat(),
-        "session_calendar_end": end_date.isoformat(),
-        "session_calendar_bars": int(len(index)),
+        "session_calendar_source": "pandas_market_calendars==5.6.0 NSE holiday calendar + observed NSE NIFTY 50 index sessions",
+        "session_calendar_start": calendar_start.date().isoformat(),
+        "session_calendar_end": calendar_end.date().isoformat(),
+        "session_calendar_bars": int(len(official_sessions)),
+        "index_missing_official_sessions": int(len(missing_index)),
+        "index_missing_official_dates": missing_index.strftime("%Y-%m-%d").tolist()[:20],
+        "index_session_coverage_pct": float(index_coverage * 100),
         "benchmark_missing_official_sessions": int(len(missing_benchmark)),
         "benchmark_max_consecutive_missing_sessions": int(max_benchmark_gap),
         "zero_stock_bar_sessions": int(session_audit["zero_stock_bar_session"].sum()),
@@ -831,10 +850,10 @@ def main(argv=None):
         f"Stock universe: TejHQ adjusted NSE OHLC (dataset revision {source_metadata.get('dataset_revision', 'unknown')}), "
         "back-adjusted for splits, bonuses and dividends; raw exchange volume/turnover retained; "
         "mergers/demergers/rights/buybacks are not scaled. "
-        "Benchmark: NSE NextApi raw NIFTYBEES OHLC, supplemented only with TejHQ raw NSE bhavcopy bars on official NIFTY 50 sessions absent from NextApi, split-adjusted for the 10:1 face-value split "
+        "Benchmark: NSE NextApi raw NIFTYBEES OHLC, supplemented only with TejHQ raw NSE bhavcopy bars on validated NSE-calendar sessions absent from NextApi, split-adjusted for the 10:1 face-value split "
         "effective 2019-12-19 and cross-checked against TejHQ raw bars on common dates; the ETF is not dividend-adjusted. "
-        "Session calendar: official NSE NIFTY 50 index history (historicalOR/indicesHistory), independent "
-        "of ETF trade dates. Missing NIFTYBEES bars are never price-filled; only the last observed ETF "
+        "Session calendar: pandas_market_calendars==5.6.0 NSE holiday schedule plus observed official NIFTY 50 index sessions; "
+        "the index feed is checked for coverage and missing index rows are not synthesized. Missing NIFTYBEES bars are never price-filled; only the last observed ETF "
         "regime state and mark are carried across at most one isolated official session. Missing stock "
         "opens, eligibility and returns are never forward-filled; close carry-forward is used only to "
         "mark existing holdings to market.\n"
