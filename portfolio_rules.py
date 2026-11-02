@@ -262,10 +262,69 @@ def compare_stop(base, stop):
     return "STOP HELPS" if not why else "NO: " + "; ".join(why)
 
 
+def build_missing_history_audit(calendar, frames, loader_diagnostics, start, end):
+    """Audit absent price histories, distinguishing in-window members from older constituents."""
+    cal = validate_membership_calendar(calendar)
+    loaded = {normalise_symbol(t) for t in frames}
+    start_ts, end_ts = pd.Timestamp(start), pd.Timestamp(end)
+    missing = sorted(set(cal["symbol"]) - loaded)
+    rows = []
+    for symbol in missing:
+        group = cal.loc[cal["symbol"].eq(symbol)]
+        overlaps = group["valid_from"].le(end_ts) & (
+            group["valid_to"].isna() | group["valid_to"].gt(start_ts)
+        )
+        diag = loader_diagnostics.get(f"{symbol}.NS", {})
+        last_end = "OPEN" if group["valid_to"].isna().any() else group["valid_to"].max().date().isoformat()
+        rows.append({
+            "symbol": symbol,
+            "overlaps_test_window": bool(overlaps.any()),
+            "membership_first": group["valid_from"].min().date().isoformat(),
+            "membership_last": last_end,
+            "membership_intervals": int(len(group)),
+            "membership_sources": ",".join(sorted(group["source"].dropna().astype(str).unique())),
+            "load_status": diag.get("status", "not_attempted"),
+            "history_bars": diag.get("bars", 0),
+            "load_detail": str(diag.get("detail", ""))[:400],
+        })
+    return pd.DataFrame(rows, columns=[
+        "symbol", "overlaps_test_window", "membership_first", "membership_last",
+        "membership_intervals", "membership_sources", "load_status",
+        "history_bars", "load_detail",
+    ])
+
+
+def build_daily_coverage_audit(prepared, frames, start_pos=START):
+    """Return one row per tested session, including all-series and PIT-member bar counts."""
+    idx = pd.DatetimeIndex(prepared["idx"])
+    if idx.tz is not None:
+        idx = idx.tz_localize(None)
+    all_series_bars = np.zeros(len(idx), dtype=np.int32)
+    for frame in frames.values():
+        frame_idx = pd.DatetimeIndex(frame.index)
+        if frame_idx.tz is not None:
+            frame_idx = frame_idx.tz_localize(None)
+        positions = idx.get_indexer(frame_idx.unique())
+        positions = positions[positions >= 0]
+        if len(positions):
+            all_series_bars += np.bincount(positions, minlength=len(idx)).astype(np.int32)
+    daily = pd.DataFrame({
+        "date": idx.strftime("%Y-%m-%d"),
+        "expected_active_members": prepared["pit_expected_count"],
+        "active_member_bars": prepared["pit_available_count"],
+        "active_member_coverage_pct": prepared["pit_coverage_pct"],
+        "all_loaded_symbol_bars": all_series_bars,
+        "loaded_price_series": int(len(frames)),
+    })
+    return daily.iloc[start_pos:].reset_index(drop=True)
+
+
 def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30,
               index_df: pd.DataFrame | None = None,
               membership_df: pd.DataFrame | None = None,
-              membership_path: str = DEFAULT_MEMBERSHIP_FILE):
+              membership_path: str = DEFAULT_MEMBERSHIP_FILE,
+              loader_diagnostics: dict | None = None,
+              audit_outputs: dict | None = None):
     quality = validate_benchmark(bench_df, "NSE split-adjusted NIFTYBEES")
     index_quality = (
         validate_benchmark(index_df, "NIFTY 50 price index")
@@ -311,6 +370,24 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     calendar_symbols = set(calendar["symbol"])
     loaded_symbols = {normalise_symbol(t) for t in frames}
     missing_symbols = sorted(calendar_symbols - loaded_symbols)
+    test_window_symbols = set(calendar.loc[
+        calendar["valid_from"].le(idx[-1]) &
+        (calendar["valid_to"].isna() | calendar["valid_to"].gt(idx[START])),
+        "symbol",
+    ])
+    price_history_audit = build_missing_history_audit(
+        calendar, frames, loader_diagnostics or {}, idx[START], idx[-1]
+    )
+    daily_coverage_audit = build_daily_coverage_audit(P, frames)
+    missing_test_window = price_history_audit.loc[
+        price_history_audit["overlaps_test_window"]
+    ]
+    missing_outside_window = price_history_audit.loc[
+        ~price_history_audit["overlaps_test_window"]
+    ]
+    if audit_outputs is not None:
+        audit_outputs["pit_price_history_audit"] = price_history_audit
+        audit_outputs["pit_daily_coverage_audit"] = daily_coverage_audit
     coverage = P["pit_coverage_pct"][START:]
     coverage = coverage[np.isfinite(coverage)]
     active_counts = P["pit_expected_count"][START:]
@@ -319,12 +396,32 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
                           float(np.median(coverage)), float(np.mean(coverage < 90) * 100))
     else:
         coverage_stats = (float("nan"),) * 4
+    zero_rows = daily_coverage_audit.loc[
+        daily_coverage_audit["active_member_coverage_pct"].eq(0)
+    ]
+    worst_rows = daily_coverage_audit.dropna(
+        subset=["active_member_coverage_pct"]
+    ).nsmallest(8, "active_member_coverage_pct")
+    worst_detail = "; ".join(
+        f"{r.date}: {int(r.active_member_bars)}/{int(r.expected_active_members)} "
+        f"({r.active_member_coverage_pct:.1f}%), all-symbol bars={int(r.all_loaded_symbol_bars)}"
+        for r in worst_rows.itertuples(index=False)
+    )
+    load_status_counts = missing_test_window["load_status"].value_counts().to_dict()
+    missing_active_sample = [
+        f"{r.symbol}:{r.load_status}({int(r.history_bars)} bars)"
+        for r in missing_test_window.head(20).itertuples(index=False)
+    ]
     out = [f"Portfolio rules: {len(frames)} loaded price histories for PIT Nifty 500, daily engine {d0} to {d1}, IS/OOS split {ds}, cost {cost_pct}% round trip, cash 0%",
            f"PIT calendar: {len(calendar)} intervals / {len(calendar_symbols)} symbols; source coverage through {MEMBERSHIP_COVERAGE_THROUGH.date()}; source categories {source_counts}",
            f"PIT active-member count during test: {int(np.min(active_counts))}–{int(np.max(active_counts))} (nominal index size {EXPECTED_INDEX_SIZE}; source documents historical count drift and a 499-name 2026 snapshot)",
-           f"Price-history coverage: {len(calendar_symbols) - len(missing_symbols)}/{len(calendar_symbols)} distinct calendar symbols loaded; {len(missing_symbols)} missing/unusable (first 20: {missing_symbols[:20]})",
+           f"Price-history coverage across full calendar: {len(calendar_symbols) - len(missing_symbols)}/{len(calendar_symbols)} symbols loaded; {len(missing_symbols)} missing/unusable",
+           f"Missing histories overlapping test window: {len(missing_test_window)}/{len(test_window_symbols)} active-window symbols; {len(missing_outside_window)} additional missing symbols have no overlap with this backtest window",
+           f"Active-window missing load outcomes: {load_status_counts}; first 20: {missing_active_sample}",
            f"Daily active-member bars covered: min {coverage_stats[0]:.1f}%, p10 {coverage_stats[1]:.1f}%, median {coverage_stats[2]:.1f}%; {coverage_stats[3]:.1f}% of sessions below 90% coverage",
-           "WARNING: missing/delisted-symbol history and source calendar gaps can still bias results; see universe/NIFTY500_PIT_DATA.md.",
+           f"Zero-coverage sessions: {len(zero_rows)}; dates: {zero_rows['date'].tolist()[:20]}",
+           f"Worst coverage sessions (date: active bars/expected, coverage, all loaded-symbol bars): {worst_detail}",
+           "WARNING: missing/delisted-symbol history and source calendar gaps can still bias results; see universe/NIFTY500_PIT_DATA.md and the generated PIT audit CSVs.",
            f"Benchmark: official NSE NIFTYBEES traded closes, split-adjusted to current Rs 1 face-value units; {quality['bars']} bars; max abs daily move {quality['max_abs_daily_return_pct']:.2f}%",
            *([f"Regime diagnostic: ^NSEI price index quality gate passed; {index_quality['bars']} bars; max abs daily move {index_quality['max_abs_daily_return_pct']:.2f}%"] if index_quality else []),
            "NIFTY50_price_index is a PRICE index (not a total-return index).",
@@ -408,10 +505,18 @@ def main(argv=None):
     if index is None:
         sys.exit("could not fetch ^NSEI")
     index = index.loc[index.index <= MEMBERSHIP_COVERAGE_THROUGH]
-    frames = PL.load_frames(tickers, a.years, a.cache, a.refresh, min_bars=253)
+    frames, loader_diagnostics = PL.load_frames(
+        tickers, a.years, a.cache, a.refresh, min_bars=253, return_diagnostics=True
+    )
     corr = cross_check_benchmark(bench, index)
-    _, text = run_rules(frames, bench, a.oos_frac, a.cost_pct, index_df=index,
-                        membership_df=membership)
+    audit_outputs = {}
+    _, text = run_rules(
+        frames, bench, a.oos_frac, a.cost_pct, index_df=index,
+        membership_df=membership, loader_diagnostics=loader_diagnostics,
+        audit_outputs=audit_outputs,
+    )
+    for audit_name, audit_frame in audit_outputs.items():
+        audit_frame.to_csv(os.path.join(a.outdir, f"{audit_name}.csv"), index=False)
     actions = bench.attrs.get("corporate_actions") or []
     text = (f"NSE corporate-action adjustments: {actions or 'none'}; "
             f"daily-return correlation NSE NIFTYBEES vs ^NSEI {corr:.3f}\n") + text
