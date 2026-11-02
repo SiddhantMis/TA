@@ -9,7 +9,13 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from tejhq_data import build_symbol_chains, load_adjusted_frames, map_symbol_chains
+from tejhq_data import (
+    REPO_ID,
+    build_symbol_chains,
+    get_dataset_revision,
+    load_adjusted_frames,
+    map_symbol_chains,
+)
 
 
 class TejHQAdjustedLoaderTests(unittest.TestCase):
@@ -122,6 +128,12 @@ class TejHQAdjustedLoaderTests(unittest.TestCase):
         }])
         mapping = map_symbol_chains(["REUSED"], chained, membership)
         self.assertEqual(mapping["REUSED"], {chained.iloc[0]["chain_id"]})
+
+    @patch("huggingface_hub.HfApi")
+    def test_dataset_revision_uses_dataset_specific_info_method(self, api):
+        api.return_value.dataset_info.return_value.sha = "a" * 40
+        self.assertEqual(get_dataset_revision(), "a" * 40)
+        api.return_value.dataset_info.assert_called_once_with(REPO_ID)
 
     def test_same_symbol_new_isin_within_30_days_is_one_chain(self):
         history = pd.DataFrame([

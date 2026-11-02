@@ -27,7 +27,7 @@ def get_dataset_revision() -> str:
     """Return the immutable Hugging Face dataset commit used for a reproducible run."""
     from huggingface_hub import HfApi
 
-    revision = HfApi().dataset_info(REPO_ID, repo_type="dataset").sha
+    revision = HfApi().dataset_info(REPO_ID).sha
     if not revision:
         raise RuntimeError("Hugging Face did not return a TejHQ dataset revision")
     return str(revision)
