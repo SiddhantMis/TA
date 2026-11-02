@@ -121,8 +121,18 @@ def parse_nse_rows(rows: list[dict[str, Any]], start: date, end: date) -> pd.Dat
     """Convert NSE historical trade rows to the backtest OHLCV shape."""
     records = []
     for row in rows:
-        symbol = str(row.get("CH_SYMBOL", row.get("symbol", "NIFTYBEES"))).upper()
-        series = str(row.get("CH_SERIES", row.get("series", "EQ"))).upper()
+        # NSE can include non-trade metadata rows in the response envelope.
+        # Ignore those only when they carry neither a symbol nor any trade date.
+        has_trade_date = any(row.get(key) for key in ("CH_TIMESTAMP", "mTIMESTAMP", "Date"))
+        has_symbol = any(row.get(key) for key in ("CH_SYMBOL", "symbol"))
+        if not has_trade_date and not has_symbol:
+            continue
+        symbol_value = row.get("CH_SYMBOL", row.get("symbol"))
+        if symbol_value is None:
+            continue
+        series_value = row.get("CH_SERIES", row.get("series", "EQ"))
+        symbol = str(symbol_value).upper()
+        series = str(series_value).upper()
         if symbol != "NIFTYBEES" or series != "EQ":
             continue
         day = _row_date(row)

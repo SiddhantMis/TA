@@ -36,6 +36,16 @@ def test_nse_parser_reads_official_historical_trade_row_schema():
     assert frame.loc["2019-12-19", "Close"] == 130.20
 
 
+
+def test_nse_parser_ignores_metadata_rows_without_trading_fields():
+    rows = [
+        {"meta": "response metadata"},
+        _row("2019-12-19", 129.20, 130.33, 129.05, 130.20, 271593),
+    ]
+    frame = parse_nse_rows(rows, date(2019, 12, 19), date(2019, 12, 19))
+    assert len(frame) == 1
+    assert frame.iloc[0]["Close"] == 130.20
+
 def test_split_adjustment_converts_only_pre_ex_date_prices_and_volume():
     rows = [
         _row("2019-12-18", 1289.95, 1294.32, 1282.10, 1292.54, 21946),
