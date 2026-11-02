@@ -11,6 +11,7 @@ on:
           - tests
           - paper_audit
           - liquid500_backtest
+          - pit_portfolio_rules
       years:
         description: Backtest lookback in years (used for liquid500_backtest)
         required: false
@@ -64,7 +65,7 @@ jobs:
             esac
           fi
           case "$task" in
-            tests|paper_audit|liquid500_backtest) ;;
+            tests|paper_audit|liquid500_backtest|pit_portfolio_rules) ;;
             *) echo "Unsupported task: $task"; exit 1 ;;
           esac
           if ! [[ "$REQUEST_YEARS" =~ ^[1-9][0-9]?$ ]]; then
@@ -87,13 +88,14 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run deterministic regression tests
-        if: steps.request.outputs.task == 'tests' || steps.request.outputs.task == 'paper_audit' || steps.request.outputs.task == 'liquid500_backtest'
+        if: steps.request.outputs.task == 'tests' || steps.request.outputs.task == 'paper_audit' || steps.request.outputs.task == 'liquid500_backtest' || steps.request.outputs.task == 'pit_portfolio_rules'
         run: |
           python test_patterns.py
           if [ -f test_momentum_portfolio.py ]; then
             python test_momentum_portfolio.py
           fi
-          python -m py_compile analyzer.py leaders.py portfolio.py backtest.py main.py
+          python test_pit_membership.py
+          python -m py_compile analyzer.py leaders.py portfolio.py backtest.py main.py nifty500_pit.py portfolio_rules.py
 
       - name: Audit published paper scorecard
         if: steps.request.outputs.task == 'paper_audit'
@@ -114,6 +116,19 @@ jobs:
             for report in results/hosted/portfolio_report*.md; do
               [ -f "$report" ] && cat "$report"
             done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run PIT Nifty 500 momentum backtest
+        if: steps.request.outputs.task == 'pit_portfolio_rules'
+        run: |
+          mkdir -p results/hosted
+          python portfolio_rules.py \
+            --years "${{ steps.request.outputs.years }}" \
+            --cost-pct "${{ steps.request.outputs.cost_pct }}" \
+            --outdir results/hosted
+          {
+            echo "## PIT Nifty 500 momentum backtest"
+            cat results/hosted/portfolio_rules_report.md
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload public research outputs
