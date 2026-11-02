@@ -242,6 +242,9 @@ def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0
                     want, cur = exposure / size * eq_now, sh.get(j, 0.0) * o[j]
                     d = want - cur
                     if d > 1e-12:
+                        d = min(d, max(cash, 0.0))
+                        if d <= 1e-12:
+                            continue
                         cash -= d; sh[j] = sh.get(j, 0.0) + d / o[j]; traded += d; hwm.setdefault(j, o[j])
                     elif d < -1e-12:
                         cash += -d; sh[j] = sh[j] + d / o[j]; traded += -d;
