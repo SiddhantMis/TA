@@ -4,7 +4,7 @@ name: Portfolio rules test
 on:
   push:
     branches: [rules-test, pit-nifty500-membership, research/pit-data-quality]
-    paths: ['portfolio_rules.py', 'test_patterns.py', 'pattern_lab.py', 'portfolio.py', 'nifty500_pit.py', 'universe/nifty500_membership_history.csv', 'test_pit_membership.py', 'nse_benchmark.py', 'bench_check.py', 'test_nse_benchmark.py', 'test_tejhq_data.py', 'scripts/probe_tejhq_history.py', 'tejhq_data.py', 'requirements.txt', '.github/workflows/rules-test.yml']
+    paths: ['portfolio_rules.py', 'test_patterns.py', 'pattern_lab.py', 'portfolio.py', 'nifty500_pit.py', 'universe/nifty500_membership_history.csv', 'test_pit_membership.py', 'nse_benchmark.py', 'bench_check.py', 'test_nse_benchmark.py', 'test_tejhq_data.py', 'test_portfolio_data_quality.py', 'scripts/probe_tejhq_history.py', 'tejhq_data.py', 'requirements.txt', '.github/workflows/rules-test.yml']
   workflow_dispatch:
 
 concurrency:
@@ -34,6 +34,7 @@ jobs:
       - run: python test_patterns.py
       - run: python test_pit_membership.py
       - run: python test_tejhq_data.py
+      - run: python test_portfolio_data_quality.py
       - run: python -m py_compile portfolio_rules.py nifty500_pit.py pattern_lab.py portfolio.py tejhq_data.py
       - name: Run NSE benchmark validation
         run: python bench_check.py
