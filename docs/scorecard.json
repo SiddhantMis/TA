@@ -1,0 +1,54 @@
+{
+ "schema_version": 2,
+ "status": "tracking",
+ "snapshots": 1,
+ "month_end_snapshots": 0,
+ "first_snapshot": "2026-10-30",
+ "missing_month_ends": [],
+ "snapshots_outside_price_window": [],
+ "monthly": [],
+ "cumulative": {
+  "status": "incomplete",
+  "months": 0,
+  "top20_net": null,
+  "same_universe_equal_weight": null,
+  "nifty50": null
+ },
+ "daily_forward": {
+  "5d": {
+   "expected_snapshots": 0,
+   "snapshots": 0,
+   "incomplete_snapshots": 0,
+   "mean_excess_vs_nifty": null,
+   "share_positive": null,
+   "setup_fired_n": 0,
+   "setup_fired_mean_excess": null,
+   "no_setup_n": 0,
+   "no_setup_mean_excess": null
+  },
+  "21d": {
+   "expected_snapshots": 0,
+   "snapshots": 0,
+   "incomplete_snapshots": 0,
+   "mean_excess_vs_nifty": null,
+   "share_positive": null,
+   "setup_fired_n": 0,
+   "setup_fired_mean_excess": null,
+   "no_setup_n": 0,
+   "no_setup_mean_excess": null
+  },
+  "63d": {
+   "expected_snapshots": 0,
+   "snapshots": 0,
+   "incomplete_snapshots": 0,
+   "mean_excess_vs_nifty": null,
+   "share_positive": null,
+   "setup_fired_n": 0,
+   "setup_fired_mean_excess": null,
+   "no_setup_n": 0,
+   "no_setup_mean_excess": null
+  }
+ },
+ "summary": "Paper log: 0 confirmed month-end snapshot(s) since 2026-10-30; the first completed interval is not available yet.",
+ "snapshot_status": "saved leaders_2026-10-30.json"
+}
