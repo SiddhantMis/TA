@@ -62,6 +62,11 @@ def prepare(frames: dict, bench_df: pd.DataFrame, liquid_top: int = LIQUID_TOP,
             membership_df: pd.DataFrame | None = None,
             membership_path: str = DEFAULT_MEMBERSHIP_FILE) -> dict:
     idx = bench_df.index
+    if len(idx) and pd.Timestamp(idx.max()).tz_localize(None) > MEMBERSHIP_COVERAGE_THROUGH:
+        raise ValueError(
+            f"Backtest ends after PIT membership coverage ({MEMBERSHIP_COVERAGE_THROUGH.date()}); "
+            "refusing to extrapolate constituent membership."
+        )
     cols = list(frames)
     if membership_df is None:
         membership_df = load_membership_calendar(membership_path)
