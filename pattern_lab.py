@@ -240,8 +240,12 @@ def load_frames(tickers, years, cache, refresh, min_bars=401, return_diagnostics
             with open(cache, "rb") as fh:
                 frames = pickle.load(fh)
             diagnostics = {
-                t: {"status": "cached", "bars": int(len(frames[t])), "detail": "TejHQ adjusted frame cache"}
-                for t in tickers if t in frames
+                t: (
+                    {"status": "cached", "bars": int(len(frames[t])), "detail": "TejHQ adjusted frame cache"}
+                    if t in frames else
+                    {"status": "no_history", "bars": 0, "detail": "No TejHQ adjusted NSE rows in cached date range"}
+                )
+                for t in tickers
             }
             print(f"[cache] {len(frames)} TejHQ adjusted frames from {cache}", file=sys.stderr)
         else:
