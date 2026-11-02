@@ -134,6 +134,32 @@ def test_split_adjustment_is_idempotent():
     assert twice.attrs["corporate_actions"] == once.attrs["corporate_actions"]
 
 
+def test_niftybees_source_reconciliation_accepts_only_verified_tejhq_extra_dates():
+    from nse_benchmark import reconcile_niftybees_sources
+    import pytest
+
+    idx = pd.DatetimeIndex(["2024-01-02", "2024-01-03"])
+    nse = pd.DataFrame({
+        "Open": [100.0, 101.0], "High": [102.0, 103.0],
+        "Low": [99.0, 100.0], "Close": [101.0, 102.0],
+    }, index=idx)
+    tej = pd.concat([
+        nse,
+        pd.DataFrame(
+            {"Open": [102.0], "High": [104.0], "Low": [101.0], "Close": [103.0]},
+            index=pd.DatetimeIndex(["2024-01-04"]),
+        ),
+    ])
+    result = reconcile_niftybees_sources(nse, tej)
+    assert result["tejhq_extra_bars"] == 1
+    assert result["common_bars"] == 2
+
+    bad = tej.copy()
+    bad.loc["2024-01-03", "Close"] += 1.0
+    with pytest.raises(RuntimeError, match="source reconciliation failed"):
+        reconcile_niftybees_sources(nse, bad)
+
+
 def test_nse_request_chunks_are_inclusive_and_non_overlapping():
     chunks = date_chunks(date(2020, 1, 1), date(2020, 4, 10), max_days=100)
     assert chunks == [

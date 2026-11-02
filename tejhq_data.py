@@ -277,10 +277,11 @@ def load_adjusted_frames(
 
         for col in ("open", "high", "low", "volume", "turnover"):
             part[col] = pd.to_numeric(part[col], errors="coerce")
-        part["raw_open"] = part["open"].copy()
-        part["raw_high"] = part["high"].copy()
-        part["raw_low"] = part["low"].copy()
-        part["raw_close"] = raw_close
+        if include_raw:
+            part["raw_open"] = part["open"].copy()
+            part["raw_high"] = part["high"].copy()
+            part["raw_low"] = part["low"].copy()
+            part["raw_close"] = raw_close
         part["open"] *= factor
         part["high"] *= factor
         part["low"] *= factor
@@ -301,11 +302,13 @@ def load_adjusted_frames(
                               ["chain_id", "symbol", "isin", "date"]].head(8)
             raise RuntimeError(f"{filename} has multiple bars in one instrument chain/session: {sample.to_dict('records')}")
         row_count += len(part)
-        parts.append(part[[
+        part_columns = [
             "date", "symbol", "isin", "chain_id", "open", "high", "low",
-            "close", "volume", "turnover", "raw_open", "raw_high", "raw_low",
-            "raw_close",
-        ]])
+            "close", "volume", "turnover",
+        ]
+        if include_raw:
+            part_columns.extend(["raw_open", "raw_high", "raw_low", "raw_close"])
+        parts.append(part[part_columns])
 
     if not parts:
         raise RuntimeError("No TejHQ adjusted price rows found for requested PIT symbols")

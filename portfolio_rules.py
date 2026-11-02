@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The exact live portfolio rules (PR #3), tested day by day against the old baseline.
 
-NIFTYBEES benchmark prices come from NSE historical trades and are split-adjusted by the published ex-date; quality gates run before metrics are calculated.
+Stock OHLC uses pinned TejHQ adjusted NSE history. NIFTYBEES raw bhavcopy OHLC is split-adjusted and reconciled to NSE historical trades; the official NSE NIFTY 50 index supplies the session calendar.
 
     python portfolio_rules.py --years 10 --oos-frac 0.35 --cost-pct 0.30
 
@@ -13,8 +13,8 @@ Questions, answered with the same data, costs and a DAILY engine (stops need dai
 Pre-registered (nothing is tuned after seeing results):
   universe  historical Nifty 500 membership; top-200 by 126-day traded value among members on each signal date
   rank      12-1 return (252 sessions back to 21 back), highest first;  20 slots, equal weight of current equity
-  filter    BULL = NSE NIFTYBEES split-adjusted traded close above its 200-day average
-  diagnostic compare: ^NSEI 200-DMA regime as a separate variant; it does not replace the live ETF rule
+  filter    BULL = NIFTYBEES split-adjusted traded close above its 200-day average
+  diagnostic compare: official NSE NIFTY 50 200-DMA regime as a separate variant; it does not replace the live ETF rule
   target    PR #3's build_target_holdings: incumbents stay if still eligible and rank <= 30, then fill from ranks <= 20
   execute   signal after the close, trade at the NEXT session's open, 0.30% round trip on traded value, cash earns 0%
   stops     trailing stop from the highest close since entry; checked on closes, sold at the next open, slot stays
@@ -472,6 +472,9 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
               loader_diagnostics: dict | None = None,
               audit_outputs: dict | None = None,
               source_metadata: dict | None = None):
+    source_metadata = source_metadata or {}
+    loader_diagnostics = loader_diagnostics or {}
+    audit_outputs = audit_outputs or {}
     observed_benchmark = bench_df.loc[bench_df["Close"].notna(), ["Close"]]
     quality = validate_benchmark(observed_benchmark, "adjusted NIFTYBEES")
     index_quality = (
@@ -579,13 +582,18 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     adjustment_scope = source_metadata.get("adjustment_scope", "not recorded") if source_metadata else "not recorded"
     stale_days = sum(v.get("stale_holding_days", 0) for v in runs.values())
     max_stale = max((v.get("max_stale_sessions", 0) for v in runs.values()), default=0)
-    benchmark_stale = P["bench_stale"][START:]
-    benchmark_stale_days = int(benchmark_stale.sum())
-    benchmark_stale_max = 0
+    benchmark_stale = P["bench_stale"]
+    computed_benchmark_stale_max = 0
     current_stale = 0
     for stale in benchmark_stale:
         current_stale = current_stale + 1 if stale else 0
-        benchmark_stale_max = max(benchmark_stale_max, current_stale)
+        computed_benchmark_stale_max = max(computed_benchmark_stale_max, current_stale)
+    benchmark_stale_days = int(source_metadata.get(
+        "benchmark_missing_official_sessions", benchmark_stale.sum()
+    ))
+    benchmark_stale_max = int(source_metadata.get(
+        "benchmark_max_consecutive_missing_sessions", computed_benchmark_stale_max
+    ))
     quality_issues = []
     if len(missing_test_window):
         quality_issues.append(f"{len(missing_test_window)} active-window symbols lack a full 253-bar history")

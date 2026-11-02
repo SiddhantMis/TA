@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate NSE-sourced NIFTYBEES history against the index and Yahoo diagnostics."""
+"""Reconcile TejHQ NIFTYBEES raw bhavcopy history to NSE and validate the official index."""
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import os
@@ -28,6 +28,8 @@ tej_raw, _ = load_niftybees_raw_frame(
     START.isoformat(), END.isoformat(),
     cache_dir="data_cache/tejhq_parquet", revision=get_dataset_revision(),
 )
+nse = apply_niftybees_split_adjustments(nse_raw)
+nse_quality = validate_benchmark(nse, "NSE split-adjusted NIFTYBEES")
 reconciliation = reconcile_niftybees_sources(nse_raw, tej_raw)
 tej = apply_niftybees_split_adjustments(tej_raw)
 quality = validate_benchmark(tej, "TejHQ raw NIFTYBEES, split-adjusted")
@@ -42,6 +44,7 @@ out = [
     f"Requested range: {START} through {END}",
     f"TejHQ bars: {quality['bars']}; max absolute daily return: {quality['max_abs_daily_return_pct']:.2f}%",
     f"NSE API reconciliation: {reconciliation}",
+    f"NSE split-adjusted bars: {nse_quality['bars']}; max abs daily move: {nse_quality['max_abs_daily_return_pct']:.2f}%",
     f"Official NSE NIFTY 50 sessions: {index_quality['bars']}; source={nifty.attrs.get('source')}",
     f"Daily-return correlation of split-adjusted NIFTYBEES vs official NIFTY 50: {corr:.4f}",
     "Corporate action: 10:1 face-value split effective 2019-12-19; pre-ex-date OHLC x0.1, volume x10.",
