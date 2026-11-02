@@ -261,7 +261,10 @@ def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0
                     want, cur = per_slot, sh.get(j, 0.0) * o[j]
                     delta = want - cur
                     if delta > 1e-12:
-                        delta = min(delta, max(cash, 0.0))
+                        # Reserve transaction costs before committing cash so
+                        # a fully invested target does not create negative cash.
+                        spendable = max(cash - traded * side, 0.0) / (1.0 + side)
+                        delta = min(delta, spendable)
                         if delta <= 1e-12:
                             continue
                         cash -= delta
