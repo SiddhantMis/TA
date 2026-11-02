@@ -1,8 +1,5 @@
 name: Benchmark check
 on:
-  push:
-    branches: [rules-test]
-    paths: ['bench_check.py', '.github/workflows/bench-check.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -16,6 +13,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install -r requirements.txt
+      - run: python test_nse_benchmark.py
       - run: python bench_check.py
       - name: Commit report back to the branch
         run: |
@@ -23,4 +21,4 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -f results/bench_check.md
           git commit -m "Benchmark check [skip ci]" || echo "nothing to commit"
-          for i in 1 2 3 4; do git pull -q --rebase origin "${{ github.ref_name }}" && git push && break; sleep 8; done
+          git push

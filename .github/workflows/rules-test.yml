@@ -4,7 +4,7 @@ name: Portfolio rules test
 on:
   push:
     branches: [rules-test]
-    paths: ['portfolio_rules.py', '.github/workflows/rules-test.yml']
+    paths: ['portfolio_rules.py', 'nse_benchmark.py', 'bench_check.py', 'test_nse_benchmark.py', 'requirements.txt', '.github/workflows/rules-test.yml']
   workflow_dispatch:
 
 permissions:
@@ -26,7 +26,10 @@ jobs:
           key: frames-v2-${{ github.run_id }}
           restore-keys: |
             frames-v2-
+      - run: python test_nse_benchmark.py
       - run: python test_patterns.py
+      - name: Run NSE benchmark validation
+        run: python bench_check.py
       - name: Run the rules test
         run: python portfolio_rules.py --years 10 --oos-frac 0.35 --cost-pct 0.30
       - uses: actions/cache/save@v4
@@ -38,6 +41,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f results/portfolio_rules_report.md
+          git add -f results/bench_check.md results/portfolio_rules_report.md
           git commit -m "Portfolio rules report [skip ci]" || echo "nothing to commit"
           for i in 1 2 3 4; do git pull -q --rebase origin "${{ github.ref_name }}" && git push && break; sleep 8; done

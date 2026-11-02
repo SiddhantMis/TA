@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The exact live portfolio rules (PR #3), tested day by day against the old baseline.
 
-Benchmark inputs are corporate-action repaired and sanity-gated before metrics are calculated.
+NIFTYBEES benchmark prices come from NSE historical trades and are split-adjusted by the published ex-date; quality gates run before metrics are calculated.
 
     python portfolio_rules.py --years 10 --oos-frac 0.35 --cost-pct 0.30
 
@@ -13,16 +13,16 @@ Questions, answered with the same data, costs and a DAILY engine (stops need dai
 Pre-registered (nothing is tuned after seeing results):
   universe  Nifty 500 list; point-in-time top-200 by 126-day traded value; close above own 200-day average
   rank      12-1 return (252 sessions back to 21 back), highest first;  20 slots, equal weight of current equity
-  filter    BULL = split/dividend-repaired NIFTYBEES adjusted close above its 200-day average (as in PR #3)
+  filter    BULL = NSE NIFTYBEES split-adjusted traded close above its 200-day average
   diagnostic compare: ^NSEI 200-DMA regime as a separate variant; it does not replace the live ETF rule
   target    PR #3's build_target_holdings: incumbents stay if still eligible and rank <= 30, then fill from ranks <= 20
   execute   signal after the close, trade at the NEXT session's open, 0.30% round trip on traded value, cash earns 0%
   stops     trailing stop from the highest close since entry; checked on closes, sold at the next open, slot stays
             in cash until the next rebalance
 Variants:
-  V1_baseline      month-end signal, no buffer, repaired ETF filter
-  V3_live_nobuf    repaired ETF filter, no buffer, corrected 28th trigger (isolates timing)
-  V2_live          corrected 28th trigger, buffer 30, repaired ETF filter (the live rules)
+  V1_baseline      month-end signal, no buffer, NSE-sourced ETF filter
+  V3_live_nobuf    NSE-sourced ETF filter, no buffer, corrected 28th trigger (isolates timing)
+  V2_live          corrected 28th trigger, buffer 30, NSE-sourced ETF filter (the live rules)
   V4a_stop20       V2 + 20% trailing stop         V4b_stop30   V2 + 30% trailing stop
   V5_nofilter      V2 without the market filter    V6_half      V2 but half exposure when ETF filter says BEAR
   V7_nifty50       same live rules, but ^NSEI 200-DMA regime (diagnostic alternative only)
@@ -44,6 +44,7 @@ import pandas as pd
 
 import backtest as B
 import leaders as LD
+from nse_benchmark import load_niftybees_history
 import pattern_lab as PL
 
 SIZE, RETAIN, LIQUID_TOP = 20, 30, 200
@@ -232,7 +233,7 @@ def compare_stop(base, stop):
 
 def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30,
               index_df: pd.DataFrame | None = None):
-    quality = validate_benchmark(bench_df, "Repaired NIFTYBEES")
+    quality = validate_benchmark(bench_df, "NSE split-adjusted NIFTYBEES")
     index_quality = (
         validate_benchmark(index_df, "NIFTY 50 price index")
         if index_df is not None else None
@@ -263,7 +264,7 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     for t in range(START + 1, n):
         ew_eq[t] = ew_eq[t - 1] * (1 + (dr[t] if np.isfinite(dr[t]) else 0.0))
     series = {**{k: v["equity"] for k, v in runs.items()},
-              "NIFTYBEES_adjusted_buyhold": bench_eq, "EW_universe_daily": ew_eq}
+              "NIFTYBEES_split_adjusted_buyhold": bench_eq, "EW_universe_daily": ew_eq}
     if P["index_is_distinct"]:
         ic = P["index_close"]
         index_eq = np.full(n, np.nan); index_eq[START:] = ic[START:] / ic[START]
@@ -272,7 +273,7 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     M = {(k, p): metrics(e, a, b) for k, e in series.items() for p, (a, b) in spans.items()}
     d0, d1, ds = idx[START].date(), idx[-1].date(), idx[split].date()
     out = [f"Portfolio rules: {len(frames)} stocks, daily engine {d0} to {d1}, IS/OOS split {ds}, cost {cost_pct}% round trip, cash 0%",
-           f"Benchmark: NIFTYBEES auto-adjusted with yfinance repair=True; {quality['bars']} bars; max abs daily move {quality['max_abs_daily_return_pct']:.2f}%",
+           f"Benchmark: official NSE NIFTYBEES traded closes, split-adjusted to current Rs 1 face-value units; {quality['bars']} bars; max abs daily move {quality['max_abs_daily_return_pct']:.2f}%",
            *([f"Regime diagnostic: ^NSEI price index quality gate passed; {index_quality['bars']} bars; max abs daily move {index_quality['max_abs_daily_return_pct']:.2f}%"] if index_quality else []),
            "NIFTY50_price_index is a PRICE index (not a total-return index).",
            "CAGR / vol / Sharpe(rf=0) / max drawdown (daily)"]
@@ -290,7 +291,7 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     etf_ret = np.full(n, np.nan); etf_ret[1:] = bc[1:] / bc[:-1] - 1
     index_close = P["index_close"]
     index_ret = np.full(n, np.nan); index_ret[1:] = index_close[1:] / index_close[:-1] - 1
-    out += ["", f"-- what the repaired NIFTYBEES filter sees: {len(bear_days)} BEAR days ({len(bear_days) / max(1, len(bear_days) + len(bull_days)) * 100:.0f}% of known-regime days), {len(bull_days)} BULL days --",
+    out += ["", f"-- what the NSE-sourced NIFTYBEES filter sees: {len(bear_days)} BEAR days ({len(bear_days) / max(1, len(bear_days) + len(bull_days)) * 100:.0f}% of known-regime days), {len(bull_days)} BULL days --",
             f"annualised adjusted ETF return on ETF-BEAR days: {ann(etf_ret, bear_days) * 100:+.1f}%; same-universe equal-weight: {ann(dr, bear_days) * 100:+.1f}%",
             f"annualised adjusted ETF return on ETF-BULL days: {ann(etf_ret, bull_days) * 100:+.1f}%; same-universe equal-weight: {ann(dr, bull_days) * 100:+.1f}%"]
     if P["index_is_distinct"]:
@@ -298,7 +299,7 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
         ibull = [t for t in range(START + 1, n) if P["bull_index_known"][t - 1] and P["bull_index"][t - 1]]
         common = [t for t in range(START + 1, n) if P["bull_known"][t - 1] and P["bull_index_known"][t - 1]]
         disagree = sum(P["bull"][t - 1] != P["bull_index"][t - 1] for t in common)
-        out += [f"^NSEI filter: {len(ibear)} BEAR / {len(ibull)} BULL days; disagrees with repaired ETF regime on {disagree}/{len(common)} common days",
+        out += [f"^NSEI filter: {len(ibear)} BEAR / {len(ibull)} BULL days; disagrees with NSE-sourced ETF regime on {disagree}/{len(common)} common days",
                 f"annualised ^NSEI price-index return on ^NSEI-BEAR days: {ann(index_ret, ibear) * 100:+.1f}%; same-universe equal-weight: {ann(dr, ibear) * 100:+.1f}%"]
     out += ["", "-- comparisons (rules fixed in advance) --"]
     def line(a, b, label):
@@ -340,19 +341,19 @@ def main(argv=None):
     ap.add_argument("--outdir", default="results")
     a = ap.parse_args(argv)
     os.makedirs(a.outdir, exist_ok=True)
-    bench = B.load_history("NIFTYBEES.NS", a.years, repair=True)
+    bench = load_niftybees_history(a.years)
     if bench is None:
         sys.exit("could not fetch NIFTYBEES.NS")
-    validate_benchmark(bench, "Repaired NIFTYBEES")
+    validate_benchmark(bench, "NSE split-adjusted NIFTYBEES")
     index = B.load_history("^NSEI", a.years)
     if index is None:
         sys.exit("could not fetch ^NSEI")
     frames = PL.load_frames(LD.load_universe(), a.years, a.cache, a.refresh)
     corr = cross_check_benchmark(bench, index)
     _, text = run_rules(frames, bench, a.oos_frac, a.cost_pct, index_df=index)
-    fixes = bench.attrs.get("scale_repairs") or []
-    text = (f"Benchmark data repairs: {[(f['from'], f['to'], 'x%g' % f['factor']) for f in fixes] or 'none'}; "
-            f"daily-return correlation NIFTYBEES vs ^NSEI after repair {corr:.3f}\n") + text
+    actions = bench.attrs.get("corporate_actions") or []
+    text = (f"NSE corporate-action adjustments: {actions or 'none'}; "
+            f"daily-return correlation NSE NIFTYBEES vs ^NSEI {corr:.3f}\n") + text
     open(os.path.join(a.outdir, "portfolio_rules_report.md"), "w").write("```\n" + text + "\n```\n")
     print(text)
 

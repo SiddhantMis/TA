@@ -1,92 +1,71 @@
 #!/usr/bin/env python3
-"""Compare raw vs Yahoo-repaired NIFTYBEES data and validate the NIFTY 50 regime proxy.
-
-The supported yfinance[repair] extra installs SciPy and scikit-learn, both used by Yahoo's repair implementation.
-"""
+"""Validate NSE-sourced NIFTYBEES history against the index and Yahoo diagnostics."""
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import os
 
-import numpy as np
 import pandas as pd
-import yfinance as yf
 
 import backtest as B
+from nse_benchmark import apply_niftybees_split_adjustments, fetch_niftybees_history
+from portfolio_rules import cross_check_benchmark, validate_benchmark
 
-raw = B.load_history("NIFTYBEES.NS", 10, repair=False)
-fixed = B.load_history("NIFTYBEES.NS", 10, repair=True)
-nifty = B.load_history("^NSEI", 10)
-if raw is None or fixed is None or nifty is None:
-    raise SystemExit("Benchmark diagnostic could not download all required series.")
+YEARS = 10
+END = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+START = (pd.Timestamp(END) - pd.DateOffset(years=YEARS)).date()
 
+# NSE traded OHLCV is the source of truth. Yahoo is diagnostic only.
+nse_raw = fetch_niftybees_history(START, END)
+nse = apply_niftybees_split_adjustments(nse_raw)
+quality = validate_benchmark(nse, "NSE split-adjusted NIFTYBEES")
 
-def summarize(name, frame):
-    close = pd.to_numeric(frame["Close"], errors="coerce")
-    returns = close.pct_change()
-    out = [
-        f"== {name}: {len(frame)} bars {frame.index[0].date()} to {frame.index[-1].date()}",
-        f"   last close {close.iloc[-1]:.4f}; 200-DMA {close.rolling(200, min_periods=200).mean().iloc[-1]:.4f}",
-        f"   NaN closes {int(close.isna().sum())}; non-positive closes {int((close <= 0).sum())}",
-        f"   daily-return std {returns.std() * 100:.3f}%; max abs move {returns.abs().max() * 100:.2f}%",
-    ]
-    big = returns[returns.abs() > 0.08]
-    out.append(f"   days with |return| > 8%: {len(big)}")
-    for day, value in big.items():
-        pos = close.index.get_loc(day)
-        out.append(f"     {day.date()} {value * 100:+.1f}%: {close.iloc[pos - 1]:.4f} -> {close.iloc[pos]:.4f}")
-    return out, returns
-
+# The index is an independent cross-check, not a replacement for the ETF filter.
+nifty = B.load_history("^NSEI", YEARS)
+if nifty is None:
+    raise SystemExit("Could not download ^NSEI for benchmark cross-check.")
+corr = cross_check_benchmark(nse, nifty)
 
 out = [
-    "NIFTYBEES had a 10:1 face-value split effective 2019-12-19 (NSE circular NSE/CML/42873).",
-    "The raw Yahoo series is shown only as a diagnostic; strategy results use repair=True.",
+    f"Primary source: {nse.attrs.get('source')}",
+    f"Requested range: {START} through {END}",
+    f"NSE bars: {quality['bars']}; max absolute daily return: {quality['max_abs_daily_return_pct']:.2f}%",
+    f"Daily-return correlation of split-adjusted NSE NIFTYBEES vs ^NSEI: {corr:.4f}",
+    "Corporate action: 10:1 face-value split effective 2019-12-19; pre-ex-date OHLC x0.1, volume x10.",
+    f"Adjustment record: {nse.attrs.get('corporate_actions')}",
 ]
-# Inspect Yahoo's unadjusted Close, Adj Close and split actions around the official split.
-probe = yf.download(
-    "NIFTYBEES.NS", start="2019-12-16", end="2019-12-24",
-    interval="1d", actions=True, auto_adjust=False, repair=False,
-    progress=False, multi_level_index=False,
+
+split_start = pd.Timestamp("2019-12-18")
+split_end = pd.Timestamp("2019-12-23")
+window_raw = nse_raw.loc[split_start:split_end, ["Open", "High", "Low", "Close", "Volume"]]
+window_adj = nse.loc[split_start:split_end, ["Open", "High", "Low", "Close", "Volume"]]
+out.append("== NSE raw exchange prices around the split")
+out.extend(
+    f"  {day.date()} close={row.Close:.2f} volume={row.Volume:.0f}"
+    for day, row in window_raw.iterrows()
 )
-out.append("== Yahoo unadjusted fields around the official split")
-out.append(f"   columns: {', '.join(str(x) for x in probe.columns)}")
-for day, row in probe.iterrows():
-    out.append(
-        f"   {day.date()} Open={row.get('Open')} High={row.get('High')} "
-        f"Low={row.get('Low')} Close={row.get('Close')} "
-        f"AdjClose={row.get('Adj Close')} StockSplits={row.get('Stock Splits')}"
-    )
+out.append("== NSE prices on current face-value basis")
+out.extend(
+    f"  {day.date()} close={row.Close:.3f} volume={row.Volume:.0f}"
+    for day, row in window_adj.iterrows()
+)
 
-raw_lines, raw_ret = summarize("NIFTYBEES raw Yahoo adjusted history", raw)
-fixed_lines, fixed_ret = summarize("NIFTYBEES Yahoo repair=True adjusted history", fixed)
-nifty_lines, nifty_ret = summarize("^NSEI price-index history", nifty)
-out += raw_lines + fixed_lines + nifty_lines
-
-# Show the split window explicitly: the data-quality fix must remove the false one-session jump.
-split = pd.Timestamp("2019-12-19")
-if split in fixed.index:
-    around = fixed.loc[split - pd.Timedelta(days=4):split + pd.Timedelta(days=4), "Close"]
-    out.append("== repaired NIFTYBEES split window (2019-12-19)")
-    out.extend(f"   {d.date()} close {v:.4f}" for d, v in around.items())
-
-bad = fixed_ret[fixed_ret.abs() > 0.25]
-out.append(f"== repaired benchmark hard gate: {len(bad)} daily returns exceed 25%")
-if not bad.empty:
-    out.extend(f"   FAIL {d.date()} {v * 100:+.1f}%" for d, v in bad.items())
-
-j = pd.concat([fixed["Close"].rename("NIFTYBEES"), nifty["Close"].rename("^NSEI")], axis=1).dropna()
-out.append(f"== repaired ETF vs ^NSEI daily-return correlation: {j.pct_change().dropna().corr().iloc[0, 1]:.3f}")
-etf_sma = j["NIFTYBEES"].rolling(200, min_periods=200).mean()
-idx_sma = j["^NSEI"].rolling(200, min_periods=200).mean()
-reg = pd.DataFrame({
-    "ETF_BULL": j["NIFTYBEES"] > etf_sma,
-    "INDEX_BULL": j["^NSEI"] > idx_sma,
-}).dropna()
-dis = reg[reg["ETF_BULL"] != reg["INDEX_BULL"]]
-out.append(f"== 200-DMA regime comparison: {len(reg)} common sessions; disagreement {len(dis)} ({len(dis) / max(1, len(reg)) * 100:.1f}%)")
-if len(dis):
-    out.append(f"   first/last disagreement: {dis.index[0].date()} / {dis.index[-1].date()}")
+# Yahoo is an independent vendor diagnostic only. It is not consumed by the strategy.
+try:
+    yahoo = B.load_history("NIFTYBEES.NS", YEARS, repair=False)
+    if yahoo is not None:
+        yahoo_ret = yahoo["Close"].pct_change()
+        bad = yahoo_ret[yahoo_ret.abs() > 0.25]
+        out.append(f"== Yahoo adjusted-price diagnostic: {len(yahoo)} bars; >25% daily moves: {len(bad)}")
+        out.extend(f"  {day.date()} {value * 100:+.1f}%" for day, value in bad.items())
+        if split_start in yahoo.index:
+            y = yahoo.loc[split_start:split_end, "Close"]
+            out.append("== Yahoo split window (diagnostic only)")
+            out.extend(f"  {day.date()} close={value:.3f}" for day, value in y.items())
+except Exception as exc:
+    out.append(f"Yahoo diagnostic unavailable (not used by strategy): {exc}")
 
 os.makedirs("results", exist_ok=True)
 report = "\n".join(out)
-open("results/bench_check.md", "w").write("\x60\x60\x60\n" + report + "\n\x60\x60\x60\n")
+with open("results/bench_check.md", "w", encoding="utf-8") as handle:
+    handle.write(report + "\n")
 print(report)
-if not bad.empty:
-    raise SystemExit("Yahoo repair did not remove all >25% NIFTYBEES daily jumps; do not trust ETF-filter backtest yet.")
