@@ -21,7 +21,7 @@ NSE_BASE = "https://www.nseindia.com"
 NSE_HISTORY_URL = f"{NSE_BASE}/api/NextApi/apiClient/GetQuoteApi"
 NSE_BOOTSTRAP_URL = f"{NSE_BASE}/option-chain"
 NSE_INDEX_HISTORY_URL = f"{NSE_BASE}/api/historicalOR/indicesHistory"
-NSE_INDEX_BOOTSTRAP_URL = f"{NSE_BASE}/report-detail/eq_security"
+NSE_INDEX_BOOTSTRAP_URL = f"{NSE_BASE}/reports-indices-historical-index-data"
 NIFTY50_INDEX_NAME = "NIFTY 50"
 NSE_INDEX_SOURCE_NAME = "NSE historicalOR/indicesHistory (NIFTY 50)"
 SOURCE_NAME = "NSE NextApi getHistoricalTradeData (NIFTYBEES, EQ)"
@@ -289,7 +289,18 @@ def _request_index_chunk(session, start, end, timeout, retries):
                 raise last_error
             response.raise_for_status()
             payload = response.json()
-            rows = payload.get("data") if isinstance(payload, dict) else None
+            if isinstance(payload, list):
+                rows = payload
+            elif isinstance(payload, dict):
+                data = payload.get("data")
+                if isinstance(data, list):
+                    rows = data
+                elif isinstance(data, dict):
+                    rows = data.get("indexCloseOnlineRecords")
+                else:
+                    rows = payload.get("indexCloseOnlineRecords")
+            else:
+                rows = None
             if not isinstance(rows, list) or not rows:
                 raise RuntimeError(
                     f"NSE returned an empty/invalid NIFTY 50 response for {start} through {end}"

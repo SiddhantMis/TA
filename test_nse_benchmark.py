@@ -160,6 +160,39 @@ def test_niftybees_source_reconciliation_accepts_only_verified_tejhq_extra_dates
         reconcile_niftybees_sources(nse, bad)
 
 
+def test_index_chunk_accepts_nse_flattened_list_and_legacy_envelope():
+    from nse_benchmark import _request_index_chunk
+    import pytest
+
+    row = {
+        "EOD_INDEX_NAME": "NIFTY 50", "EOD_TIMESTAMP": "03-NOV-2016",
+        "EOD_OPEN_INDEX_VAL": 8500, "EOD_HIGH_INDEX_VAL": 8550,
+        "EOD_LOW_INDEX_VAL": 8480, "EOD_CLOSE_INDEX_VAL": 8520,
+    }
+
+    class Response:
+        status_code = 200
+        def __init__(self, payload):
+            self.payload = payload
+        def raise_for_status(self):
+            return None
+        def json(self):
+            return self.payload
+
+    class Session:
+        def __init__(self, payload):
+            self.payload = payload
+        def get(self, *args, **kwargs):
+            return Response(self.payload)
+
+    start = date(2016, 11, 3)
+    assert _request_index_chunk(Session([row]), start, start, 10, 0) == [row]
+    assert _request_index_chunk(
+        Session({"data": {"indexCloseOnlineRecords": [row]}}),
+        start, start, 10, 0,
+    ) == [row]
+
+
 def test_nse_request_chunks_are_inclusive_and_non_overlapping():
     chunks = date_chunks(date(2020, 1, 1), date(2020, 4, 10), max_days=100)
     assert chunks == [
