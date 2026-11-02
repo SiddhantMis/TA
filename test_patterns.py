@@ -1726,6 +1726,115 @@ def test_alert_includes_the_paper_log_line_within_the_limit():
     assert "Paper log since" in text and len(text) <= DISCORD_CONTENT_LIMIT, len(text)
 
 
+# ---------------------------------------------------------------------------
+# portfolio_rules.py: the exact live rules, daily engine
+# ---------------------------------------------------------------------------
+
+def _rules_panel(prices, rank_rows=None, bull=True, n=None):
+    import numpy as np
+    n = n or len(next(iter(prices.values())))
+    idx = pd.bdate_range("2024-01-01", periods=n)
+    cols = list(prices)
+    X = np.column_stack([np.asarray(prices[c], float) for c in cols])
+    rank = np.array(rank_rows, float) if rank_rows is not None else np.tile(np.arange(1, len(cols) + 1, dtype=float), (n, 1))
+    return {"idx": idx, "cols": cols, "O": X, "C": X, "rank": rank, "univ": np.ones_like(X, bool),
+            "bull": np.full(n, bool(bull)), "bull_known": np.ones(n, bool), "bench_close": np.linspace(100, 120, n)}
+
+
+def test_rules_engine_entry_cost_and_no_cost_when_nothing_changes():
+    import numpy as np
+    import portfolio_rules as PR
+    n = 320
+    P = _rules_panel({"A": 100 * 1.003 ** np.arange(n), "B": np.full(n, 100.0)})
+    r = PR.simulate(P, {299}, buffer=False, size=1, start=250, cost_pct=0.30)
+    eq = r["equity"]
+    assert np.allclose(eq[250:300], 1.0)                                  # in cash before the first signal
+    assert abs(eq[300] - (1 - 0.0015)) < 1e-12                            # all-in at the open, half the round trip paid
+    assert abs(eq[301] - (-0.0015 + 1.003)) < 1e-12 and r["turnover"] == [1.0]
+    r2 = PR.simulate(P, {299, 309}, buffer=False, size=1, start=250, cost_pct=0.30)   # same holding re-selected: no turnover
+    assert len(r2["turnover"]) == 2 and r2["turnover"][1] < 0.01 and abs(r2["equity"][310] - r["equity"][310]) < 1e-5   # only the 0.15% entry-cost overdraft is repaid
+
+
+def test_rules_trailing_stop_sells_next_open_and_stays_in_cash():
+    import numpy as np
+    import portfolio_rules as PR
+    px = np.concatenate([np.full(262, 100.0), np.linspace(100, 130, 20)[1:], [125, 115, 103, 99], np.full(40, 99.0)])   # fill at 100 on day 260
+    P = _rules_panel({"A": px})
+    r = PR.simulate(P, {259}, buffer=False, size=1, start=250, cost_pct=0.30, trail=0.20)
+    assert r["stops"] == 1 and r["cash_days"] > 30
+    assert abs(r["equity"][-1] - 0.987015) < 1e-9, r["equity"][-1]        # bought at 100, trigger close 103 (<= 0.8 x 130), sold at the next open 99
+    assert np.allclose(r["equity"][-30:], r["equity"][-1])                  # flat afterwards: no re-entry before the next signal
+    nostop = PR.simulate(P, {259}, buffer=False, size=1, start=250, cost_pct=0.30)
+    assert nostop["stops"] == 0 and nostop["equity"][-1] < 1.0 and nostop["cash_days"] == 10   # only the 10 days before the first entry
+
+
+def test_rules_market_filter_cash_half_and_off():
+    import numpy as np
+    import portfolio_rules as PR
+    n = 320
+    prices = {"A": 100 * 1.003 ** np.arange(n)}
+    bear = _rules_panel(prices, bull=False)
+    assert np.allclose(PR.simulate(bear, {299}, size=1, start=250)["equity"][250:], 1.0)        # BEAR -> cash, no trades, no costs
+    half = PR.simulate(bear, {299}, size=1, start=250, regime="half", cost_pct=0.30)["equity"]
+    assert abs(half[300] - (1 - 0.5 * 0.0015)) < 1e-12 and half[310] > 1.0                    # half exposure
+    off = PR.simulate(bear, {299}, size=1, start=250, regime="off", cost_pct=0.30)["equity"]
+    assert abs(off[300] - (1 - 0.0015)) < 1e-12
+    unknown = _rules_panel(prices, bull=True); unknown["bull_known"][:] = False
+    assert np.allclose(PR.simulate(unknown, {299}, size=1, start=250)["equity"][250:], 1.0)      # unknown regime is treated as no-go
+
+
+def test_rules_buffer_retains_ranks_up_to_30_but_only_adds_from_the_top_20():
+    import numpy as np
+    import portfolio_rules as PR
+    rank = np.arange(1, 46, dtype=float)
+    tgt = PR.select_target(rank, [24, 34, 40], buffer=True)             # ranks 25, 35, 41
+    assert len(tgt) == 20 and 24 in tgt and 34 not in tgt and 40 not in tgt
+    assert all(rank[j] <= 20 for j in tgt if j != 24)                    # new names only from the top 20
+    assert PR.select_target(rank, [24, 34], buffer=False) == list(range(20))
+    rank2 = rank.copy(); rank2[24] = np.nan                              # incumbent no longer eligible -> dropped
+    assert 24 not in PR.select_target(rank2, [24], buffer=True)
+
+
+def test_rules_trigger_dates_and_the_february_gap():
+    import portfolio_rules as PR
+    idx = pd.bdate_range("2026-01-01", "2026-04-30")
+    months = lambda sig: {idx[i].strftime("%Y-%m") for i in sig}
+    r28 = PR.rule28_signals(idx)
+    assert months(r28) == {"2026-01", "2026-03", "2026-04"}              # Feb 2026: the 28th is a Saturday, last session is the 27th -> no trigger
+    assert "2026-02" in months(PR.month_end_signals(idx))                # the month-end rule would not skip it
+    assert idx[sorted(r28)[1]].date().isoformat() == "2026-03-30"        # Mar 28-29 are a weekend -> next session
+
+
+def test_rules_engine_has_no_lookahead():
+    import numpy as np
+    import portfolio_rules as PR
+    def mk(seed, n=700):
+        rng = np.random.default_rng(seed); c = np.abs(100 + np.cumsum(rng.normal(0.08, 1.5, n))) + 40
+        o = np.concatenate([[c[0]], c[:-1]]) * (1 + rng.normal(0, .004, n))
+        return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + 1, "Low": np.minimum(o, c) - 1, "Close": c,
+                             "Volume": rng.integers(5e5, 3e6, n)}, index=pd.bdate_range("2023-01-02", periods=n))
+    frames = {f"S{i}": mk(i) for i in range(8)}; bench = mk(99)
+    def run(T):
+        P = PR.prepare({k: f.iloc[:T] for k, f in frames.items()}, bench.iloc[:T], liquid_top=6)
+        return PR.simulate(P, PR.rule28_signals(P["idx"]), buffer=True, trail=0.2, size=3)["equity"]
+    full, part = run(700), run(560)
+    assert np.allclose(full[:560], part[:560], equal_nan=True) and np.isfinite(full[300:]).all()
+
+
+def test_rules_end_to_end_report_has_every_section():
+    import numpy as np
+    import portfolio_rules as PR
+    def mk(seed, n=1000):
+        rng = np.random.default_rng(seed); c = np.abs(100 + np.cumsum(rng.normal(0.06, 1.5, n))) + 40
+        o = np.concatenate([[c[0]], c[:-1]]) * (1 + rng.normal(0, .004, n))
+        return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + 1, "Low": np.minimum(o, c) - 1, "Close": c,
+                             "Volume": rng.integers(5e5, 3e6, n)}, index=pd.bdate_range("2022-01-03", periods=n))
+    series, text = PR.run_rules({f"S{i}": mk(i) for i in range(30)}, mk(99))
+    for part in ("-- FULL --", "-- activity --", "BEAR days", "comparisons", "V4a_stop20 vs V2_live", "V6_half vs V2_live", "buffer 30 vs none"):
+        assert part in text, part
+    assert set(series) >= {"V1_baseline", "V2_live", "Nifty50_buyhold", "EW_universe_daily"}
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

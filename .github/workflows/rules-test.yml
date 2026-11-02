@@ -1,0 +1,43 @@
+name: Portfolio rules test
+
+# Branch-only research run: the exact live rules, daily engine. Commits the report back to the branch.
+on:
+  push:
+    branches: [rules-test]
+    paths: ['portfolio_rules.py', '.github/workflows/rules-test.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - uses: actions/cache/restore@v4
+        with:
+          path: data_cache
+          key: frames-v2-${{ github.run_id }}
+          restore-keys: |
+            frames-v2-
+      - run: python test_patterns.py
+      - name: Run the rules test
+        run: python portfolio_rules.py --years 10 --oos-frac 0.35 --cost-pct 0.30
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: data_cache
+          key: frames-v2-${{ github.run_id }}
+      - name: Commit report back to the branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f results/portfolio_rules_report.md
+          git commit -m "Portfolio rules report [skip ci]" || echo "nothing to commit"
+          for i in 1 2 3 4; do git pull -q --rebase origin "${{ github.ref_name }}" && git push && break; sleep 8; done
