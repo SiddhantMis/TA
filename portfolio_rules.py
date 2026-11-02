@@ -350,7 +350,7 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
               membership_path: str = DEFAULT_MEMBERSHIP_FILE,
               loader_diagnostics: dict | None = None,
               audit_outputs: dict | None = None):
-    quality = validate_benchmark(bench_df, "NSE split-adjusted NIFTYBEES")
+    quality = validate_benchmark(bench_df, "adjusted NIFTYBEES")
     index_quality = (
         validate_benchmark(index_df, "NIFTY 50 price index")
         if index_df is not None else None
@@ -447,7 +447,7 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
            f"Zero-coverage sessions: {len(zero_rows)}; dates: {zero_rows['date'].tolist()[:20]}",
            f"Worst coverage sessions (date: active bars/expected, coverage, all loaded-symbol bars): {worst_detail}",
            "WARNING: missing/delisted-symbol history and source calendar gaps can still bias results; see universe/NIFTY500_PIT_DATA.md and the generated PIT audit CSVs.",
-           f"Benchmark: official NSE NIFTYBEES traded closes, split-adjusted to current Rs 1 face-value units; {quality['bars']} bars; max abs daily move {quality['max_abs_daily_return_pct']:.2f}%",
+           f"Benchmark: NIFTYBEES adjusted close series; {quality['bars']} bars; max abs daily move {quality['max_abs_daily_return_pct']:.2f}%",
            *([f"Regime diagnostic: ^NSEI price index quality gate passed; {index_quality['bars']} bars; max abs daily move {index_quality['max_abs_daily_return_pct']:.2f}%"] if index_quality else []),
            "NIFTY50_price_index is a PRICE index (not a total-return index).",
            "CAGR / vol / Sharpe(rf=0) / max drawdown (daily)"]
