@@ -150,7 +150,7 @@ def test_niftybees_source_reconciliation_accepts_nse_only_bars_but_rejects_tejhq
             index=pd.DatetimeIndex(["2024-01-04"]),
         ),
     ])
-    result = reconcile_niftybees_sources(nse, common)
+    result = reconcile_niftybees_sources(nse, common, min_common_fraction=0.5)
     assert result["nse_api_only_bars"] == 1
     assert result["tejhq_only_bars"] == 0
     assert result["common_bars"] == 2
@@ -158,7 +158,7 @@ def test_niftybees_source_reconciliation_accepts_nse_only_bars_but_rejects_tejhq
     bad = common.copy()
     bad.loc["2024-01-03", "Close"] += 1.0
     with pytest.raises(RuntimeError, match="source reconciliation failed"):
-        reconcile_niftybees_sources(nse, bad)
+        reconcile_niftybees_sources(nse, bad, min_common_fraction=0.5)
 
     tej_extra = pd.concat([
         common,
