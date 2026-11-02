@@ -1873,6 +1873,64 @@ def test_rules_end_to_end_report_has_every_section():
                            "NIFTYBEES_adjusted_buyhold", "EW_universe_daily"}
 
 
+def _etf_glitch_frame():
+    """The real NIFTYBEES pattern: closes 129.254 -> 13.020 -> 13.034 -> 129.930 around the 2019-12-19 split."""
+    import numpy as np
+    idx = pd.bdate_range("2019-12-10", periods=14)
+    c = np.array([128.6, 128.9, 129.1, 129.3, 129.254, 13.020, 13.034, 129.930, 130.4, 130.1, 130.6, 131.0, 130.8, 131.2])
+    scale = np.where(np.arange(14).__ge__(5) & np.arange(14).__le__(6), 1.0, 1.0)
+    return pd.DataFrame({"Open": c * 0.998, "High": c * 1.004, "Low": c * 0.995, "Close": c, "Volume": 1e6}, index=idx), c
+
+
+def test_scale_glitch_repair_fixes_the_split_artifact_and_nothing_else():
+    import numpy as np
+    import backtest as B
+    from portfolio_rules import validate_benchmark
+    df, c = _etf_glitch_frame()
+    fixed = B.repair_scale_glitches(df)
+    fx = fixed.attrs["scale_repairs"]
+    assert len(fx) == 1 and fx[0]["factor"] == 10.0 and fx[0]["from"] == df.index[5].date().isoformat() and fx[0]["to"] == df.index[6].date().isoformat()
+    assert abs(fixed["Close"].iloc[5] - 130.20) < 1e-9 and abs(fixed["Open"].iloc[5] - 13.020 * 0.998 * 10) < 1e-9
+    assert fixed["Close"].pct_change().abs().max() < 0.01                       # smooth again
+    with np.errstate(all="ignore"):
+        try:
+            validate_benchmark(df, "raw")
+            raised = False
+        except RuntimeError:
+            raised = True
+    assert raised and validate_benchmark(fixed, "repaired")["max_abs_daily_return_pct"] < 1.0
+    assert B.repair_scale_glitches(fixed).attrs["scale_repairs"] == []          # idempotent
+    clean = pd.DataFrame({"Open": np.linspace(100, 110, 40), "High": 111.0, "Low": 99.0, "Close": np.linspace(100, 110, 40), "Volume": 1.0},
+                         index=pd.bdate_range("2020-01-01", periods=40))
+    assert B.repair_scale_glitches(clean).attrs["scale_repairs"] == [] and (B.repair_scale_glitches(clean)["Close"] == clean["Close"]).all()
+
+
+def test_scale_glitch_repair_leaves_real_crashes_and_permanent_shifts_alone():
+    import numpy as np
+    import backtest as B
+    idx = pd.bdate_range("2020-02-03", periods=30)
+    crash = np.concatenate([np.full(15, 100.0), [86.0], np.full(14, 87.0)])        # a genuine -14% day
+    shift = np.concatenate([np.full(15, 100.0), np.full(15, 10.0)])                # a permanent 10x level shift (e.g. an unadjusted split)
+    mk = lambda c: pd.DataFrame({"Open": c, "High": c, "Low": c, "Close": c, "Volume": 1.0}, index=idx)
+    assert B.repair_scale_glitches(mk(crash)).attrs["scale_repairs"] == []
+    assert B.repair_scale_glitches(mk(shift)).attrs["scale_repairs"] == []         # not recoverable by this rule -> the gate must still reject it
+
+
+def test_benchmark_cross_check_with_the_index():
+    import numpy as np
+    import portfolio_rules as PR
+    rng = np.random.default_rng(3)
+    idx = pd.bdate_range("2020-01-01", periods=400)
+    r = rng.normal(0.0004, 0.01, 400)
+    mk = lambda ret: pd.DataFrame({"Close": 100 * np.cumprod(1 + ret)}, index=idx)
+    assert PR.cross_check_benchmark(mk(r + rng.normal(0, 0.001, 400)), mk(r)) > 0.95
+    try:
+        PR.cross_check_benchmark(mk(rng.normal(0.0004, 0.01, 400)), mk(r))
+        assert False, "uncorrelated series must fail the cross-check"
+    except RuntimeError as e:
+        assert "cross-check failed" in str(e)
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

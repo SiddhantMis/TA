@@ -80,6 +80,16 @@ def prepare(frames: dict, bench_df: pd.DataFrame, liquid_top: int = LIQUID_TOP,
             "index_is_distinct": index_df is not None}
 
 
+def cross_check_benchmark(etf: pd.DataFrame, index: pd.DataFrame, min_corr: float = 0.95) -> float:
+    """The ETF and the index it tracks must move together day to day; if not, one of the series is still wrong."""
+    j = pd.concat([etf["Close"].pct_change(), index["Close"].pct_change()], axis=1, keys=["etf", "idx"]).dropna()
+    corr = float(j.corr().iloc[0, 1]) if len(j) > 100 else float("nan")
+    if not corr >= min_corr:
+        raise RuntimeError(f"benchmark cross-check failed: daily-return correlation with ^NSEI is {corr:.3f} (< {min_corr}); "
+                           "refusing to calculate strategy metrics")
+    return corr
+
+
 def validate_benchmark(df: pd.DataFrame, label="NIFTYBEES", max_abs_daily_return=0.25):
     """Fail closed on benchmark price jumps large enough to indicate an unhandled split/data error."""
     if df is None or df.empty or "Close" not in df:
@@ -338,7 +348,11 @@ def main(argv=None):
     if index is None:
         sys.exit("could not fetch ^NSEI")
     frames = PL.load_frames(LD.load_universe(), a.years, a.cache, a.refresh)
+    corr = cross_check_benchmark(bench, index)
     _, text = run_rules(frames, bench, a.oos_frac, a.cost_pct, index_df=index)
+    fixes = bench.attrs.get("scale_repairs") or []
+    text = (f"Benchmark data repairs: {[(f['from'], f['to'], 'x%g' % f['factor']) for f in fixes] or 'none'}; "
+            f"daily-return correlation NIFTYBEES vs ^NSEI after repair {corr:.3f}\n") + text
     open(os.path.join(a.outdir, "portfolio_rules_report.md"), "w").write("```\n" + text + "\n```\n")
     print(text)
 
