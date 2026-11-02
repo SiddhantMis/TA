@@ -41,10 +41,10 @@ def validate_membership_calendar(calendar: pd.DataFrame) -> pd.DataFrame:
     out = out.sort_values(["symbol", "valid_from", "valid_to"], na_position="last").reset_index(drop=True)
     for symbol, group in out.groupby("symbol", sort=False):
         previous_end = None
-        for row in group.itertuples(index=False):
-            if previous_end is None and row is not group.iloc[0]:
+        for i, row in enumerate(group.itertuples(index=False)):
+            if i > 0 and previous_end is None:
                 raise ValueError(f"{symbol} has an open-ended interval followed by another interval")
-            if previous_end is not None and row.valid_from < previous_end:
+            if i > 0 and row.valid_from < previous_end:
                 raise ValueError(f"{symbol} has overlapping membership intervals")
             previous_end = row.valid_to
     return out
