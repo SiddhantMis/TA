@@ -1,25 +1,51 @@
 symbol,overlaps_test_window,membership_first,membership_last,membership_intervals,membership_sources,load_status,history_bars,load_detail
-ADVANTA,False,2014-01-01,2016-04-29,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-BAGMANE,True,2026-09-30,OPEN,1,press_release,no_history,0,No TejHQ adjusted NSE rows in requested date range
-BIRET,True,2026-09-30,OPEN,1,press_release,no_history,0,No TejHQ adjusted NSE rows in requested date range
-CASTROL,False,2014-01-01,2014-02-28,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-CMC,False,2014-01-01,2015-03-24,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-COREEDUTEC,False,2014-01-01,2014-09-19,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-DRDATSONS,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-ELDERPHARM,False,2014-01-01,2015-03-27,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-EMBASSY,True,2026-09-30,OPEN,1,press_release,no_history,0,No TejHQ adjusted NSE rows in requested date range
-ERAINFRA,False,2014-01-01,2014-09-19,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-ESSAROIL,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-FCEL,False,2015-03-27,2015-03-31,1,press_release,no_history,0,No TejHQ adjusted NSE rows in requested date range
-FRL,False,2014-01-01,2015-12-14,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-INNOIND,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-MAHINDUGIN,False,2014-03-28,2014-03-31,1,press_release,no_history,0,No TejHQ adjusted NSE rows in requested date range
-MAX,False,2014-01-01,2015-09-28,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-ORCHIDCHEM,False,2014-01-01,2015-09-28,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-SGPC,True,2014-01-01,2021-09-30,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-SHASUNPHAR,False,2014-01-01,2015-03-24,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-SHREEASHTA,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-SHTV,True,2014-01-01,2021-09-30,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-SITICABLE,False,2015-09-28,2015-09-30,1,press_release,no_history,0,No TejHQ adjusted NSE rows in requested date range
-SKUMARSYNF,False,2014-01-01,2014-09-19,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
-TULIP,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in requested date range
+ABIRLANUVO,False,2014-01-01,2017-05-26,1,snapshot_floor,insufficient_history,180,"1 chain(s), 1 ISIN(s), aliases=['ABIRLANUVO']; adjusted OHLC, raw volume/turnover"
+ADVANTA,False,2014-01-01,2016-04-29,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+BAGMANE,True,2026-09-30,OPEN,1,press_release,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+BHARATCOAL,True,2026-09-30,OPEN,1,press_release,insufficient_history,181,"1 chain(s), 1 ISIN(s), aliases=['BHARATCOAL']; adjusted OHLC, raw volume/turnover"
+BIRET,True,2026-09-30,OPEN,1,press_release,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+CANHLIFE,True,2026-03-30,OPEN,1,press_release,insufficient_history,242,"1 chain(s), 1 ISIN(s), aliases=['CANHLIFE']; adjusted OHLC, raw volume/turnover"
+CASTROL,False,2014-01-01,2014-02-28,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+CLEANMAX,True,2026-09-30,OPEN,1,press_release,insufficient_history,152,"1 chain(s), 1 ISIN(s), aliases=['CLEANMAX']; adjusted OHLC, raw volume/turnover"
+CMC,False,2014-01-01,2015-03-24,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+CMPDI,True,2026-09-30,OPEN,1,press_release,insufficient_history,134,"1 chain(s), 1 ISIN(s), aliases=['CMPDI']; adjusted OHLC, raw volume/turnover"
+COREEDUTEC,False,2014-01-01,2014-09-19,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+DISHMAN,False,2014-01-01,2017-01-23,1,snapshot_floor,insufficient_history,155,"1 chain(s), 1 ISIN(s), aliases=['DISHMAN']; adjusted OHLC, raw volume/turnover"
+DRDATSONS,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+ELDERPHARM,False,2014-01-01,2015-03-27,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+EMBASSY,True,2026-09-30,OPEN,1,press_release,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+EMMVEE,True,2026-03-30,OPEN,1,press_release,insufficient_history,223,"1 chain(s), 1 ISIN(s), aliases=['EMMVEE']; adjusted OHLC, raw volume/turnover"
+ERAINFRA,False,2014-01-01,2014-09-19,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+ESSAROIL,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+FRACTAL,True,2026-09-30,OPEN,1,press_release,insufficient_history,162,"1 chain(s), 1 ISIN(s), aliases=['FRACTAL']; adjusted OHLC, raw volume/turnover"
+GROWW,True,2026-03-30,OPEN,1,press_release,insufficient_history,227,"1 chain(s), 1 ISIN(s), aliases=['GROWW']; adjusted OHLC, raw volume/turnover"
+GTOFFSHORE,False,2014-01-01,2014-09-19,1,snapshot_floor,insufficient_history,190,"1 chain(s), 1 ISIN(s), aliases=['GTOFFSHORE']; adjusted OHLC, raw volume/turnover"
+ICICIAMC,True,2026-03-30,OPEN,1,press_release,insufficient_history,200,"1 chain(s), 1 ISIN(s), aliases=['ICICIAMC']; adjusted OHLC, raw volume/turnover"
+INNOIND,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+LENSKART,True,2026-03-30,OPEN,1,press_release,insufficient_history,229,"1 chain(s), 1 ISIN(s), aliases=['LENSKART']; adjusted OHLC, raw volume/turnover"
+LGEINDIA,True,2026-03-30,OPEN,1,press_release,insufficient_history,245,"1 chain(s), 1 ISIN(s), aliases=['LGEINDIA']; adjusted OHLC, raw volume/turnover"
+MAHINDUGIN,False,2014-03-28,2014-03-31,1,press_release,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+MEESHO,True,2026-03-30,OPEN,1,press_release,insufficient_history,207,"1 chain(s), 1 ISIN(s), aliases=['MEESHO']; adjusted OHLC, raw volume/turnover"
+ORBITCORP,False,2014-01-01,2014-09-19,1,snapshot_floor,insufficient_history,214,"1 chain(s), 1 ISIN(s), aliases=['ORBITCORP']; adjusted OHLC, raw volume/turnover"
+PINELABS,True,2026-03-30,OPEN,1,press_release,insufficient_history,225,"1 chain(s), 1 ISIN(s), aliases=['PINELABS']; adjusted OHLC, raw volume/turnover"
+PIRAMALFIN,True,2026-03-30,OPEN,1,press_release,insufficient_history,230,"1 chain(s), 1 ISIN(s), aliases=['PIRAMALFIN']; adjusted OHLC, raw volume/turnover"
+PWL,True,2026-03-30,OPEN,1,press_release,insufficient_history,223,"1 chain(s), 1 ISIN(s), aliases=['PWL']; adjusted OHLC, raw volume/turnover"
+RASOYPR,False,2014-01-01,2015-09-28,1,snapshot_floor,insufficient_history,217,"1 chain(s), 1 ISIN(s), aliases=['RASOYPR']; adjusted OHLC, raw volume/turnover"
+REIAGROLTD,False,2014-01-01,2015-03-27,1,snapshot_floor,insufficient_history,206,"1 chain(s), 1 ISIN(s), aliases=['REIAGROLTD']; adjusted OHLC, raw volume/turnover"
+RUBICON,True,2026-09-30,OPEN,1,press_release,insufficient_history,243,"1 chain(s), 1 ISIN(s), aliases=['RUBICON']; adjusted OHLC, raw volume/turnover"
+SFCL,False,2014-01-01,2017-01-23,1,snapshot_floor,insufficient_history,116,"1 chain(s), 1 ISIN(s), aliases=['SFCL']; adjusted OHLC, raw volume/turnover"
+SGPC,True,2014-01-01,2021-09-30,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+SHASUNPHAR,False,2014-01-01,2015-03-24,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+SHREEASHTA,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+SHTV,True,2014-01-01,2021-09-30,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+SKUMARSYNF,False,2014-01-01,2014-09-19,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+TATACAP,True,2026-03-30,OPEN,1,press_release,insufficient_history,246,"1 chain(s), 1 ISIN(s), aliases=['TATACAP']; adjusted OHLC, raw volume/turnover"
+TENNIND,True,2026-03-30,OPEN,1,press_release,insufficient_history,222,"1 chain(s), 1 ISIN(s), aliases=['TENNIND']; adjusted OHLC, raw volume/turnover"
+TMCV,True,2026-03-30,OPEN,1,press_release,insufficient_history,227,"1 chain(s), 1 ISIN(s), aliases=['TMCV']; adjusted OHLC, raw volume/turnover"
+TUBEINVEST,False,2014-01-01,2017-05-26,1,snapshot_floor,insufficient_history,215,"1 chain(s), 1 ISIN(s), aliases=['TUBEINVEST']; adjusted OHLC, raw volume/turnover"
+TULIP,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,No TejHQ adjusted NSE rows in symbol/ISIN chains overlapping PIT membership
+UBHOLDINGS,False,2014-01-01,2014-03-28,1,snapshot_floor,insufficient_history,251,"1 chain(s), 1 ISIN(s), aliases=['UBHOLDINGS']; adjusted OHLC, raw volume/turnover"
+VAML,True,2026-09-30,OPEN,1,press_release,insufficient_history,84,"1 chain(s), 1 ISIN(s), aliases=['VAML']; adjusted OHLC, raw volume/turnover"
+VEDPOWER,True,2026-09-30,OPEN,1,press_release,insufficient_history,84,"1 chain(s), 1 ISIN(s), aliases=['VEDPOWER']; adjusted OHLC, raw volume/turnover"
+VISL,True,2026-09-30,OPEN,1,press_release,insufficient_history,84,"1 chain(s), 1 ISIN(s), aliases=['VISL']; adjusted OHLC, raw volume/turnover"
+VOGL,True,2026-09-30,OPEN,1,press_release,insufficient_history,84,"1 chain(s), 1 ISIN(s), aliases=['VOGL']; adjusted OHLC, raw volume/turnover"
