@@ -286,7 +286,14 @@ def load_frames(tickers, years, cache, refresh, min_bars=401, return_diagnostics
                                 ),
                             }
                     diagnostics["_source"] = meta.get("source", {})
-                    diagnostics["_symbol_audit"] = meta.get("symbol_audit", [])
+                    symbol_audit = meta.get("symbol_audit", [])
+                    for row in symbol_audit:
+                        bars = int(row.get("bars", 0))
+                        row["status"] = (
+                            "loaded" if bars >= min_bars else
+                            "insufficient_history" if bars else "no_history"
+                        )
+                    diagnostics["_symbol_audit"] = symbol_audit
                     print(f"[cache] {len(frames)} pinned TejHQ adjusted frames from {cache}", file=sys.stderr)
             except (OSError, ValueError, KeyError, TypeError):
                 frames = None
@@ -294,7 +301,7 @@ def load_frames(tickers, years, cache, refresh, min_bars=401, return_diagnostics
         if frames is None:
             frames, diagnostics = load_adjusted_frames(
                 requested, start.date().isoformat(), end.date().isoformat(),
-                cache_dir=os.path.join(os.path.dirname(cache) or "data_cache", "tejhq_parquet"),
+                cache_dir=os.path.join(os.path.dirname(cache) if cache else "data_cache", "tejhq_parquet"),
                 refresh=refresh, membership_df=membership_df,
                 min_bars=min_bars, revision=revision,
             )
