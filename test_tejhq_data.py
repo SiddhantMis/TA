@@ -23,6 +23,7 @@ class TejHQAdjustedLoaderTests(unittest.TestCase):
             "volume", "turnover", "adj_factor_cumulative", "adj_close",
         ]
         frame = pd.DataFrame(rows, columns=columns)
+        frame["date"] = pd.to_datetime(frame["date"]).dt.date
         pq.write_table(pa.Table.from_pandas(frame, preserve_index=False), path)
 
     def _mock_download(self, history_path, price_path):
