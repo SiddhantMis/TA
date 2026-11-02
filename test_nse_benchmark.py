@@ -134,30 +134,41 @@ def test_split_adjustment_is_idempotent():
     assert twice.attrs["corporate_actions"] == once.attrs["corporate_actions"]
 
 
-def test_niftybees_source_reconciliation_accepts_only_verified_tejhq_extra_dates():
+def test_niftybees_source_reconciliation_accepts_nse_only_bars_but_rejects_tejhq_only():
     from nse_benchmark import reconcile_niftybees_sources
     import pytest
 
     idx = pd.DatetimeIndex(["2024-01-02", "2024-01-03"])
-    nse = pd.DataFrame({
+    common = pd.DataFrame({
         "Open": [100.0, 101.0], "High": [102.0, 103.0],
         "Low": [99.0, 100.0], "Close": [101.0, 102.0],
     }, index=idx)
-    tej = pd.concat([
-        nse,
+    nse = pd.concat([
+        common,
         pd.DataFrame(
             {"Open": [102.0], "High": [104.0], "Low": [101.0], "Close": [103.0]},
             index=pd.DatetimeIndex(["2024-01-04"]),
         ),
     ])
-    result = reconcile_niftybees_sources(nse, tej)
-    assert result["tejhq_extra_bars"] == 1
+    result = reconcile_niftybees_sources(nse, common)
+    assert result["nse_api_only_bars"] == 1
+    assert result["tejhq_only_bars"] == 0
     assert result["common_bars"] == 2
 
-    bad = tej.copy()
+    bad = common.copy()
     bad.loc["2024-01-03", "Close"] += 1.0
     with pytest.raises(RuntimeError, match="source reconciliation failed"):
         reconcile_niftybees_sources(nse, bad)
+
+    tej_extra = pd.concat([
+        common,
+        pd.DataFrame(
+            {"Open": [102.0], "High": [104.0], "Low": [101.0], "Close": [103.0]},
+            index=pd.DatetimeIndex(["2024-01-05"]),
+        ),
+    ])
+    with pytest.raises(RuntimeError, match="absent from NSE NextApi"):
+        reconcile_niftybees_sources(common, tej_extra)
 
 
 def test_index_chunk_accepts_nse_flattened_list_and_legacy_envelope():

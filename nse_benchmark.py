@@ -410,19 +410,27 @@ def load_nifty50_index_history(
 def reconcile_niftybees_sources(
     nse_raw: pd.DataFrame, tejhq_raw: pd.DataFrame, *,
     absolute_tolerance: float = 0.05, relative_tolerance: float = 0.0005,
+    min_common_fraction: float = 0.98,
 ) -> dict[str, Any]:
-    """Require TejHQ raw NIFTYBEES bars to reconcile to NSE's trade-history API."""
+    """Cross-check TejHQ raw NIFTYBEES bars against NSE; NSE-only dates remain usable."""
     if nse_raw is None or nse_raw.empty or tejhq_raw is None or tejhq_raw.empty:
         raise RuntimeError("NIFTYBEES source reconciliation requires both non-empty histories")
     nse_dates = pd.DatetimeIndex(pd.to_datetime(nse_raw.index)).normalize()
     tej_dates = pd.DatetimeIndex(pd.to_datetime(tejhq_raw.index)).normalize()
-    missing_in_tejhq = nse_dates.difference(tej_dates)
-    if len(missing_in_tejhq):
-        sample = missing_in_tejhq.strftime("%Y-%m-%d").tolist()[:8]
-        raise RuntimeError(f"TejHQ NIFTYBEES history is missing {len(missing_in_tejhq)} NSE bars: {sample}")
+    nse_only = nse_dates.difference(tej_dates)
+    tejhq_only = tej_dates.difference(nse_dates)
+    if len(tejhq_only):
+        sample = tejhq_only.strftime("%Y-%m-%d").tolist()[:8]
+        raise RuntimeError(
+            f"TejHQ has {len(tejhq_only)} NIFTYBEES dates absent from NSE NextApi: {sample}"
+        )
     common = nse_dates.intersection(tej_dates).sort_values()
-    if len(common) == 0:
-        raise RuntimeError("NIFTYBEES sources have no overlapping trade dates")
+    common_fraction = len(common) / len(nse_dates)
+    if len(common) == 0 or common_fraction < min_common_fraction:
+        raise RuntimeError(
+            f"NIFTYBEES source overlap is insufficient: {len(common)}/{len(nse_dates)} "
+            f"NSE bars ({common_fraction:.2%}); required {min_common_fraction:.0%}"
+        )
     left, right = nse_raw.reindex(common), tejhq_raw.reindex(common)
     max_abs, max_rel = 0.0, 0.0
     for column in PRICE_COLUMNS:
@@ -438,13 +446,13 @@ def reconcile_niftybees_sources(
             f"NIFTYBEES source reconciliation failed: max absolute OHLC difference={max_abs:.4f}, "
             f"max relative={max_rel:.6%}"
         )
-    extra = tej_dates.difference(nse_dates)
     return {
         "nse_api_bars": int(len(nse_dates)), "tejhq_bars": int(len(tej_dates)),
-        "common_bars": int(len(common)), "tejhq_extra_bars": int(len(extra)),
-        "nse_api_missing_in_tejhq": int(len(missing_in_tejhq)),
+        "common_bars": int(len(common)), "nse_api_only_bars": int(len(nse_only)),
+        "tejhq_only_bars": int(len(tejhq_only)),
+        "common_fraction_of_nse": float(common_fraction),
         "max_abs_ohlc_diff": max_abs, "max_rel_ohlc_diff": max_rel,
-        "tejhq_extra_dates": extra.strftime("%Y-%m-%d").tolist()[:20],
+        "nse_api_only_dates": nse_only.strftime("%Y-%m-%d").tolist()[:20],
     }
 
 

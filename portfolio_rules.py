@@ -731,8 +731,8 @@ def main(argv=None):
         revision=source_metadata.get("dataset_revision"),
     )
     benchmark_reconciliation = reconcile_niftybees_sources(nse_benchmark_raw, tej_benchmark_raw)
-    official_bench = apply_niftybees_split_adjustments(tej_benchmark_raw)
-    validate_benchmark(official_bench, "TejHQ raw NIFTYBEES, split-adjusted")
+    official_bench = apply_niftybees_split_adjustments(nse_benchmark_raw)
+    validate_benchmark(official_bench, "NSE NextApi raw NIFTYBEES, split-adjusted")
 
     # Official NSE NIFTY 50 index dates define the exchange-session calendar.
     # NIFTYBEES is the live regime instrument; it may have no trade on an official
@@ -771,7 +771,7 @@ def main(argv=None):
     index = index.reindex(official_sessions)
     corr = cross_check_benchmark(bench, index)
     source_metadata.update({
-        "benchmark_source": "TejHQ raw NSE bhavcopy NIFTYBEES OHLC, split-adjusted; reconciled to NSE NextApi",
+        "benchmark_source": "NSE NextApi raw NIFTYBEES OHLC, split-adjusted; cross-checked against TejHQ raw bars on common dates",
         "benchmark_adjustment_scope": "10:1 face-value split only; no dividend adjustment applied to the ETF",
         **{f"benchmark_{key}": value for key, value in benchmark_reconciliation.items()},
         "session_calendar_source": index.attrs.get("source", "NSE historicalOR/indicesHistory"),
@@ -817,8 +817,8 @@ def main(argv=None):
         f"Stock universe: TejHQ adjusted NSE OHLC (dataset revision {source_metadata.get('dataset_revision', 'unknown')}), "
         "back-adjusted for splits, bonuses and dividends; raw exchange volume/turnover retained; "
         "mergers/demergers/rights/buybacks are not scaled. "
-        "Benchmark: TejHQ raw NSE bhavcopy NIFTYBEES OHLC, split-adjusted for the 10:1 face-value split "
-        "effective 2019-12-19 and reconciled against NSE NextApi; the ETF is not dividend-adjusted. "
+        "Benchmark: NSE NextApi raw NIFTYBEES OHLC, split-adjusted for the 10:1 face-value split "
+        "effective 2019-12-19 and cross-checked against TejHQ raw bars on common dates; the ETF is not dividend-adjusted. "
         "Session calendar: official NSE NIFTY 50 index history (historicalOR/indicesHistory), independent "
         "of ETF trade dates. Missing NIFTYBEES bars are never price-filled; only the last observed ETF "
         "regime state and mark are carried across at most one isolated official session. Missing stock "
