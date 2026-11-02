@@ -1795,20 +1795,20 @@ def test_rules_buffer_retains_ranks_up_to_30_but_only_adds_from_the_top_20():
     assert 24 not in PR.select_target(rank2, [24], buffer=True)
 
 
-def test_rules_trigger_dates_include_february_fallback_without_partial_month_lookahead():
+def test_rules_trigger_dates_match_live_february_catchup_without_partial_month_lookahead():
     import portfolio_rules as PR
     partial = pd.bdate_range("2026-01-01", "2026-02-27")
-    partial_months = {partial[i].strftime("%Y-%m") for i in PR.rule28_signals(partial)}
-    assert partial_months == {"2026-01"}  # no premature February rebalance before the month is confirmed complete
+    partial_dates = [partial[i].date().isoformat() for i in PR.rule28_signals(partial)]
+    assert partial_dates == ["2026-01-28"]  # do not prematurely signal for a month whose 28th has not arrived
 
     idx = pd.bdate_range("2026-01-01", "2026-04-30")
-    dates = {idx[i].strftime("%Y-%m"): idx[i].date().isoformat() for i in PR.rule28_signals(idx)}
-    assert dates == {
-        "2026-01": "2026-01-28",
-        "2026-02": "2026-02-27",  # 28th is Saturday; use the last session of the completed month
-        "2026-03": "2026-03-30",  # 28th/29th are weekend; first session after the 28th
-        "2026-04": "2026-04-28",
-    }
+    dates = [idx[i].date().isoformat() for i in sorted(PR.rule28_signals(idx))]
+    assert dates == [
+        "2026-01-28",
+        "2026-03-02",  # Feb 28 is Saturday; live manager catches February up on first March scan
+        "2026-03-30",  # March 28-29 are weekend
+        "2026-04-28",
+    ]
 
 
 def test_rules_benchmark_quality_gate_rejects_split_adjustment_jumps():
