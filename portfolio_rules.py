@@ -655,17 +655,18 @@ def main(argv=None):
         bench_sessions = bench_sessions.tz_localize(None)
     missing_benchmark_sessions = official_sessions.difference(bench_sessions)
     extra_benchmark_sessions = bench_sessions.difference(official_sessions)
+    def _has_session(frame, date):
+        frame_idx = pd.DatetimeIndex(frame.index)
+        if frame_idx.tz is not None:
+            frame_idx = frame_idx.tz_localize(None)
+        return date in frame_idx
+
     session_audit = pd.DataFrame({
         "date": official_sessions.strftime("%Y-%m-%d"),
         "official_nse_session": True,
         "adjusted_benchmark_bar": official_sessions.isin(bench_sessions),
         "stock_symbol_bars": [
-            sum(
-                1 for frame in frames.values()
-                if pd.Timestamp(date) in pd.DatetimeIndex(frame.index).tz_localize(None)
-                if pd.DatetimeIndex(frame.index).tz is not None
-            ) if any(pd.DatetimeIndex(frame.index).tz is not None for frame in frames.values()) else
-            sum(1 for frame in frames.values() if pd.Timestamp(date) in pd.DatetimeIndex(frame.index))
+            sum(1 for frame in frames.values() if _has_session(frame, date))
             for date in official_sessions
         ],
     })
@@ -676,9 +677,10 @@ def main(argv=None):
             f"TejHQ adjusted NIFTYBEES misses {len(missing_benchmark_sessions)} official NSE sessions "
             f"(first dates: {missing_dates}); refusing to forward-fill the benchmark"
         )
-    bench = bench.loc[bench.index.isin(official_sessions)].copy()
-    bench.index = pd.DatetimeIndex(bench.index).tz_localize(None) if pd.DatetimeIndex(bench.index).tz is not None else pd.DatetimeIndex(bench.index)
-    bench = bench.reindex(official_sessions)
+    bench.index = pd.DatetimeIndex(bench.index)
+    if bench.index.tz is not None:
+        bench.index = bench.index.tz_localize(None)
+    bench = bench.loc[bench.index.isin(official_sessions)].copy().reindex(official_sessions)
     if bench["Close"].isna().any():
         sys.exit("Adjusted benchmark has missing closes after official NSE session alignment")
     index.index = pd.DatetimeIndex(index.index).tz_localize(None) if pd.DatetimeIndex(index.index).tz is not None else pd.DatetimeIndex(index.index)
