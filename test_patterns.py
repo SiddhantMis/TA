@@ -1795,14 +1795,50 @@ def test_rules_buffer_retains_ranks_up_to_30_but_only_adds_from_the_top_20():
     assert 24 not in PR.select_target(rank2, [24], buffer=True)
 
 
-def test_rules_trigger_dates_and_the_february_gap():
+def test_rules_trigger_dates_include_february_fallback_without_partial_month_lookahead():
     import portfolio_rules as PR
+    partial = pd.bdate_range("2026-01-01", "2026-02-27")
+    partial_months = {partial[i].strftime("%Y-%m") for i in PR.rule28_signals(partial)}
+    assert partial_months == {"2026-01"}  # no premature February rebalance before the month is confirmed complete
+
     idx = pd.bdate_range("2026-01-01", "2026-04-30")
-    months = lambda sig: {idx[i].strftime("%Y-%m") for i in sig}
-    r28 = PR.rule28_signals(idx)
-    assert months(r28) == {"2026-01", "2026-03", "2026-04"}              # Feb 2026: the 28th is a Saturday, last session is the 27th -> no trigger
-    assert "2026-02" in months(PR.month_end_signals(idx))                # the month-end rule would not skip it
-    assert idx[sorted(r28)[1]].date().isoformat() == "2026-03-30"        # Mar 28-29 are a weekend -> next session
+    dates = {idx[i].strftime("%Y-%m"): idx[i].date().isoformat() for i in PR.rule28_signals(idx)}
+    assert dates == {
+        "2026-01": "2026-01-28",
+        "2026-02": "2026-02-27",  # 28th is Saturday; use the last session of the completed month
+        "2026-03": "2026-03-30",  # 28th/29th are weekend; first session after the 28th
+        "2026-04": "2026-04-28",
+    }
+
+
+def test_rules_benchmark_quality_gate_rejects_split_adjustment_jumps():
+    import portfolio_rules as PR
+    idx = pd.to_datetime(["2019-12-18", "2019-12-19", "2019-12-23"])
+    broken = pd.DataFrame({"Close": [129.254, 13.020, 129.930]}, index=idx)
+    try:
+        PR.validate_benchmark(broken)
+    except RuntimeError as exc:
+        assert "quality gate failed" in str(exc)
+        assert "2019-12-19" in str(exc)
+    else:
+        raise AssertionError("A split-adjustment discontinuity must block the backtest")
+
+    repaired = pd.DataFrame({"Close": [129.254, 130.200, 129.930]}, index=idx)
+    assert PR.validate_benchmark(repaired)["bars"] == 3
+
+
+def test_rules_can_compare_separate_etf_and_index_regimes():
+    import numpy as np
+    import portfolio_rules as PR
+    n = 320
+    prices = {"A": 100 * 1.003 ** np.arange(n)}
+    P = _rules_panel(prices, bull=False)
+    P["bull_index"] = np.ones(n, dtype=bool)
+    P["bull_index_known"] = np.ones(n, dtype=bool)
+    etf = PR.simulate(P, {299}, size=1, start=250, regime_source="etf")
+    index = PR.simulate(P, {299}, size=1, start=250, regime_source="index")
+    assert np.allclose(etf["equity"][250:], 1.0)  # ETF filter says BEAR -> cash
+    assert index["equity"][310] > 1.0             # index diagnostic says BULL -> invested
 
 
 def test_rules_engine_has_no_lookahead():
@@ -1830,9 +1866,11 @@ def test_rules_end_to_end_report_has_every_section():
         return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + 1, "Low": np.minimum(o, c) - 1, "Close": c,
                              "Volume": rng.integers(5e5, 3e6, n)}, index=pd.bdate_range("2022-01-03", periods=n))
     series, text = PR.run_rules({f"S{i}": mk(i) for i in range(30)}, mk(99))
-    for part in ("-- FULL --", "-- activity --", "BEAR days", "comparisons", "V4a_stop20 vs V2_live", "V6_half vs V2_live", "buffer 30 vs none"):
+    for part in ("-- FULL --", "-- activity --", "BEAR days", "comparisons", "V4a_stop20 vs V2_live",
+                 "V6_half vs V2_live", "V7_nifty50_filter vs V2_live", "buffer 30 vs none"):
         assert part in text, part
-    assert set(series) >= {"V1_baseline", "V2_live", "Nifty50_buyhold", "EW_universe_daily"}
+    assert set(series) >= {"V1_baseline", "V2_live", "V7_nifty50_filter",
+                           "NIFTYBEES_adjusted_buyhold", "EW_universe_daily"}
 
 
 if __name__ == "__main__":
