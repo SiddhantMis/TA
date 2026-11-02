@@ -223,6 +223,10 @@ def compare_stop(base, stop):
 def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30,
               index_df: pd.DataFrame | None = None):
     quality = validate_benchmark(bench_df, "Repaired NIFTYBEES")
+    index_quality = (
+        validate_benchmark(index_df, "NIFTY 50 price index")
+        if index_df is not None else None
+    )
     P = prepare(frames, bench_df, index_df=index_df)
     idx = P["idx"]
     me, r28 = month_end_signals(idx), rule28_signals(idx)
@@ -259,6 +263,7 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     d0, d1, ds = idx[START].date(), idx[-1].date(), idx[split].date()
     out = [f"Portfolio rules: {len(frames)} stocks, daily engine {d0} to {d1}, IS/OOS split {ds}, cost {cost_pct}% round trip, cash 0%",
            f"Benchmark: NIFTYBEES auto-adjusted with yfinance repair=True; {quality['bars']} bars; max abs daily move {quality['max_abs_daily_return_pct']:.2f}%",
+           *([f"Regime diagnostic: ^NSEI price index quality gate passed; {index_quality['bars']} bars; max abs daily move {index_quality['max_abs_daily_return_pct']:.2f}%"] if index_quality else []),
            "NIFTY50_price_index is a PRICE index (not a total-return index).",
            "CAGR / vol / Sharpe(rf=0) / max drawdown (daily)"]
     for per in ("FULL", "IS", "OOS"):
