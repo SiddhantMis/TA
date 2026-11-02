@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """The exact live portfolio rules (PR #3), tested day by day against the old baseline.
 
+Benchmark inputs are corporate-action repaired and sanity-gated before metrics are calculated.
+
     python portfolio_rules.py --years 10 --oos-frac 0.35 --cost-pct 0.30
 
 Questions, answered with the same data, costs and a DAILY engine (stops need daily prices):
