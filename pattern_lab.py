@@ -225,19 +225,20 @@ def run_lab(frames: dict, oos_frac=0.35, cost_pct=0.30, liquid_top=200):
 
 
 # ----------------------------------------------------------------------- main --
-def load_frames(tickers, years, cache, refresh, min_bars=401):
+def load_frames(tickers, years, cache, refresh, min_bars=401, return_diagnostics=False):
     if cache and os.path.exists(cache) and not refresh:
         with open(cache, "rb") as fh:
             store = pickle.load(fh)
         print(f"[cache] {len(store)} frames from {cache}", file=sys.stderr)
     else:
         store = {}
-    P._load(tickers, years, store, "lab", min_bars=min_bars)
+    diagnostics = P._load(tickers, years, store, "lab", min_bars=min_bars)
     if cache:
         os.makedirs(os.path.dirname(cache) or ".", exist_ok=True)
         with open(cache, "wb") as fh:
             pickle.dump(store, fh)
-    return {t: store[t] for t in tickers if t in store}
+    frames = {t: store[t] for t in tickers if t in store}
+    return (frames, diagnostics) if return_diagnostics else frames
 
 
 def main(argv=None):
