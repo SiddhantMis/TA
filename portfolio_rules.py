@@ -749,9 +749,9 @@ def main(argv=None):
     official_bench = apply_niftybees_split_adjustments(benchmark_raw)
     validate_benchmark(official_bench, "NSE/TejHQ raw NIFTYBEES, split-adjusted")
 
-    # Official NSE NIFTY 50 index dates define the exchange-session calendar.
-    # NIFTYBEES is the live regime instrument; it may have no trade on an official
-    # session, in which case only its last observed regime state is carried.
+    # The pinned NSE holiday calendar defines regular sessions; observed NSE
+    # NIFTY 50 dates add special sessions. The index feed can have small row gaps.
+    # NIFTYBEES is the live regime instrument; a missing bar is never synthesized.
     bench = official_bench[["Open", "Close"]].copy()
     benchmark_sessions = normalise_session_index(bench.index)
     index_sessions = official_sessions

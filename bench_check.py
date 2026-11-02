@@ -61,7 +61,7 @@ out = [
     f"NSE bars: {quality['bars']}; max absolute daily return: {quality['max_abs_daily_return_pct']:.2f}%",
     f"TejHQ cross-check bars: {tej_quality['bars']}; max abs daily move: {tej_quality['max_abs_daily_return_pct']:.2f}%",
     f"NSE / TejHQ reconciliation: {reconciliation}",
-    f"TejHQ-only bars accepted as supplements on official NSE sessions: {reconciliation['tejhq_only_dates']}",
+    f"TejHQ-only bars accepted as supplements on validated NSE-calendar sessions: {reconciliation['tejhq_only_dates']}",
     f"Official NSE NIFTY 50 sessions: {index_quality['bars']}; source={nifty.attrs.get('source')}",
     f"Daily-return correlation of split-adjusted NIFTYBEES vs official NIFTY 50: {corr:.4f}",
     "Corporate action: 10:1 face-value split effective 2019-12-19; pre-ex-date OHLC x0.1, volume x10.",

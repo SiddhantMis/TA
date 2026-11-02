@@ -500,7 +500,7 @@ def merge_niftybees_sources(
     absolute_tolerance: float = 0.05, relative_tolerance: float = 0.0005,
     min_common_fraction: float = 0.98,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
-    """Keep NSE bars and supplement only missing dates validated by the NSE index calendar."""
+    """Keep NSE bars and supplement missing dates only when a validated NSE session calendar allows them."""
     nse = _normalise_niftybees_frame(nse_raw, "NSE NextApi")
     tej = _normalise_niftybees_frame(tejhq_raw, "TejHQ")
     audit = reconcile_niftybees_sources(

@@ -40,7 +40,7 @@ jobs:
         run: python bench_check.py
       - name: Run the rules test
         run: python portfolio_rules.py --years 10 --oos-frac 0.35 --cost-pct 0.30
-      - name: Probe missing histories with independent NSE bhavcopy-backed source
+      - name: Probe missing histories via TejHQ API
         run: python scripts/probe_tejhq_history.py
       - uses: actions/cache/save@v4
         if: always()

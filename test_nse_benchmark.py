@@ -172,7 +172,7 @@ def test_niftybees_source_reconciliation_accepts_nse_only_bars_but_rejects_tejhq
 
 
 
-def test_tejq_only_benchmark_bars_are_supplemented_only_on_official_sessions():
+def test_tejhq_only_benchmark_bars_are_supplemented_only_on_official_sessions():
     from nse_benchmark import merge_niftybees_sources
     import pytest
 

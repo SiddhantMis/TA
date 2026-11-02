@@ -33,8 +33,8 @@ def probe(rows: list[dict[str, str]], start_date: str, end_date: str,
         symbol = row["symbol"].strip().upper()
         outcome: dict[str, object] = {
             "symbol": symbol,
-            "yahoo_status": row.get("load_status", ""),
-            "yahoo_bars": int(row.get("history_bars") or 0),
+            "loader_status": row.get("load_status", ""),
+            "loader_bars": int(row.get("history_bars") or 0),
             "membership_first": row.get("membership_first", ""),
             "membership_last": row.get("membership_last", ""),
             "tej_status": "error",
