@@ -487,9 +487,12 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
               loader_diagnostics: dict | None = None,
               audit_outputs: dict | None = None,
               source_metadata: dict | None = None):
-    source_metadata = source_metadata or {}
-    loader_diagnostics = loader_diagnostics or {}
-    audit_outputs = audit_outputs or {}
+    if source_metadata is None:
+        source_metadata = {}
+    if loader_diagnostics is None:
+        loader_diagnostics = {}
+    if audit_outputs is None:
+        audit_outputs = {}
     observed_benchmark = bench_df.loc[bench_df["Close"].notna(), ["Close"]]
     quality = validate_benchmark(observed_benchmark, "adjusted NIFTYBEES")
     index_quality = (

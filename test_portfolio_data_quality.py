@@ -11,6 +11,7 @@ from portfolio_rules import (
     build_missing_history_audit,
     build_session_calendar_audit,
     prepare,
+    run_rules,
     simulate,
 )
 
@@ -173,6 +174,16 @@ class PortfolioMissingBarTests(unittest.TestCase):
         self.assertTrue(bool(audit.loc["2024-01-03", "missing_benchmark_bar"]))
         self.assertTrue(bool(audit.loc["2024-01-04", "extra_stock_session"]))
         self.assertIn("nse_nifty50_session", audit.columns)
+
+    def test_run_rules_populates_the_callers_empty_audit_outputs(self):
+        outputs = {}
+        run_rules(
+            {"AAA.NS": self.frame}, self.bench,
+            membership_df=self.membership, audit_outputs=outputs,
+        )
+        self.assertIn("pit_price_history_audit", outputs)
+        self.assertIn("pit_daily_coverage_audit", outputs)
+        self.assertEqual(len(outputs["pit_daily_coverage_audit"]), len(self.idx) - 253)
 
     def test_zero_stock_bar_sessions_are_excluded_from_all_comparison_series(self):
         sessions = pd.DatetimeIndex(["2024-01-02", "2024-01-03", "2024-01-04"])
