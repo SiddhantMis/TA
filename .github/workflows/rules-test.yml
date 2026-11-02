@@ -25,10 +25,11 @@ jobs:
           path: data_cache
           key: tejhq-frames-v1-${{ github.run_id }}
           restore-keys: |
-            frames-v2-
+            tejhq-frames-v1-
       - run: python test_nse_benchmark.py
       - run: python test_patterns.py
       - run: python test_pit_membership.py
+      - run: python test_tejhq_data.py
       - run: python -m py_compile portfolio_rules.py nifty500_pit.py pattern_lab.py portfolio.py tejhq_data.py
       - name: Run NSE benchmark validation
         run: python bench_check.py
