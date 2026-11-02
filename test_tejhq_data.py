@@ -13,6 +13,7 @@ from tejhq_data import load_adjusted_frames
 
 
 class TejHQAdjustedLoaderTests(unittest.TestCase):
+    # Regression coverage for the exchange-adjusted provider path.
     def test_adjusts_ohlc_but_preserves_raw_volume_and_turnover(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "nse_2026.parquet"
