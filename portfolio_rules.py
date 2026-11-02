@@ -200,28 +200,39 @@ def select_target(rank_row, incumbents, buffer: bool, size=SIZE, retain=RETAIN) 
 
 def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0.30,
              size=SIZE, retain=RETAIN, start=START, regime_source="etf"):
-    """Daily engine. regime: 'cash' (BEAR -> no stocks), 'half' (BEAR -> half exposure), 'off' (ignore the filter)."""
+    """Daily engine: no synthetic opens, actual closes for signals, stale closes for valuation only."""
     idx, O, C = P["idx"], P["O"], P["C"]
+    C_raw = P.get("C_raw", C)
     n, side = len(idx), cost_pct / 200.0
     cash, sh, hwm, pending = 1.0, {}, {}, set()
+    last_close_seen = {}
     eq = np.full(n, np.nan)
     turns, stops, cash_days = [], 0, 0
+    stale_holding_days, max_stale_sessions = 0, 0
     for t in range(start, n):
-        o, c = O[t], C[t]
-        # A missing open means no executable trade. Keep stop-outs pending and
-        # mark an existing position at its last observed close instead.
-        mark_o = np.where(np.isfinite(o), o, C[t - 1])
+        o, c, actual_c = O[t], C[t], C_raw[t]
+        prior_mark = C[t - 1] if t > 0 else c
+        valid_open = np.isfinite(o) & (o > 0)
+        mark_o = np.where(valid_open, o, prior_mark)
+        mark_o = np.where(np.isfinite(mark_o), mark_o, c)
         reb = (t - 1) in signals and (t - 1) >= start - 1
         if reb or pending:
             traded = 0.0
+            stopped_today = set()
             still_pending = set()
-            for j in list(pending):                                   # stop-outs flagged at yesterday's close
-                if j in sh and np.isfinite(o[j]):
-                    v = sh.pop(j) * o[j]; cash += v; traded += v; hwm.pop(j, None)
+            for j in list(pending):
+                if j in sh and valid_open[j]:
+                    v = sh.pop(j) * o[j]
+                    cash += v
+                    traded += v
+                    hwm.pop(j, None)
+                    last_close_seen.pop(j, None)
+                    stopped_today.add(j)
                 elif j in sh:
                     still_pending.add(j)
             pending = still_pending
-            equity_before = cash + sum(q * mark_o[j] for j, q in sh.items())
+            equity_before = cash + sum(q * mark_o[j] for j, q in sh.items()
+                                       if np.isfinite(mark_o[j]))
             if reb:
                 s = t - 1
                 if regime_source == "index":
@@ -232,34 +243,62 @@ def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0
                     raise ValueError(f"Unknown regime_source: {regime_source}")
                 exposure = 1.0 if (regime == "off" or bull) else (0.5 if regime == "half" else 0.0)
                 target = select_target(P["rank"][s], list(sh), buffer, size, retain) if exposure > 0 else []
+                target = [j for j in target if j not in stopped_today]
                 for j in list(sh):
-                    if j not in target and np.isfinite(o[j]):
-                        v = sh.pop(j) * o[j]; cash += v; traded += v; hwm.pop(j, None)
-                eq_now = cash + sum(q * mark_o[j] for j, q in sh.items())
+                    if j not in target and valid_open[j]:
+                        v = sh.pop(j) * o[j]
+                        cash += v
+                        traded += v
+                        hwm.pop(j, None)
+                        last_close_seen.pop(j, None)
+                        pending.discard(j)
+                eq_now = cash + sum(q * mark_o[j] for j, q in sh.items()
+                                    if np.isfinite(mark_o[j]))
+                per_slot = exposure / size * eq_now if size > 0 else 0.0
                 for j in target:
-                    if not np.isfinite(o[j]):
+                    if not valid_open[j]:
                         continue
-                    want, cur = exposure / size * eq_now, sh.get(j, 0.0) * o[j]
-                    d = want - cur
-                    if d > 1e-12:
-                        d = min(d, max(cash, 0.0))
-                        if d <= 1e-12:
+                    want, cur = per_slot, sh.get(j, 0.0) * o[j]
+                    delta = want - cur
+                    if delta > 1e-12:
+                        delta = min(delta, max(cash, 0.0))
+                        if delta <= 1e-12:
                             continue
-                        cash -= d; sh[j] = sh.get(j, 0.0) + d / o[j]; traded += d; hwm.setdefault(j, o[j])
-                    elif d < -1e-12:
-                        cash += -d; sh[j] = sh[j] + d / o[j]; traded += -d;
+                        cash -= delta
+                        sh[j] = sh.get(j, 0.0) + delta / o[j]
+                        traded += delta
+                        hwm.setdefault(j, o[j])
+                        last_close_seen.setdefault(j, t)
+                    elif delta < -1e-12:
+                        cash += -delta
+                        sh[j] = sh[j] + delta / o[j]
+                        traded += -delta
                 turns.append(traded / equity_before if equity_before > 0 else 0.0)
-            cash -= traded * side                                        # costs on everything traded at this open
+            cash -= traded * side
+
         total = cash + sum(q * c[j] for j, q in sh.items())
         eq[t] = total
         if not sh:
             cash_days += 1
-        if trail:
-            for j in sh:
-                hwm[j] = max(hwm.get(j, c[j]), c[j])
-                if c[j] <= hwm[j] * (1 - trail):
-                    pending.add(j); stops += 1
-    return {"equity": eq, "turnover": turns, "stops": stops, "cash_days": cash_days}
+        for j in list(sh):
+            if np.isfinite(actual_c[j]) and actual_c[j] > 0:
+                last_close_seen[j] = t
+                if trail:
+                    hwm[j] = max(hwm.get(j, actual_c[j]), actual_c[j])
+                    if actual_c[j] <= hwm[j] * (1 - trail) and j not in pending:
+                        pending.add(j)
+                        stops += 1
+            else:
+                last_seen = last_close_seen.setdefault(j, t)
+                stale = t - last_seen
+                if stale > 0:
+                    stale_holding_days += 1
+                    max_stale_sessions = max(max_stale_sessions, stale)
+    return {
+        "equity": eq, "turnover": turns, "stops": stops, "cash_days": cash_days,
+        "stale_holding_days": stale_holding_days,
+        "max_stale_sessions": max_stale_sessions,
+    }
 
 
 # ---------------------------------------------------------------- metrics ---
@@ -291,15 +330,23 @@ def build_missing_history_audit(calendar, frames, loader_diagnostics, start, end
     """Audit absent price histories, distinguishing in-window members from older constituents."""
     cal = validate_membership_calendar(calendar)
     loaded = {normalise_symbol(t) for t in frames}
+    diagnostics = {
+        normalise_symbol(t): value for t, value in (loader_diagnostics or {}).items()
+    }
     start_ts, end_ts = pd.Timestamp(start), pd.Timestamp(end)
-    missing = sorted(set(cal["symbol"]) - loaded)
+    missing = sorted(
+        symbol for symbol in set(cal["symbol"])
+        if symbol not in loaded or diagnostics.get(symbol, {}).get("status") in {
+            "no_history", "insufficient_history", "error"
+        }
+    )
     rows = []
     for symbol in missing:
         group = cal.loc[cal["symbol"].eq(symbol)]
         overlaps = group["valid_from"].le(end_ts) & (
             group["valid_to"].isna() | group["valid_to"].gt(start_ts)
         )
-        diag = loader_diagnostics.get(f"{symbol}.NS", {})
+        diag = diagnostics.get(symbol, {})
         last_end = "OPEN" if group["valid_to"].isna().any() else group["valid_to"].max().date().isoformat()
         rows.append({
             "symbol": symbol,
@@ -349,7 +396,8 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
               membership_df: pd.DataFrame | None = None,
               membership_path: str = DEFAULT_MEMBERSHIP_FILE,
               loader_diagnostics: dict | None = None,
-              audit_outputs: dict | None = None):
+              audit_outputs: dict | None = None,
+              source_metadata: dict | None = None):
     quality = validate_benchmark(bench_df, "adjusted NIFTYBEES")
     index_quality = (
         validate_benchmark(index_df, "NIFTY 50 price index")
@@ -394,7 +442,15 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     source_counts = calendar["source"].value_counts().to_dict()
     calendar_symbols = set(calendar["symbol"])
     loaded_symbols = {normalise_symbol(t) for t in frames}
-    missing_symbols = sorted(calendar_symbols - loaded_symbols)
+    diagnostics_by_symbol = {
+        normalise_symbol(t): value for t, value in (loader_diagnostics or {}).items()
+    }
+    missing_symbols = sorted(
+        symbol for symbol in calendar_symbols
+        if symbol not in loaded_symbols or diagnostics_by_symbol.get(symbol, {}).get("status") in {
+            "no_history", "insufficient_history", "error"
+        }
+    )
     test_window_symbols = set(calendar.loc[
         calendar["valid_from"].le(idx[-1]) &
         (calendar["valid_to"].isna() | calendar["valid_to"].gt(idx[START])),
@@ -437,7 +493,30 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
         f"{r.symbol}:{r.load_status}({int(r.history_bars)} bars)"
         for r in missing_test_window.head(20).itertuples(index=False)
     ]
-    out = [f"Portfolio rules: {len(frames)} loaded price histories for PIT Nifty 500, daily engine {d0} to {d1}, IS/OOS split {ds}, cost {cost_pct}% round trip, cash 0%",
+    source_line = (
+        f"Stock source: {source_metadata.get('source')} | dataset revision "
+        f"{source_metadata.get('dataset_revision')} | series {source_metadata.get('series_scope')}"
+        if source_metadata else "Stock source: unspecified"
+    )
+    adjustment_scope = source_metadata.get("adjustment_scope", "not recorded") if source_metadata else "not recorded"
+    stale_days = sum(v.get("stale_holding_days", 0) for v in runs.values())
+    max_stale = max((v.get("max_stale_sessions", 0) for v in runs.values()), default=0)
+    quality_issues = []
+    if len(missing_test_window):
+        quality_issues.append(f"{len(missing_test_window)} active-window symbols lack a full 253-bar history")
+    if len(zero_rows):
+        quality_issues.append(f"{len(zero_rows)} official sessions have zero stock bars")
+    if max_stale > 5:
+        quality_issues.append(f"a held position had up to {max_stale} consecutive sessions without an actual close")
+    if source_metadata and any(term in adjustment_scope.lower() for term in ("merger", "demerger", "rights", "buyback")):
+        quality_issues.append("the provider does not scale mergers/demergers/rights/buybacks")
+    quality_status = (
+        "NOT DECISION-GRADE — " + "; ".join(quality_issues)
+        if quality_issues else "DIAGNOSTIC ONLY — source-level corporate-action coverage must be reviewed"
+    )
+    out = [source_line, f"Adjustment scope: {adjustment_scope}",
+           f"Data quality status: {quality_status}",
+           f"Portfolio rules: {len(frames)} loaded price histories for PIT Nifty 500, daily engine {d0} to {d1}, IS/OOS split {ds}, cost {cost_pct}% round trip, cash 0%",
            f"PIT calendar: {len(calendar)} intervals / {len(calendar_symbols)} symbols; source coverage through {MEMBERSHIP_COVERAGE_THROUGH.date()}; source categories {source_counts}",
            f"PIT active-member count during test: {int(np.min(active_counts))}–{int(np.max(active_counts))} (nominal index size {EXPECTED_INDEX_SIZE}; source documents historical count drift and a 499-name 2026 snapshot)",
            f"Price-history coverage across full calendar: {len(calendar_symbols) - len(missing_symbols)}/{len(calendar_symbols)} symbols loaded; {len(missing_symbols)} missing/unusable",
@@ -446,7 +525,8 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
            f"Daily active-member bars covered: min {coverage_stats[0]:.1f}%, p10 {coverage_stats[1]:.1f}%, median {coverage_stats[2]:.1f}%; {coverage_stats[3]:.1f}% of sessions below 90% coverage",
            f"Zero-coverage sessions: {len(zero_rows)}; dates: {zero_rows['date'].tolist()[:20]}",
            f"Worst coverage sessions (date: active bars/expected, coverage, all loaded-symbol bars): {worst_detail}",
-           "WARNING: missing/delisted-symbol history and source calendar gaps can still bias results; see universe/NIFTY500_PIT_DATA.md and the generated PIT audit CSVs.",
+           "Missing opens are never forward-filled; close carry-forward is used only to value existing holdings, while eligibility, returns and stops use observed closes.",
+           f"Stale-close diagnostics: {stale_days} held-position stale-close days across variants; maximum consecutive stale sessions={max_stale}.",
            f"Benchmark: NIFTYBEES adjusted close series; {quality['bars']} bars; max abs daily move {quality['max_abs_daily_return_pct']:.2f}%",
            *([f"Regime diagnostic: ^NSEI price index quality gate passed; {index_quality['bars']} bars; max abs daily move {index_quality['max_abs_daily_return_pct']:.2f}%"] if index_quality else []),
            "NIFTY50_price_index is a PRICE index (not a total-return index).",
