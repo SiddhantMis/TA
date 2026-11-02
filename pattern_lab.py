@@ -100,13 +100,18 @@ def build_panels(frames: dict, liquid_top):
     O = pd.concat({t: frames[t].Open for t in cols}, axis=1).reindex(idx)
     C = pd.concat({t: frames[t].Close for t in cols}, axis=1).reindex(idx)
     V = pd.concat({t: frames[t].Volume for t in cols}, axis=1).reindex(idx)
+    turnover_flags = ["Turnover" in frames[t].columns for t in cols]
+    if any(turnover_flags) and not all(turnover_flags):
+        raise ValueError("mixed price frames: either every symbol must have raw Turnover or none")
+    TV = (pd.concat({t: frames[t].Turnover for t in cols}, axis=1).reindex(idx)
+          if all(turnover_flags) else C * V)
     sma50, sma200 = C.rolling(50).mean(), C.rolling(200).mean()
     up = (C > sma200) & (sma50 > sma200)
     dn = (C < sma200) & (sma50 < sma200)
     state = pd.DataFrame(np.where(up, 1, np.where(dn, -1, 0)), index=idx, columns=cols)
     state = state.where(sma200.notna())
     if liquid_top:
-        tv = (C * V).rolling(126, min_periods=100).mean()
+        tv = TV.rolling(126, min_periods=100).mean()
         liquid = tv.rank(axis=1, ascending=False) <= liquid_top
     else:
         liquid = C.notna()
