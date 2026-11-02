@@ -77,6 +77,6 @@ buffer 30 vs none                                   turnover 0.35 vs 0.43 (+17% 
 V4a_stop20 vs V2_live                               NO: FULL max drawdown improves by < 5 points; OOS max drawdown improves by < 5 points
 V4b_stop30 vs V2_live                               NO: FULL max drawdown improves by < 5 points; OOS max drawdown improves by < 5 points
 V5_nofilter vs V2_live                              FULL CAGR +4.9 pts; FULL maxDD +2.0 pts; OOS CAGR +1.3 pts; OOS maxDD +0.0 pts
-V6_half vs V2_live                                  FULL CAGR +2.5 pts; FULL maxDD +1.0 pts; OOS CAGR +0.7 pts; OOS maxDD -0.0 pts
-V7_nifty50_filter vs V2_live                        FULL CAGR -1.3 pts; FULL maxDD +7.6 pts; OOS CAGR +0.0 pts; OOS maxDD +0.0 pts
+V6_half vs V2_live                                  FULL CAGR +2.5 pts; FULL maxDD +1.0 pts; OOS CAGR +0.7 pts; OOS maxDD +0.0 pts
+V7_nifty50_filter vs V2_live                        FULL CAGR -1.3 pts; FULL maxDD +7.6 pts; OOS CAGR -0.0 pts; OOS maxDD -0.0 pts
 ```
