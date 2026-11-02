@@ -36,10 +36,22 @@ WINDOW = 520            # bars given to score_ticker per session (it needs > ~48
 WARMUP = WINDOW - 1     # first session with enough history
 
 
-def load_history(ticker: str, years: int):
+def load_history(ticker: str, years: int, repair: bool = False):
+    """Load adjusted daily OHLCV; opt into Yahoo's documented repair path for benchmark history.
+
+    repair=True asks yfinance to detect split/dividend/currency and missing-price anomalies.
+    It is deliberately opt-in so the existing constituent price cache and stock universe
+    are not silently rewritten when the benchmark is repaired.
+    """
     import yfinance as yf  # imported here so tests/imports work without it
-    data = yf.download(ticker, period=f"{years}y", interval="1d", auto_adjust=True, progress=False)
-    if data.empty:
+    kwargs = {
+        "period": f"{years}y", "interval": "1d", "auto_adjust": True,
+        "progress": False, "repair": repair,
+    }
+    if repair:
+        kwargs["actions"] = True
+    data = yf.download(ticker, **kwargs)
+    if data is None or data.empty:
         return None
     data = A._drop_unsettled_today(data)
     if data.empty:
