@@ -1,37 +1,73 @@
 #!/usr/bin/env python3
-"""Data-quality check of the benchmark series that drives the market filter: NIFTYBEES.NS vs ^NSEI."""
+"""Compare raw vs Yahoo-repaired NIFTYBEES data and validate the NIFTY 50 regime proxy."""
 import os
+
 import numpy as np
 import pandas as pd
+
 import backtest as B
 
-nb = B.load_history("NIFTYBEES.NS", 10)
-ix = B.load_history("^NSEI", 10)
-out = []
-for name, df in (("NIFTYBEES.NS", nb), ("^NSEI", ix)):
-    c = df["Close"]
-    r = c.pct_change()
-    out.append(f"== {name}: {len(df)} bars {df.index[0].date()} to {df.index[-1].date()}, last close {c.iloc[-1]:.2f}, 200-DMA {c.rolling(200).mean().iloc[-1]:.2f}")
-    out.append(f"   NaN closes {int(c.isna().sum())}, zero/negative closes {int((c <= 0).sum())}, daily-return std {r.std() * 100:.2f}%")
-    big = r[r.abs() > 0.08]
+raw = B.load_history("NIFTYBEES.NS", 10, repair=False)
+fixed = B.load_history("NIFTYBEES.NS", 10, repair=True)
+nifty = B.load_history("^NSEI", 10)
+if raw is None or fixed is None or nifty is None:
+    raise SystemExit("Benchmark diagnostic could not download all required series.")
+
+
+def summarize(name, frame):
+    close = pd.to_numeric(frame["Close"], errors="coerce")
+    returns = close.pct_change()
+    out = [
+        f"== {name}: {len(frame)} bars {frame.index[0].date()} to {frame.index[-1].date()}",
+        f"   last close {close.iloc[-1]:.4f}; 200-DMA {close.rolling(200, min_periods=200).mean().iloc[-1]:.4f}",
+        f"   NaN closes {int(close.isna().sum())}; non-positive closes {int((close <= 0).sum())}",
+        f"   daily-return std {returns.std() * 100:.3f}%; max abs move {returns.abs().max() * 100:.2f}%",
+    ]
+    big = returns[returns.abs() > 0.08]
     out.append(f"   days with |return| > 8%: {len(big)}")
-    for d, v in big.items():
-        i = c.index.get_loc(d)
-        out.append(f"     {d.date()}  return {v * 100:+.1f}%   close {c.iloc[i - 1]:.4f} -> {c.iloc[i]:.4f}   (open {df['Open'].iloc[i]:.4f})")
-j = pd.concat([nb["Close"].pct_change().rename("nb"), ix["Close"].pct_change().rename("ix")], axis=1).dropna()
-out.append(f"== daily-return correlation NIFTYBEES vs ^NSEI: {j.corr().iloc[0, 1]:.3f}")
-gap = (j.nb - j.ix).abs()
-out.append(f"   days where they differ by > 3 points: {int((gap > 0.03).sum())}")
-for d in gap[gap > 0.03].index[:12]:
-    out.append(f"     {d.date()}  NIFTYBEES {j.nb[d] * 100:+.1f}%  ^NSEI {j.ix[d] * 100:+.1f}%")
-reg = {}
-for name, df in (("NIFTYBEES", nb), ("NSEI", ix)):
-    c = df["Close"]; reg[name] = (c > c.rolling(200, min_periods=200).mean()).where(c.rolling(200, min_periods=200).mean().notna())
-r2 = pd.concat(reg, axis=1).dropna()
-out.append(f"== market filter agreement (BULL = close above 200-DMA): {len(r2)} days, share BEAR: NIFTYBEES {100 * (~r2.NIFTYBEES.astype(bool)).mean():.0f}%  ^NSEI {100 * (~r2.NSEI.astype(bool)).mean():.0f}%, disagree on {int((r2.NIFTYBEES != r2.NSEI).sum())} days")
-dis = r2[r2.NIFTYBEES != r2.NSEI]
+    for day, value in big.items():
+        pos = close.index.get_loc(day)
+        out.append(f"     {day.date()} {value * 100:+.1f}%: {close.iloc[pos - 1]:.4f} -> {close.iloc[pos]:.4f}")
+    return out, returns
+
+
+out = [
+    "NIFTYBEES had a 10:1 face-value split effective 2019-12-19 (NSE circular NSE/CML/42873).",
+    "The raw Yahoo series is shown only as a diagnostic; strategy results use repair=True.",
+]
+raw_lines, raw_ret = summarize("NIFTYBEES raw Yahoo adjusted history", raw)
+fixed_lines, fixed_ret = summarize("NIFTYBEES Yahoo repair=True adjusted history", fixed)
+nifty_lines, nifty_ret = summarize("^NSEI price-index history", nifty)
+out += raw_lines + fixed_lines + nifty_lines
+
+# Show the split window explicitly: the data-quality fix must remove the false one-session jump.
+split = pd.Timestamp("2019-12-19")
+if split in fixed.index:
+    around = fixed.loc[split - pd.Timedelta(days=4):split + pd.Timedelta(days=4), "Close"]
+    out.append("== repaired NIFTYBEES split window (2019-12-19)")
+    out.extend(f"   {d.date()} close {v:.4f}" for d, v in around.items())
+
+bad = fixed_ret[fixed_ret.abs() > 0.25]
+out.append(f"== repaired benchmark hard gate: {len(bad)} daily returns exceed 25%")
+if not bad.empty:
+    out.extend(f"   FAIL {d.date()} {v * 100:+.1f}%" for d, v in bad.items())
+
+j = pd.concat([fixed["Close"].rename("NIFTYBEES"), nifty["Close"].rename("^NSEI")], axis=1).dropna()
+out.append(f"== repaired ETF vs ^NSEI daily-return correlation: {j.pct_change().dropna().corr().iloc[0, 1]:.3f}")
+etf_sma = j["NIFTYBEES"].rolling(200, min_periods=200).mean()
+idx_sma = j["^NSEI"].rolling(200, min_periods=200).mean()
+reg = pd.DataFrame({
+    "ETF_BULL": j["NIFTYBEES"] > etf_sma,
+    "INDEX_BULL": j["^NSEI"] > idx_sma,
+}).dropna()
+dis = reg[reg["ETF_BULL"] != reg["INDEX_BULL"]]
+out.append(f"== 200-DMA regime comparison: {len(reg)} common sessions; disagreement {len(dis)} ({len(dis) / max(1, len(reg)) * 100:.1f}%)")
 if len(dis):
     out.append(f"   first/last disagreement: {dis.index[0].date()} / {dis.index[-1].date()}")
+
 os.makedirs("results", exist_ok=True)
-open("results/bench_check.md", "w").write("```\n" + "\n".join(out) + "\n```\n")
-print("\n".join(out))
+report = "\n".join(out)
+open("results/bench_check.md", "w").write("\x60\x60\x60\n" + report + "\n\x60\x60\x60\n")
+print(report)
+if not bad.empty:
+    raise SystemExit("Yahoo repair did not remove all >25% NIFTYBEES daily jumps; do not trust ETF-filter backtest yet.")
