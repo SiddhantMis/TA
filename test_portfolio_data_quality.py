@@ -28,7 +28,7 @@ class PortfolioMissingBarTests(unittest.TestCase):
             "Close": close,
             "Volume": np.full(len(close), 10000.0),
             "Turnover": np.nan_to_num(close, nan=0.0) * 10000.0,
-        }, index=self.idx)
+        }, index=self.idx).drop(index=self.idx[self.missing_pos])
         self.bench = pd.DataFrame({"Close": np.linspace(100.0, 130.0, len(self.idx))}, index=self.idx)
         self.membership = pd.DataFrame([{
             "symbol": "AAA",
@@ -48,7 +48,7 @@ class PortfolioMissingBarTests(unittest.TestCase):
         self.assertTrue(np.isnan(prepared["C_raw"][self.missing_pos, 0]))
         self.assertAlmostEqual(
             prepared["C"][self.missing_pos, 0],
-            self.frame["Close"].iloc[self.missing_pos - 1],
+            self.frame["Close"].loc[self.idx[self.missing_pos - 1]],
         )
 
     def test_simulator_does_not_execute_at_a_synthetic_open(self):
