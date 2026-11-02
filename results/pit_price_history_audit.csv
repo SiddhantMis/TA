@@ -1,0 +1,165 @@
+symbol,overlaps_test_window,membership_first,membership_last,membership_intervals,membership_sources,load_status,history_bars,load_detail
+ABIRLANUVO,False,2014-01-01,2017-05-26,1,snapshot_floor,no_history,0,provider returned no rows
+ADLABS,False,2015-09-28,2015-09-30,1,press_release,no_history,0,provider returned no rows
+ADVANTA,False,2014-01-01,2016-04-29,1,snapshot_floor,no_history,0,provider returned no rows
+AKZOINDIA,True,2014-01-01,2026-03-31,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+ALBK,True,2014-01-01,2019-12-27,1,snapshot_floor,no_history,0,provider returned no rows
+ALOKTEXT,False,2014-01-01,2017-03-31,1,snapshot_floor,no_history,0,provider returned no rows
+AMTEKAUTO,False,2014-01-01,2017-09-29,1,snapshot_floor,no_history,0,provider returned no rows
+ANDHRABANK,True,2014-01-01,2019-12-27,1,snapshot_floor,no_history,0,provider returned no rows
+ANGELBRKG,True,2021-03-31,2021-09-30,1,press_release,no_history,0,provider returned no rows
+BAGMANE,True,2026-09-30,OPEN,1,press_release,no_history,0,provider returned no rows
+BALLARPUR,True,2014-01-01,2018-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+BHARATCOAL,True,2026-09-30,OPEN,1,press_release,insufficient_history,193,need at least 253 bars
+BHARATFIN,True,2014-01-01,2018-12-28,1,snapshot_floor,no_history,0,provider returned no rows
+BHUSANSTL,True,2014-01-01,2018-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+BRFL,True,2014-01-01,2018-09-28,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+CAPF,True,2014-01-01,2018-12-28,1,snapshot_floor,no_history,0,provider returned no rows
+CASTROL,False,2014-01-01,2014-02-28,1,snapshot_floor,no_history,0,provider returned no rows
+CENTURYTEX,True,2014-01-01,2020-09-30,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+CLEANMAX,True,2026-09-30,OPEN,1,press_release,insufficient_history,164,need at least 253 bars
+CMC,False,2014-01-01,2015-03-24,1,snapshot_floor,no_history,0,provider returned no rows
+CMPDI,True,2026-09-30,OPEN,1,press_release,insufficient_history,146,need at least 253 bars
+COREEDUTEC,False,2014-01-01,2014-09-19,1,snapshot_floor,no_history,0,provider returned no rows
+CORPBANK,True,2014-01-01,2019-12-27,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+COX&KINGS,True,2014-01-01,2019-12-26,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+CROMPGREAV,False,2014-01-01,2015-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+DENABANK,True,2014-01-01,2019-01-28,1,snapshot_floor,no_history,0,provider returned no rows
+DHANI,True,2017-09-29,2023-03-31,1,press_release,no_history,0,provider returned no rows
+DHFL,True,2014-01-01,2020-06-26,1,snapshot_floor,no_history,0,provider returned no rows
+DISHMAN,False,2014-01-01,2017-01-23,1,snapshot_floor,no_history,0,provider returned no rows
+DRDATSONS,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,provider returned no rows
+ELDERPHARM,False,2014-01-01,2015-03-27,1,snapshot_floor,no_history,0,provider returned no rows
+EMMVEE,True,2026-03-30,OPEN,1,press_release,insufficient_history,236,need at least 253 bars
+EQUITAS,True,2014-01-01,2022-09-30,1,snapshot_floor,no_history,0,provider returned no rows
+ERAINFRA,False,2014-01-01,2014-09-19,1,snapshot_floor,no_history,0,provider returned no rows
+ESSAROIL,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,provider returned no rows
+EXCELCROP,True,2018-09-28,2019-04-15,1,press_release,no_history,0,provider returned no rows
+FCEL,False,2015-03-27,2015-03-31,1,press_release,no_history,0,provider returned no rows
+FRACTAL,True,2026-09-30,OPEN,1,press_release,insufficient_history,174,need at least 253 bars
+FRL,False,2014-01-01,2015-12-14,1,snapshot_floor,no_history,0,provider returned no rows
+FSC,True,2020-03-27,2020-03-31,1,press_release,no_history,0,provider returned no rows
+GAMMONIND,False,2014-01-01,2015-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+GATI,True,2014-01-01,2018-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+GDL,True,2014-01-01,2019-09-27,1,snapshot_floor,no_history,0,provider returned no rows
+GEPIL,True,2014-01-01,2021-09-30,1,snapshot_floor,no_history,0,provider returned no rows
+GET&D,True,2014-01-01,2025-03-31,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+GLS,True,2022-03-31,2024-09-30,2,press_release,no_history,0,provider returned no rows
+GROWW,True,2026-03-30,OPEN,1,press_release,insufficient_history,240,need at least 253 bars
+GSPL,True,2014-01-01,2026-05-12,1,snapshot_floor,insufficient_history,1,need at least 253 bars
+GTOFFSHORE,False,2014-01-01,2014-09-19,1,snapshot_floor,no_history,0,provider returned no rows
+GUJFLUORO,True,2014-01-01,2019-06-28,1,snapshot_floor,no_history,0,provider returned no rows
+GUJGASLTD,True,2014-01-01,2026-03-30,1,snapshot_floor,no_history,0,provider returned no rows
+GUJNRECOKE,False,2014-01-01,2015-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+HBLPOWER,True,2024-03-28,2024-03-31,1,press_release,no_history,0,provider returned no rows
+HDFC,True,2014-01-01,2023-07-13,1,snapshot_floor,no_history,0,provider returned no rows
+HOTELEELA,False,2014-01-01,2015-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+HSIL,True,2014-01-01,2018-12-28,1,snapshot_floor,no_history,0,provider returned no rows
+IBREALEST,True,2014-01-01,2023-09-29,1,snapshot_floor,no_history,0,provider returned no rows
+IBULISL,True,2019-03-29,2020-06-26,1,press_release,no_history,0,provider returned no rows
+ICICIAMC,True,2026-03-30,OPEN,1,press_release,insufficient_history,213,need at least 253 bars
+IDFC,True,2014-01-01,2024-10-10,1,snapshot_floor,no_history,0,provider returned no rows
+IIFLWAM,True,2020-06-26,2020-09-30,1,press_release,no_history,0,provider returned no rows
+INFIBEAM,True,2014-01-01,2024-03-28,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+INFINITE,False,2014-01-01,2014-09-19,1,snapshot_floor,no_history,0,provider returned no rows
+INNOIND,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,provider returned no rows
+INOXLEISUR,True,2014-03-28,2023-02-17,1,press_release,no_history,0,provider returned no rows
+IPAPPM,False,2014-01-01,2017-03-31,1,snapshot_floor,no_history,0,provider returned no rows
+ISEC,True,2018-09-28,2025-03-21,1,press_release,no_history,0,provider returned no rows
+ITDCEM,True,2014-01-01,2020-06-26,1,snapshot_floor,no_history,0,provider returned no rows
+JBCHEPHARM,True,2014-01-01,2026-07-17,1,snapshot_floor,insufficient_history,1,need at least 253 bars
+JBFIND,True,2014-01-01,2018-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+JCHAC,True,2014-01-01,2019-09-30,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+JMTAUTOLTD,False,2014-01-01,2017-09-29,1,snapshot_floor,no_history,0,provider returned no rows
+JPASSOCIAT,True,2014-01-01,2019-09-27,1,snapshot_floor,no_history,0,provider returned no rows
+JPINFRATEC,False,2014-01-01,2017-03-31,1,snapshot_floor,no_history,0,provider returned no rows
+JSLHISAR,True,2017-09-29,2022-05-31,1,press_release,no_history,0,provider returned no rows
+KGL,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,provider returned no rows
+KPIT,True,2014-01-01,2018-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+KSBPUMPS,False,2014-01-01,2017-03-31,1,snapshot_floor,no_history,0,provider returned no rows
+KWALITY,True,2014-01-01,2018-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+LAKSHVILAS,True,2014-01-01,2020-06-26,1,snapshot_floor,no_history,0,provider returned no rows
+LAXMIMACH,True,2014-01-01,2024-03-28,1,snapshot_floor,no_history,0,provider returned no rows
+LENSKART,True,2026-03-30,OPEN,1,press_release,insufficient_history,242,need at least 253 bars
+LITL,False,2014-01-01,2017-03-31,1,snapshot_floor,no_history,0,provider returned no rows
+MAGMA,True,2014-01-01,2020-06-26,1,snapshot_floor,no_history,0,provider returned no rows
+MAHINDCIE,True,2014-01-01,2021-03-31,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+MAHINDUGIN,False,2014-03-28,2014-03-31,1,press_release,no_history,0,provider returned no rows
+MANDHANA,False,2014-01-01,2015-12-14,1,snapshot_floor,no_history,0,provider returned no rows
+MANGCHEFER,False,2014-01-01,2015-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+MANPASAND,True,2014-01-01,2019-03-29,1,snapshot_floor,no_history,0,provider returned no rows
+MAX,False,2014-01-01,2015-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+MAXINDIA,True,2017-03-31,2019-12-27,1,press_release,no_history,0,provider returned no rows
+MCDOWELL-N,False,2014-01-01,2015-03-31,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+MEESHO,True,2026-03-30,OPEN,1,press_release,insufficient_history,220,need at least 253 bars
+METALFORGE,False,2015-09-28,2015-09-30,1,press_release,no_history,0,provider returned no rows
+MFL,True,2023-03-31,2023-09-30,1,press_release,no_history,0,provider returned no rows
+MONNETISPA,False,2014-01-01,2015-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+MONSANTO,True,2014-01-01,2019-06-28,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+NBVENTURES,True,2017-03-31,2020-09-25,1,press_release,no_history,0,provider returned no rows
+NITINFIRE,False,2014-09-19,2017-09-29,1,press_release,no_history,0,provider returned no rows
+OCL,False,2014-01-01,2017-01-23,1,snapshot_floor,no_history,0,provider returned no rows
+ORBITCORP,False,2014-01-01,2014-09-19,1,snapshot_floor,no_history,0,provider returned no rows
+ORCHIDCHEM,False,2014-01-01,2015-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+ORIENTBANK,True,2014-01-01,2019-12-27,1,snapshot_floor,no_history,0,provider returned no rows
+ORIENTREF,True,2019-09-27,2019-09-30,1,press_release,no_history,0,provider returned no rows
+PAPERPROD,True,2020-09-25,2020-09-30,1,press_release,no_history,0,provider returned no rows
+PEL,True,2014-01-01,2025-09-23,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+PHILIPCARB,True,2018-09-28,2018-09-30,1,press_release,no_history,0,provider returned no rows
+PINELABS,True,2026-03-30,OPEN,1,press_release,insufficient_history,238,need at least 253 bars
+PIRAMALFIN,True,2026-03-30,OPEN,1,press_release,insufficient_history,243,need at least 253 bars
+POLARIS,True,2014-01-01,2018-02-05,1,snapshot_floor,no_history,0,provider returned no rows
+PSL,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,provider returned no rows
+PUNJLLOYD,False,2014-01-01,2017-09-29,1,snapshot_floor,no_history,0,provider returned no rows
+PWL,True,2026-03-30,OPEN,1,press_release,insufficient_history,236,need at least 253 bars
+RASOYPR,False,2014-01-01,2015-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+REIAGROLTD,False,2014-01-01,2015-03-27,1,snapshot_floor,no_history,0,provider returned no rows
+RELCAPITAL,True,2018-02-05,2020-06-26,1,press_release,no_history,0,provider returned no rows
+RNAVAL,True,2014-01-01,2019-03-29,1,snapshot_floor,no_history,0,provider returned no rows
+ROLTA,False,2014-01-01,2017-09-29,1,snapshot_floor,no_history,0,provider returned no rows
+RUCHISOYA,False,2014-01-01,2017-09-29,1,snapshot_floor,no_history,0,provider returned no rows
+SEQUENT,True,2014-01-01,2022-09-30,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+SFCL,False,2014-01-01,2017-01-23,1,snapshot_floor,no_history,0,provider returned no rows
+SGPC,True,2014-01-01,2021-09-30,1,snapshot_floor,no_history,0,provider returned no rows
+SHASUNPHAR,False,2014-01-01,2015-03-24,1,snapshot_floor,no_history,0,provider returned no rows
+SHILPI,True,2017-03-31,2017-11-13,1,press_release,no_history,0,provider returned no rows
+SHREEASHTA,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,provider returned no rows
+SHRIRAMCIT,True,2014-01-01,2022-08-08,1,snapshot_floor,no_history,0,provider returned no rows
+SHTV,True,2014-01-01,2021-09-30,1,snapshot_floor,no_history,0,provider returned no rows
+SINTEX,False,2014-01-01,2017-03-31,1,snapshot_floor,no_history,0,provider returned no rows
+SITICABLE,False,2015-09-28,2015-09-30,1,press_release,no_history,0,provider returned no rows
+SKUMARSYNF,False,2014-01-01,2014-09-19,1,snapshot_floor,no_history,0,provider returned no rows
+SMLISUZU,True,2014-01-01,2018-09-28,1,snapshot_floor,no_history,0,provider returned no rows
+SONASTEER,False,2014-03-28,2014-03-31,1,press_release,no_history,0,provider returned no rows
+SPICEJET,True,2019-12-27,2022-09-30,1,press_release,no_history,0,provider returned no rows
+SPTL,True,2018-04-02,2019-09-27,1,press_release,no_history,0,provider returned no rows
+SREINFRA,True,2014-01-01,2019-09-27,1,snapshot_floor,no_history,0,provider returned no rows
+SRIPIPES,False,2015-09-28,2015-09-30,1,press_release,no_history,0,provider returned no rows
+STRTECH,False,2014-01-01,2017-09-30,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+SUNCLAYLTD,True,2019-04-15,2021-09-30,2,press_release,no_history,0,provider returned no rows
+SUPPETRO,True,2017-09-29,2022-04-07,2,press_release,no_history,0,provider returned no rows
+SUVENPHAR,True,2020-09-25,2020-09-30,1,press_release,no_history,0,provider returned no rows
+SWANENERGY,True,2014-01-01,2023-03-31,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+SYNDIBANK,True,2014-01-01,2019-12-27,1,snapshot_floor,no_history,0,provider returned no rows
+TATACOFFEE,True,2014-01-01,2020-09-30,2,"press_release,snapshot_floor",no_history,0,provider returned no rows
+TATASPONGE,True,2014-01-01,2019-03-29,1,snapshot_floor,no_history,0,provider returned no rows
+TATASTLBSL,True,2020-01-16,2021-04-29,1,press_release,no_history,0,provider returned no rows
+TATASTLLP,True,2021-09-30,2022-09-30,1,press_release,no_history,0,provider returned no rows
+TCNSBRANDS,True,2019-03-29,2023-09-29,1,press_release,no_history,0,provider returned no rows
+TECHNO,True,2014-01-01,2018-08-08,1,snapshot_floor,no_history,0,provider returned no rows
+TENNIND,True,2026-03-30,OPEN,1,press_release,insufficient_history,235,need at least 253 bars
+TIDEWATER,False,2014-01-01,2017-09-29,1,snapshot_floor,no_history,0,provider returned no rows
+TIFIN,True,2018-02-05,2018-03-31,1,press_release,no_history,0,provider returned no rows
+TINPLATE,False,2014-01-01,2014-09-19,1,snapshot_floor,no_history,0,provider returned no rows
+TMCV,True,2026-03-30,OPEN,1,press_release,insufficient_history,240,need at least 253 bars
+TUBEINVEST,False,2014-01-01,2017-05-26,1,snapshot_floor,no_history,0,provider returned no rows
+TULIP,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,provider returned no rows
+TV18BRDCST,True,2014-01-01,2024-10-16,1,snapshot_floor,no_history,0,provider returned no rows
+UBHOLDINGS,False,2014-01-01,2014-03-28,1,snapshot_floor,no_history,0,provider returned no rows
+UJJIVAN,True,2017-01-23,2022-03-31,1,press_release,no_history,0,provider returned no rows
+UNITEDBNK,True,2017-09-29,2018-04-02,1,press_release,no_history,0,provider returned no rows
+VAML,True,2026-09-30,OPEN,1,press_release,insufficient_history,96,need at least 253 bars
+VEDPOWER,True,2026-09-30,OPEN,1,press_release,insufficient_history,96,need at least 253 bars
+VIJAYABANK,True,2014-01-01,2019-01-28,1,snapshot_floor,no_history,0,provider returned no rows
+VISL,True,2026-09-30,OPEN,1,press_release,insufficient_history,96,need at least 253 bars
+VOGL,True,2026-09-30,OPEN,1,press_release,insufficient_history,96,need at least 253 bars

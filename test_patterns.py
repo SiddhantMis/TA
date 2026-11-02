@@ -1850,8 +1850,17 @@ def test_rules_engine_has_no_lookahead():
         return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + 1, "Low": np.minimum(o, c) - 1, "Close": c,
                              "Volume": rng.integers(5e5, 3e6, n)}, index=pd.bdate_range("2023-01-02", periods=n))
     frames = {f"S{i}": mk(i) for i in range(8)}; bench = mk(99)
+    pit_calendar = pd.DataFrame({
+        "symbol": [f"S{i}" for i in range(8)],
+        "valid_from": [frames["S0"].index[0]] * 8,
+        "valid_to": [pd.NaT] * 8,
+        "source": ["fixture"] * 8,
+        "source_url": [""] * 8,
+        "notes": ["synthetic test interval"] * 8,
+    })
     def run(T):
-        P = PR.prepare({k: f.iloc[:T] for k, f in frames.items()}, bench.iloc[:T], liquid_top=6)
+        P = PR.prepare({k: f.iloc[:T] for k, f in frames.items()}, bench.iloc[:T],
+                       liquid_top=6, membership_df=pit_calendar)
         return PR.simulate(P, PR.rule28_signals(P["idx"]), buffer=True, trail=0.2, size=3)["equity"]
     full, part = run(700), run(560)
     assert np.allclose(full[:560], part[:560], equal_nan=True) and np.isfinite(full[300:]).all()
@@ -1865,7 +1874,17 @@ def test_rules_end_to_end_report_has_every_section():
         o = np.concatenate([[c[0]], c[:-1]]) * (1 + rng.normal(0, .004, n))
         return pd.DataFrame({"Open": o, "High": np.maximum(o, c) + 1, "Low": np.minimum(o, c) - 1, "Close": c,
                              "Volume": rng.integers(5e5, 3e6, n)}, index=pd.bdate_range("2022-01-03", periods=n))
-    series, text = PR.run_rules({f"S{i}": mk(i) for i in range(30)}, mk(99))
+    frames = {f"S{i}": mk(i) for i in range(30)}
+    idx = next(iter(frames.values())).index
+    pit_calendar = pd.DataFrame({
+        "symbol": list(frames),
+        "valid_from": [idx[0]] * len(frames),
+        "valid_to": [pd.NaT] * len(frames),
+        "source": ["fixture"] * len(frames),
+        "source_url": [""] * len(frames),
+        "notes": ["synthetic test interval"] * len(frames),
+    })
+    series, text = PR.run_rules(frames, mk(99), membership_df=pit_calendar)
     for part in ("-- FULL --", "-- activity --", "BEAR days", "comparisons", "V4a_stop20 vs V2_live",
                  "V6_half vs V2_live", "V7_nifty50_filter vs V2_live", "buffer 30 vs none"):
         assert part in text, part

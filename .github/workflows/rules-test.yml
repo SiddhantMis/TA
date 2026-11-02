@@ -3,8 +3,8 @@ name: Portfolio rules test
 # Branch-only research run: the exact live rules, daily engine. Commits the report back to the branch.
 on:
   push:
-    branches: [rules-test]
-    paths: ['portfolio_rules.py', 'nse_benchmark.py', 'bench_check.py', 'test_nse_benchmark.py', 'requirements.txt', '.github/workflows/rules-test.yml']
+    branches: [rules-test, pit-nifty500-membership]
+    paths: ['portfolio_rules.py', 'test_patterns.py', 'pattern_lab.py', 'portfolio.py', 'nifty500_pit.py', 'universe/nifty500_membership_history.csv', 'test_pit_membership.py', 'nse_benchmark.py', 'bench_check.py', 'test_nse_benchmark.py', 'requirements.txt', '.github/workflows/rules-test.yml']
   workflow_dispatch:
 
 permissions:
@@ -28,6 +28,8 @@ jobs:
             frames-v2-
       - run: python test_nse_benchmark.py
       - run: python test_patterns.py
+      - run: python test_pit_membership.py
+      - run: python -m py_compile portfolio_rules.py nifty500_pit.py pattern_lab.py portfolio.py
       - name: Run NSE benchmark validation
         run: python bench_check.py
       - name: Run the rules test
@@ -41,6 +43,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f results/bench_check.md results/portfolio_rules_report.md
+          git add -f results/bench_check.md results/portfolio_rules_report.md results/pit_price_history_audit.csv results/pit_daily_coverage_audit.csv
           git commit -m "Portfolio rules report [skip ci]" || echo "nothing to commit"
           for i in 1 2 3 4; do git pull -q --rebase origin "${{ github.ref_name }}" && git push && break; sleep 8; done
