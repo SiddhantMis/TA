@@ -64,3 +64,14 @@ The exchange series is unadjusted. To express historical prices in today's Rs 1 
 A hard gate rejects missing/non-positive closes or daily moves above 25%, and a separate daily-return correlation check compares NIFTYBEES against the \`^NSEI\` price index. The index remains a diagnostic only; it does not replace the ETF filter. Yahoo's NIFTYBEES history is retained only as an independent diagnostic in \`bench_check.py\`, not as a strategy input.
 
 This is an exchange-traded price series, not fund NAV or a separately constructed total-return series. The strategy's technical regime uses traded closes.
+
+## Point-in-time Nifty 500 research variant
+
+The daily rules backtest now uses `universe/nifty500_membership_history.csv` instead of applying today's Nifty 500 list to the entire past. At each signal date, only symbols whose published interval includes that date can enter the 126-session traded-value top-200 liquidity ranking or the 12–1 momentum eligibility/rank. Intervals are start-inclusive and end-exclusive.
+
+Run it with:
+
+    python portfolio_rules.py --years 10 --oos-frac 0.35 --cost-pct 0.30
+
+The membership calendar is a CC0-filtered Nifty 500 extract from [aditya-jha/nse-historical-membership](https://github.com/aditya-jha/nse-historical-membership). It has known gaps: some initial 2014 membership starts are approximate, the source validation notes historical count drift, and Yahoo Finance may not provide price histories for delisted or renamed companies. The run stops at the calendar's stated 2026-10-13 coverage date and prints both symbol-level and daily member-price coverage. Treat the result as **survivorship-bias-reduced**, not survivorship-bias-free; poor price coverage means the corrected CAGR is not decision-grade. See [universe/NIFTY500_PIT_DATA.md](universe/NIFTY500_PIT_DATA.md) for provenance and limitations.
+
