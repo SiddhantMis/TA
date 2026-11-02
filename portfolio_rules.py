@@ -553,7 +553,13 @@ def main(argv=None):
     for audit_name, audit_frame in audit_outputs.items():
         audit_frame.to_csv(os.path.join(a.outdir, f"{audit_name}.csv"), index=False)
     actions = bench.attrs.get("corporate_actions") or []
-    text = (f"NSE corporate-action adjustments: {actions or 'none'}; "
+    source_note = (
+        "TejHQ adjusted NSE bhavcopy prices: OHLC back-adjusted for splits, bonuses and dividends; "
+        "raw exchange volume/turnover retained; missing opens are never forward-filled.\n"
+        if a.data_source == "tejhq" else
+        "Yahoo Finance auto-adjusted OHLCV; legacy source path.\n"
+    )
+    text = (source_note + f"NSE corporate-action adjustments: {actions or 'none'}; "
             f"daily-return correlation NSE NIFTYBEES vs ^NSEI {corr:.3f}\n") + text
     open(os.path.join(a.outdir, "portfolio_rules_report.md"), "w").write("```\n" + text + "\n```\n")
     print(text)
