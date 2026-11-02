@@ -78,9 +78,10 @@ def load_adjusted_frames(
         part = part.dropna(subset=["date", "symbol"])
         part["symbol"] = part["symbol"].astype(str).str.strip().str.upper()
         part = part[part["symbol"].isin(symbols)]
-        part = part[part["series"].isin(["EQ", "BE", "BZ"])]
-        part = part.sort_values(["symbol", "date", "series"])
-        part = part.drop_duplicates(["symbol", "date"], keep="first")
+        part = part[part["series"].isin(["EQ", "BE", "BZ"])].copy()
+        part["_series_priority"] = part["series"].map({"EQ": 0, "BE": 1, "BZ": 2})
+        part = part.sort_values(["symbol", "date", "_series_priority"])
+        part = part.drop_duplicates(["symbol", "date"], keep="first").drop(columns="_series_priority")
 
         factor = pd.to_numeric(part["adj_factor_cumulative"], errors="coerce")
         for col in ("open", "high", "low", "close"):
