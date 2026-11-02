@@ -251,19 +251,33 @@ def run_portfolio(frames, mkt_close, bench_open, label, oos_frac=0.35, cost_pct=
 
 # --------------------------------------------------------------------- main ---
 def _load(tickers, years, store, tag, min_bars=401):
+    """Load bars and return a per-ticker audit of cache, history, and failure outcomes."""
+    diagnostics = {}
     for t in tickers:
         if t in store:
+            diagnostics[t] = {"status": "cached", "bars": int(len(store[t])), "detail": ""}
             continue
         try:
             df = B.load_history(t, years)
             if df is not None and len(df) >= min_bars:
                 store[t] = df
+                diagnostics[t] = {"status": "loaded", "bars": int(len(df)), "detail": ""}
+            elif df is None or df.empty:
+                diagnostics[t] = {"status": "no_history", "bars": 0, "detail": "provider returned no rows"}
+                print(f"[skip] {t}: provider returned no history", file=sys.stderr)
             else:
-                print(f"[skip] {t}: not enough history", file=sys.stderr)
+                diagnostics[t] = {
+                    "status": "insufficient_history", "bars": int(len(df)),
+                    "detail": f"need at least {min_bars} bars",
+                }
+                print(f"[skip] {t}: {len(df)} bars; need {min_bars}", file=sys.stderr)
         except Exception as e:
-            print(f"[error] {t}: {e}", file=sys.stderr)
+            detail = f"{type(e).__name__}: {e}"[:400]
+            diagnostics[t] = {"status": "error", "bars": 0, "detail": detail}
+            print(f"[error] {t}: {detail}", file=sys.stderr)
         time.sleep(A.YF_SLEEP_SECONDS)
     print(f"[data] {tag}: {sum(1 for t in tickers if t in store)}/{len(tickers)} loaded", file=sys.stderr)
+    return diagnostics
 
 
 def main(argv=None):
