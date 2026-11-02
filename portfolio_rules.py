@@ -520,7 +520,8 @@ def main(argv=None):
     os.makedirs(a.outdir, exist_ok=True)
     membership = load_membership_calendar(a.membership_file)
     tickers = [f"{symbol}.NS" for symbol in sorted(membership["symbol"].unique())]
-    bench = load_niftybees_history(a.years)
+    official_bench = load_niftybees_history(a.years)
+    bench = official_bench
     if bench is None:
         sys.exit("could not fetch NIFTYBEES.NS")
     # Do not extrapolate a historical constituent calendar beyond its stated coverage.
@@ -532,10 +533,30 @@ def main(argv=None):
     if index is None:
         sys.exit("could not fetch ^NSEI")
     index = index.loc[index.index <= MEMBERSHIP_COVERAGE_THROUGH]
+    load_tickers = tickers + (["NIFTYBEES.NS"] if a.data_source == "tejhq" else [])
     frames, loader_diagnostics = PL.load_frames(
-        tickers, a.years, a.cache, a.refresh, min_bars=253,
+        load_tickers, a.years, a.cache, a.refresh, min_bars=253,
         return_diagnostics=True, source=a.data_source,
     )
+    if a.data_source == "tejhq":
+        tej_etf = frames.pop("NIFTYBEES.NS", None)
+        loader_diagnostics.pop("NIFTYBEES.NS", None)
+        if tej_etf is None:
+            sys.exit("TejHQ adjusted NIFTYBEES history is unavailable; refusing a mixed-basis benchmark")
+        bench = tej_etf[["Open", "Close"]].copy()
+        bench = bench.loc[bench.index <= MEMBERSHIP_COVERAGE_THROUGH]
+        official_returns = official_bench["Close"].pct_change()
+        tej_returns = bench["Close"].pct_change()
+        compared = pd.concat([tej_returns.rename("tej"), official_returns.rename("nse")], axis=1).dropna()
+        etf_source_corr = float(compared.corr().iloc[0, 1]) if len(compared) > 100 else float("nan")
+        if not etf_source_corr >= 0.95:
+            sys.exit(
+                f"TejHQ adjusted NIFTYBEES does not reconcile with official NSE split-adjusted history "
+                f"(daily-return correlation {etf_source_corr:.3f}); refusing metrics"
+            )
+        validate_benchmark(bench, "TejHQ corporate-action-adjusted NIFTYBEES")
+    else:
+        etf_source_corr = None
     if not frames:
         sys.exit(f"no stock histories loaded from {a.data_source}")
     # Use the actual NSE cash-equity session calendar from the same source.
@@ -557,10 +578,11 @@ def main(argv=None):
         audit_frame.to_csv(os.path.join(a.outdir, f"{audit_name}.csv"), index=False)
     actions = bench.attrs.get("corporate_actions") or []
     source_note = (
-        "TejHQ adjusted NSE bhavcopy prices: OHLC back-adjusted for splits, bonuses and dividends; "
-        "raw exchange volume/turnover retained; missing opens are never forward-filled.\n"
+        "TejHQ adjusted NSE bhavcopy prices: stock OHLC and NIFTYBEES back-adjusted for splits, bonuses and dividends; "
+        f"raw exchange volume/turnover retained; ETF daily-return correlation vs official NSE split-adjusted series "
+        f"{etf_source_corr:.4f}; missing opens are never forward-filled.\n"
         if a.data_source == "tejhq" else
-        "Yahoo Finance auto-adjusted OHLCV; legacy source path.\n"
+        "Yahoo Finance auto-adjusted OHLCV; legacy source path with split-adjusted NSE NIFTYBEES benchmark.\n"
     )
     text = (source_note + f"NSE corporate-action adjustments: {actions or 'none'}; "
             f"daily-return correlation NSE NIFTYBEES vs ^NSEI {corr:.3f}\n") + text
