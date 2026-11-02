@@ -76,8 +76,17 @@ def prepare(frames: dict, bench_df: pd.DataFrame, liquid_top: int = LIQUID_TOP,
     O = pd.concat({t: frames[t].Open for t in cols}, axis=1).reindex(idx)
     C = pd.concat({t: frames[t].Close for t in cols}, axis=1).reindex(idx)
     V = pd.concat({t: frames[t].Volume for t in cols}, axis=1).reindex(idx)
+    turnover_flags = ["Turnover" in frames[t].columns for t in cols]
+    if any(turnover_flags) and not all(turnover_flags):
+        raise ValueError("mixed price frames: either every symbol must have raw Turnover or none")
+    if all(turnover_flags):
+        TV = pd.concat({t: frames[t].Turnover for t in cols}, axis=1).reindex(idx)
+        tv = TV.rolling(126, min_periods=100).mean()
+    else:
+        # Legacy-only fallback for the existing Yahoo data path. Research runs
+        # using TejHQ must use exchange-reported raw turnover.
+        tv = (C * V).rolling(126, min_periods=100).mean()
     sma200 = C.rolling(200, min_periods=200).mean()
-    tv = (C * V).rolling(126, min_periods=100).mean()
     # Both the liquidity ranking and the strategy eligibility are restricted
     # to the Nifty 500 members on that exact signal date.
     liquid = tv.where(pit_mask).rank(axis=1, ascending=False) <= liquid_top
@@ -101,7 +110,12 @@ def prepare(frames: dict, bench_df: pd.DataFrame, liquid_top: int = LIQUID_TOP,
     else:
         ic = bc.copy()
     isma = ic.rolling(200, min_periods=200).mean()
-    return {"idx": idx, "cols": cols, "O": O.ffill(limit=5).to_numpy(float), "C": C.ffill(limit=5).to_numpy(float),
+    # Never forward-fill opens: a missing exchange bar is not an executable price.
+    # Close is carried only for mark-to-market of an existing holding; all signals,
+    # eligibility and cross-sectional returns use the unfilled source observations.
+    C_mark = C.ffill()
+    return {"idx": idx, "cols": cols, "O": O.to_numpy(float), "C": C_mark.to_numpy(float),
+            "C_raw": C.to_numpy(float),
             "rank": rank.to_numpy(float), "univ": (valid & liquid).to_numpy(bool),
             "pit_mask": pit_mask.to_numpy(bool), "pit_expected_count": expected,
             "pit_available_count": available, "pit_coverage_pct": coverage_pct,
@@ -194,14 +208,20 @@ def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0
     turns, stops, cash_days = [], 0, 0
     for t in range(start, n):
         o, c = O[t], C[t]
+        # A missing open means no executable trade. Keep stop-outs pending and
+        # mark an existing position at its last observed close instead.
+        mark_o = np.where(np.isfinite(o), o, C[t - 1])
         reb = (t - 1) in signals and (t - 1) >= start - 1
         if reb or pending:
             traded = 0.0
+            still_pending = set()
             for j in list(pending):                                   # stop-outs flagged at yesterday's close
-                if j in sh:
+                if j in sh and np.isfinite(o[j]):
                     v = sh.pop(j) * o[j]; cash += v; traded += v; hwm.pop(j, None)
-            pending.clear()
-            equity_before = cash + sum(q * o[j] for j, q in sh.items())
+                elif j in sh:
+                    still_pending.add(j)
+            pending = still_pending
+            equity_before = cash + sum(q * mark_o[j] for j, q in sh.items())
             if reb:
                 s = t - 1
                 if regime_source == "index":
@@ -213,16 +233,18 @@ def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0
                 exposure = 1.0 if (regime == "off" or bull) else (0.5 if regime == "half" else 0.0)
                 target = select_target(P["rank"][s], list(sh), buffer, size, retain) if exposure > 0 else []
                 for j in list(sh):
-                    if j not in target:
+                    if j not in target and np.isfinite(o[j]):
                         v = sh.pop(j) * o[j]; cash += v; traded += v; hwm.pop(j, None)
-                eq_now = cash + sum(q * o[j] for j, q in sh.items())
+                eq_now = cash + sum(q * mark_o[j] for j, q in sh.items())
                 for j in target:
+                    if not np.isfinite(o[j]):
+                        continue
                     want, cur = exposure / size * eq_now, sh.get(j, 0.0) * o[j]
                     d = want - cur
                     if d > 1e-12:
                         cash -= d; sh[j] = sh.get(j, 0.0) + d / o[j]; traded += d; hwm.setdefault(j, o[j])
                     elif d < -1e-12:
-                        cash += -d; sh[j] = sh[j] + d / o[j]; traded += -d
+                        cash += -d; sh[j] = sh[j] + d / o[j]; traded += -d;
                 turns.append(traded / equity_before if equity_before > 0 else 0.0)
             cash -= traded * side                                        # costs on everything traded at this open
         total = cash + sum(q * c[j] for j, q in sh.items())
@@ -347,12 +369,12 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     split = START + int((n - 1 - START) * (1 - oos_frac))
     bc = P["bench_close"]
     bench_eq = np.full(n, np.nan); bench_eq[START:] = bc[START:] / bc[START]
-    C = P["C"]; univ = P["univ"]
+    C = P["C"]; C_raw = P["C_raw"]; univ = P["univ"]
     dr = np.full(n, np.nan)
     for t in range(START + 1, n):
-        m = univ[t - 1] & np.isfinite(C[t]) & np.isfinite(C[t - 1]) & (C[t - 1] > 0)
+        m = univ[t - 1] & np.isfinite(C_raw[t]) & np.isfinite(C_raw[t - 1]) & (C_raw[t - 1] > 0)
         if m.any():
-            dr[t] = np.mean(C[t][m] / C[t - 1][m] - 1)
+            dr[t] = np.mean(C_raw[t][m] / C_raw[t - 1][m] - 1)
     ew_eq = np.full(n, np.nan); ew_eq[START] = 1.0
     for t in range(START + 1, n):
         ew_eq[t] = ew_eq[t - 1] * (1 + (dr[t] if np.isfinite(dr[t]) else 0.0))
@@ -485,7 +507,9 @@ def main(argv=None):
     ap.add_argument("--years", type=int, default=10)
     ap.add_argument("--oos-frac", type=float, default=0.35)
     ap.add_argument("--cost-pct", type=float, default=0.30)
-    ap.add_argument("--cache", default="data_cache/frames_10y.pkl")
+    ap.add_argument("--cache", default="data_cache/tejhq_frames_10y.pkl")
+    ap.add_argument("--data-source", choices=("tejhq", "yahoo"), default="tejhq",
+                    help="price history source; research default is one consistent TejHQ adjusted NSE dataset")
     ap.add_argument("--membership-file", default=DEFAULT_MEMBERSHIP_FILE)
     ap.add_argument("--refresh", action="store_true")
     ap.add_argument("--outdir", default="results")
@@ -506,8 +530,19 @@ def main(argv=None):
         sys.exit("could not fetch ^NSEI")
     index = index.loc[index.index <= MEMBERSHIP_COVERAGE_THROUGH]
     frames, loader_diagnostics = PL.load_frames(
-        tickers, a.years, a.cache, a.refresh, min_bars=253, return_diagnostics=True
+        tickers, a.years, a.cache, a.refresh, min_bars=253,
+        return_diagnostics=True, source=a.data_source,
     )
+    if not frames:
+        sys.exit(f"no stock histories loaded from {a.data_source}")
+    # Use the actual NSE cash-equity session calendar from the same source.
+    # Index/ETF-only dates with no stock bhavcopy are not backtest sessions.
+    stock_sessions = pd.DatetimeIndex(sorted(set().union(*[
+        set(pd.DatetimeIndex(frame.index).tz_localize(None) if pd.DatetimeIndex(frame.index).tz is not None
+            else pd.DatetimeIndex(frame.index)) for frame in frames.values()
+    ])))
+    bench = bench.loc[bench.index.isin(stock_sessions)]
+    index = index.loc[index.index.isin(stock_sessions)]
     corr = cross_check_benchmark(bench, index)
     audit_outputs = {}
     _, text = run_rules(
