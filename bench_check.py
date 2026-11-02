@@ -7,6 +7,7 @@ import os
 
 import numpy as np
 import pandas as pd
+import yfinance as yf
 
 import backtest as B
 
@@ -38,6 +39,21 @@ out = [
     "NIFTYBEES had a 10:1 face-value split effective 2019-12-19 (NSE circular NSE/CML/42873).",
     "The raw Yahoo series is shown only as a diagnostic; strategy results use repair=True.",
 ]
+# Inspect Yahoo's unadjusted Close, Adj Close and split actions around the official split.
+probe = yf.download(
+    "NIFTYBEES.NS", start="2019-12-16", end="2019-12-24",
+    interval="1d", actions=True, auto_adjust=False, repair=False,
+    progress=False, multi_level_index=False,
+)
+out.append("== Yahoo unadjusted fields around the official split")
+out.append(f"   columns: {', '.join(str(x) for x in probe.columns)}")
+for day, row in probe.iterrows():
+    out.append(
+        f"   {day.date()} Open={row.get('Open')} High={row.get('High')} "
+        f"Low={row.get('Low')} Close={row.get('Close')} "
+        f"AdjClose={row.get('Adj Close')} StockSplits={row.get('Stock Splits')}"
+    )
+
 raw_lines, raw_ret = summarize("NIFTYBEES raw Yahoo adjusted history", raw)
 fixed_lines, fixed_ret = summarize("NIFTYBEES Yahoo repair=True adjusted history", fixed)
 nifty_lines, nifty_ret = summarize("^NSEI price-index history", nifty)
