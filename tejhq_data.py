@@ -92,9 +92,6 @@ def load_adjusted_frames(
         # The provider publishes adj_close = raw close * cumulative factor.
         # Reject corrupt adjustment rows rather than silently mixing price bases.
         expected = pd.to_numeric(part["close"], errors="coerce")
-        raw_close = pd.to_numeric(
-            table.to_pandas()["close"], errors="coerce"
-        ) if False else None
         if not factor.notna().all() or (factor <= 0).any():
             raise RuntimeError(f"{filename} contains missing/non-positive adjustment factors")
         if not part["adj_close"].notna().all() or (part["adj_close"] <= 0).any():
