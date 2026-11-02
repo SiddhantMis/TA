@@ -1,23 +1,24 @@
-```
-== NIFTYBEES.NS: 2470 bars 2016-11-02 to 2026-10-30, last close 262.89, 200-DMA 273.05
-   NaN closes 0, zero/negative closes 0, daily-return std 18.16%
-   days with |return| > 8%: 3
-     2019-12-19  return -89.9%   close 129.2540 -> 13.0200   (open 12.9200)
-     2019-12-23  return +896.9%   close 13.0340 -> 129.9300   (open 131.2000)
-     2020-03-23  return -10.2%   close 92.9700 -> 83.5200   (open 87.0000)
-== ^NSEI: 2466 bars 2016-11-02 to 2026-10-30, last close 23053.10, 200-DMA 24041.15
-   NaN closes 0, zero/negative closes 0, daily-return std 1.02%
-   days with |return| > 8%: 3
-     2020-03-12  return -8.3%   close 10458.4004 -> 9590.1504   (open 10039.9502)
-     2020-03-23  return -13.0%   close 8745.4502 -> 7610.2500   (open 7945.7002)
-     2020-04-07  return +8.8%   close 8083.7998 -> 8792.2002   (open 8446.2998)
-== daily-return correlation NIFTYBEES vs ^NSEI: 0.046
-   days where they differ by > 3 points: 5
-     2019-12-19  NIFTYBEES -89.9%  ^NSEI +0.3%
-     2019-12-23  NIFTYBEES +896.9%  ^NSEI -0.1%
-     2020-03-16  NIFTYBEES -3.8%  ^NSEI -7.6%
-     2020-03-19  NIFTYBEES -6.9%  ^NSEI -2.4%
-     2024-06-05  NIFTYBEES +0.3%  ^NSEI +3.4%
-== market filter agreement (BULL = close above 200-DMA): 2266 days, share BEAR: NIFTYBEES 23%  ^NSEI 25%, disagree on 43 days
-   first/last disagreement: 2018-03-19 / 2026-08-06
-```
+Primary source: NSE NextApi getHistoricalTradeData (NIFTYBEES, EQ)
+Requested range: 2016-11-02 through 2026-11-02
+NSE bars: 2474; max absolute daily return: 10.16%
+Daily-return correlation of split-adjusted NSE NIFTYBEES vs ^NSEI: 0.9709
+Corporate action: 10:1 face-value split effective 2019-12-19; pre-ex-date OHLC x0.1, volume x10.
+Adjustment record: [{'ex_date': '2019-12-19', 'price_factor': 0.1, 'volume_factor': 10.0, 'source': 'https://archives.nseindia.com/content/circulars/CML42873.pdf'}]
+== NSE raw exchange prices around the split
+  2019-12-18 close=1292.54 volume=21946
+  2019-12-19 close=130.20 volume=271593
+  2019-12-20 close=130.34 volume=246690
+  2019-12-23 close=129.93 volume=318322
+== NSE prices on current face-value basis
+  2019-12-18 close=129.254 volume=219460
+  2019-12-19 close=130.200 volume=271593
+  2019-12-20 close=130.340 volume=246690
+  2019-12-23 close=129.930 volume=318322
+== Yahoo adjusted-price diagnostic: 2470 bars; >25% daily moves: 2
+  2019-12-19 -89.9%
+  2019-12-23 +896.9%
+== Yahoo split window (diagnostic only)
+  2019-12-18 close=129.254
+  2019-12-19 close=13.020
+  2019-12-20 close=13.034
+  2019-12-23 close=129.930

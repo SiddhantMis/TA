@@ -1,77 +1,77 @@
 ```
-Benchmark data repairs: [('2019-12-19', '2019-12-20', 'x10')]; daily-return correlation NIFTYBEES vs ^NSEI after repair 0.972
-Portfolio rules: 467 stocks, daily engine 2017-11-08 to 2026-10-30, IS/OOS split 2023-09-06, cost 0.3% round trip, cash 0%
-Benchmark: NIFTYBEES auto-adjusted with yfinance repair=True; 2471 bars; max abs daily move 10.16%
+NSE corporate-action adjustments: [{'ex_date': '2019-12-19', 'price_factor': 0.1, 'volume_factor': 10.0, 'source': 'https://archives.nseindia.com/content/circulars/CML42873.pdf'}]; daily-return correlation NSE NIFTYBEES vs ^NSEI 0.971
+Portfolio rules: 467 stocks, daily engine 2017-11-08 to 2026-11-02, IS/OOS split 2023-09-08, cost 0.3% round trip, cash 0%
+Benchmark: official NSE NIFTYBEES traded closes, split-adjusted to current Rs 1 face-value units; 2474 bars; max abs daily move 10.16%
 Regime diagnostic: ^NSEI price index quality gate passed; 2466 bars; max abs daily move 12.98%
 NIFTY50_price_index is a PRICE index (not a total-return index).
 CAGR / vol / Sharpe(rf=0) / max drawdown (daily)
 
 -- FULL --
                                 CAGR     vol  Sharpe    maxDD
-V1_baseline                    24.7%   20.9%    1.16   -21.0%
-V3_live_nobuf                  23.4%   21.0%    1.11   -27.5%
-V2_live                        20.4%   20.9%    1.00   -29.3%
-V4a_stop20                     15.8%   19.0%    0.87   -33.2%
-V4b_stop30                     19.1%   20.3%    0.96   -31.0%
-V5_nofilter                    26.9%   25.0%    1.08   -40.3%
-V6_half                        24.1%   21.8%    1.10   -30.7%
-V7_nifty50_filter              12.8%   17.6%    0.78   -30.3%
-NIFTYBEES_adjusted_buyhold     10.8%   15.1%    0.76   -36.3%
-EW_universe_daily              15.1%   19.6%    0.82   -44.0%
+V1_baseline                    11.9%   15.9%    0.79   -24.2%
+V3_live_nobuf                  10.2%   16.1%    0.68   -32.9%
+V2_live                         9.2%   16.0%    0.63   -30.3%
+V4a_stop20                      7.1%   14.6%    0.54   -33.7%
+V4b_stop30                      8.5%   15.6%    0.60   -32.1%
+V5_nofilter                    14.0%   17.2%    0.85   -31.5%
+V6_half                        11.5%   16.3%    0.75   -26.2%
+V7_nifty50_filter               4.8%   12.4%    0.44   -31.6%
+NIFTYBEES_adjusted_buyhold     11.0%   15.0%    0.77   -36.3%
+EW_universe_daily               9.1%   12.9%    0.74   -21.9%
 NIFTY50_price_index             9.6%   16.8%    0.63   -38.4%
 
 -- IS --
                                 CAGR     vol  Sharpe    maxDD
-V1_baseline                    25.8%   19.6%    1.27   -21.0%
-V3_live_nobuf                  23.1%   19.9%    1.15   -27.5%
-V2_live                        19.6%   19.6%    1.01   -29.3%
-V4a_stop20                     16.2%   17.9%    0.93   -33.2%
-V4b_stop30                     18.4%   19.2%    0.98   -31.0%
-V5_nofilter                    30.1%   23.4%    1.24   -40.3%
-V6_half                        25.5%   20.4%    1.21   -28.3%
-V7_nifty50_filter               8.0%   14.2%    0.62   -30.3%
-NIFTYBEES_adjusted_buyhold     13.2%   16.5%    0.84   -36.3%
-EW_universe_daily              15.6%   20.0%    0.83   -44.0%
-NIFTY50_price_index            11.9%   18.4%    0.71   -38.4%
+V1_baseline                    15.9%   17.6%    0.93   -24.2%
+V3_live_nobuf                  12.9%   17.9%    0.77   -32.9%
+V2_live                        11.3%   17.8%    0.69   -30.3%
+V4a_stop20                      8.5%   16.1%    0.59   -33.7%
+V4b_stop30                     10.4%   17.3%    0.66   -32.1%
+V5_nofilter                    18.2%   19.1%    0.97   -31.5%
+V6_half                        14.7%   18.1%    0.85   -26.2%
+V7_nifty50_filter               4.5%   12.6%    0.41   -31.6%
+NIFTYBEES_adjusted_buyhold     13.4%   16.4%    0.85   -36.3%
+EW_universe_daily              10.6%   14.4%    0.77   -21.9%
+NIFTY50_price_index            12.2%   18.4%    0.72   -38.4%
 
 -- OOS --
                                 CAGR     vol  Sharpe    maxDD
-V1_baseline                    22.7%   23.1%    1.00   -21.0%
-V3_live_nobuf                  24.1%   22.9%    1.06   -22.9%
-V2_live                        21.9%   23.0%    0.98   -25.5%
-V4a_stop20                     15.2%   20.9%    0.78   -23.4%
-V4b_stop30                     20.2%   22.2%    0.94   -25.4%
-V5_nofilter                    21.2%   27.8%    0.83   -40.1%
-V6_half                        21.6%   24.2%    0.93   -30.7%
-V7_nifty50_filter              22.3%   22.6%    1.01   -25.5%
+V1_baseline                     4.8%   12.2%    0.45   -12.3%
+V3_live_nobuf                   5.3%   12.1%    0.49   -10.3%
+V2_live                         5.3%   11.9%    0.49   -10.9%
+V4a_stop20                      4.5%   11.5%    0.44   -11.8%
+V4b_stop30                      5.2%   11.9%    0.49   -10.8%
+V5_nofilter                     6.6%   12.9%    0.56   -10.9%
+V6_half                         6.0%   12.2%    0.54   -10.9%
+V7_nifty50_filter               5.3%   11.9%    0.49   -10.9%
 NIFTYBEES_adjusted_buyhold      6.6%   12.0%    0.59   -15.2%
-EW_universe_daily              14.4%   18.8%    0.81   -22.7%
-NIFTY50_price_index             5.4%   13.2%    0.46   -15.8%
+EW_universe_daily               6.4%    9.6%    0.70    -8.0%
+NIFTY50_price_index             5.1%   13.3%    0.44   -15.8%
 
 -- activity --
                              rebalances  avg turnover stop-outs  days in cash
-V1_baseline                         107          0.57         0           24%
-V3_live_nobuf                       108          0.57         0           24%
-V2_live                             108          0.46         0           24%
-V4a_stop20                          108          0.47       227           24%
-V4b_stop30                          108          0.45        64           24%
-V5_nofilter                         108          0.47         0            1%
-V6_half                             108          0.46         0            1%
-V7_nifty50_filter                   108          0.33         0           56%
+V1_baseline                         108          0.41         0           49%
+V3_live_nobuf                       108          0.42         0           49%
+V2_live                             108          0.34         0           49%
+V4a_stop20                          108          0.35       158           49%
+V4b_stop30                          108          0.34        40           49%
+V5_nofilter                         108          0.32         0           41%
+V6_half                             108          0.33         0           41%
+V7_nifty50_filter                   108          0.26         0           70%
 
--- what the repaired NIFTYBEES filter sees: 525 BEAR days (24% of known-regime days), 1692 BULL days --
-annualised adjusted ETF return on ETF-BEAR days: +18.6%; same-universe equal-weight: +26.6%
-annualised adjusted ETF return on ETF-BULL days: +8.5%; same-universe equal-weight: +11.8%
-^NSEI filter: 221 BEAR / 1004 BULL days; disagrees with repaired ETF regime on 18/1225 common days
-annualised ^NSEI price-index return on ^NSEI-BEAR days: +53.2%; same-universe equal-weight: +39.6%
+-- what the NSE-sourced NIFTYBEES filter sees: 524 BEAR days (24% of known-regime days), 1696 BULL days --
+annualised adjusted ETF return on ETF-BEAR days: +18.9%; same-universe equal-weight: +94.8%
+annualised adjusted ETF return on ETF-BULL days: +8.6%; same-universe equal-weight: +7.1%
+^NSEI filter: 166 BEAR / 680 BULL days; disagrees with NSE-sourced ETF regime on 12/846 common days
+annualised ^NSEI price-index return on ^NSEI-BEAR days: +84.4%; same-universe equal-weight: +91.6%
 
 -- comparisons (rules fixed in advance) --
 live rules vs old baseline                          DIFFERENT: IS CAGR differs by > 2 points; max drawdown > 3 points worse
 28th trigger vs month-end (timing only)             DIFFERENT: IS CAGR differs by > 2 points; max drawdown > 3 points worse
-buffer 30 vs none                                   turnover 0.46 vs 0.57 (+19% lower); CAGR -3.0 pts -> NOT SHOWN TO HELP
-V4a_stop20 vs V2_live                               NO: FULL max drawdown improves by < 5 points; OOS max drawdown improves by < 5 points; IS CAGR falls by more than 2 points; OOS CAGR falls by more than 2 points
+buffer 30 vs none                                   turnover 0.34 vs 0.42 (+17% lower); CAGR -1.0 pts -> NOT SHOWN TO HELP
+V4a_stop20 vs V2_live                               NO: FULL max drawdown improves by < 5 points; OOS max drawdown improves by < 5 points; IS CAGR falls by more than 2 points
 V4b_stop30 vs V2_live                               NO: FULL max drawdown improves by < 5 points; OOS max drawdown improves by < 5 points
-V5_nofilter vs V2_live                              FULL CAGR +6.5 pts; FULL maxDD -11.1 pts; OOS CAGR -0.7 pts; OOS maxDD -14.6 pts
-V6_half vs V2_live                                  FULL CAGR +3.7 pts; FULL maxDD -1.4 pts; OOS CAGR -0.4 pts; OOS maxDD -5.2 pts
-V7_nifty50_filter vs V2_live                        FULL CAGR -7.6 pts; FULL maxDD -1.1 pts; OOS CAGR +0.4 pts; OOS maxDD -0.0 pts
+V5_nofilter vs V2_live                              FULL CAGR +4.9 pts; FULL maxDD -1.1 pts; OOS CAGR +1.3 pts; OOS maxDD +0.0 pts
+V6_half vs V2_live                                  FULL CAGR +2.4 pts; FULL maxDD +4.1 pts; OOS CAGR +0.6 pts; OOS maxDD +0.0 pts
+V7_nifty50_filter vs V2_live                        FULL CAGR -4.4 pts; FULL maxDD -1.2 pts; OOS CAGR +0.0 pts; OOS maxDD -0.0 pts
 ```
