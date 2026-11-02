@@ -622,7 +622,7 @@ def main(argv=None):
     symbol_audit = loader_diagnostics.pop("_symbol_audit", [])
     if a.data_source == "tejhq":
         tej_etf = frames.pop("NIFTYBEES.NS", None)
-        loader_diagnostics.pop("NIFTYBEES", None)
+        loader_diagnostics.pop("NIFTYBEES.NS", None)
         if tej_etf is None:
             sys.exit("TejHQ adjusted NIFTYBEES history is unavailable; refusing a mixed-basis benchmark")
         bench = tej_etf[["Open", "Close"]].copy()
