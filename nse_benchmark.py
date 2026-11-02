@@ -32,6 +32,12 @@ NIFTYBEES_SPLITS = ({
     "volume_factor": 10.0,
     "source": NSE_SPLIT_CIRCULAR,
 },)
+# NSE/MSD/60677 (2024-02-14) scheduled a special live equity session on 2024-03-02.
+# The holiday library and NIFTY 50 index feed do not both enumerate this session.
+NSE_SPECIAL_SESSIONS = ({
+    "date": date(2024, 3, 2),
+    "source": "https://nsearchives.nseindia.com/content/circulars/MSD60677.pdf",
+},)
 PRICE_COLUMNS = ("Open", "High", "Low", "Close")
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36",
@@ -444,6 +450,11 @@ def build_nse_session_calendar(
         if observed.tz is not None:
             observed = observed.tz_localize(None)
         sessions = sessions.union(observed.normalize())
+    special_sessions = pd.DatetimeIndex([
+        pd.Timestamp(item["date"]) for item in NSE_SPECIAL_SESSIONS
+        if start_date <= item["date"] <= end_date
+    ])
+    sessions = sessions.union(special_sessions)
     sessions = sessions.sort_values()
     if sessions.has_duplicates:
         raise RuntimeError("NSE session calendar contains duplicate dates")

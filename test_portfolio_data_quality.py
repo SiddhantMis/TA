@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from portfolio_rules import (
+    build_comparison_sessions,
     build_daily_coverage_audit,
     build_missing_history_audit,
     build_session_calendar_audit,
@@ -172,6 +173,14 @@ class PortfolioMissingBarTests(unittest.TestCase):
         self.assertTrue(bool(audit.loc["2024-01-03", "missing_benchmark_bar"]))
         self.assertTrue(bool(audit.loc["2024-01-04", "extra_stock_session"]))
         self.assertIn("nse_nifty50_session", audit.columns)
+
+    def test_zero_stock_bar_sessions_are_excluded_from_all_comparison_series(self):
+        sessions = pd.DatetimeIndex(["2024-01-02", "2024-01-03", "2024-01-04"])
+        stock = pd.DataFrame({"Close": [100.0, 102.0]}, index=sessions[[0, 2]])
+        audit = build_session_calendar_audit(sessions, sessions, sessions, {"AAA.NS": stock})
+        comparison, excluded = build_comparison_sessions(sessions, audit)
+        self.assertEqual(comparison.strftime("%Y-%m-%d").tolist(), ["2024-01-02", "2024-01-04"])
+        self.assertEqual(excluded.strftime("%Y-%m-%d").tolist(), ["2024-01-03"])
 
 
 if __name__ == "__main__":

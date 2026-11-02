@@ -233,6 +233,9 @@ def test_nse_session_calendar_uses_holiday_schedule_and_observed_special_session
     )
     assert pd.Timestamp("2020-02-01") in special
 
+    drs = build_nse_session_calendar(date(2024, 3, 1), date(2024, 3, 3))
+    assert pd.Timestamp("2024-03-02") in drs
+
 
 
 def test_nifty50_index_history_uses_90_day_chunks():
