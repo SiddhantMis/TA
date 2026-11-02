@@ -316,9 +316,9 @@ def _request_index_chunk(session, start, end, timeout, retries):
 
 def fetch_nifty50_index_history(
     start_date: date, end_date: date, *, session: requests.Session | None = None,
-    timeout: int = 25, retries: int = 3, pause_seconds: float = 0.2, max_days: int = 365,
+    timeout: int = 25, retries: int = 3, pause_seconds: float = 0.2, max_days: int = 90,
 ) -> pd.DataFrame:
-    """Fetch official NSE NIFTY 50 index OHLC and its exchange-session dates."""
+    """Fetch official NSE NIFTY 50 OHLC in 90-day chunks to avoid endpoint truncation."""
     if start_date > end_date:
         raise ValueError("start_date must not be after end_date")
     owns_session = session is None
@@ -388,14 +388,24 @@ def load_nifty50_index_history(
             cached = pd.read_csv(cache_path, parse_dates=["Date"]).set_index("Date")
             cached.index = pd.DatetimeIndex(cached.index).normalize()
             start, end = pd.Timestamp(start_date), pd.Timestamp(end_date)
-            if (not cached.empty and not cached.index.has_duplicates
+            expected_sessions = build_nse_session_calendar(start_date, end_date)
+            cache_coverage = (
+                len(pd.DatetimeIndex(cached.index).intersection(expected_sessions))
+                / len(expected_sessions)
+                if len(expected_sessions) else 0.0
+            )
+            if (
+                not cached.empty and not cached.index.has_duplicates
                 and cached.index.min() <= start + pd.Timedelta(days=15)
-                and cached.index.max() >= end - pd.Timedelta(days=10)):
+                and cached.index.max() >= end - pd.Timedelta(days=10)
+                and cache_coverage >= 0.99
+            ):
                 frame = cached.loc[(cached.index >= start) & (cached.index <= end)].copy()
                 if not frame.empty:
                     frame.attrs.update({
                         "source": NSE_INDEX_SOURCE_NAME, "index_name": NIFTY50_INDEX_NAME,
                         "cache_hit": True,
+                        "cache_session_coverage_pct": float(cache_coverage * 100),
                     })
                     return frame
         except (OSError, ValueError, KeyError, TypeError):

@@ -234,6 +234,36 @@ def test_nse_session_calendar_uses_holiday_schedule_and_observed_special_session
     assert pd.Timestamp("2020-02-01") in special
 
 
+
+def test_nifty50_index_history_uses_90_day_chunks():
+    from unittest.mock import patch
+    from nse_benchmark import fetch_nifty50_index_history
+
+    calls = []
+
+    def fake_request(_session, chunk_start, chunk_end, _timeout, _retries):
+        calls.append((chunk_start, chunk_end))
+        return []
+
+    def fake_parse(_rows, chunk_start, _chunk_end):
+        return pd.DataFrame(
+            {"Open": [100.0], "High": [101.0], "Low": [99.0], "Close": [100.5]},
+            index=pd.DatetimeIndex([pd.Timestamp(chunk_start)]),
+        )
+
+    with patch("nse_benchmark._bootstrap_index"), patch(
+        "nse_benchmark._request_index_chunk", side_effect=fake_request
+    ), patch("nse_benchmark.parse_nse_index_rows", side_effect=fake_parse):
+        frame = fetch_nifty50_index_history(
+            date(2020, 1, 1), date(2020, 12, 31), pause_seconds=0,
+        )
+
+    assert len(calls) == 5
+    assert all((end - start).days + 1 <= 90 for start, end in calls)
+    assert frame.index.is_monotonic_increasing
+    assert len(frame) == 5
+
+
 def test_index_chunk_accepts_nse_flattened_list_and_legacy_envelope():
     from nse_benchmark import _request_index_chunk
     import pytest

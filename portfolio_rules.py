@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The exact live portfolio rules (PR #3), tested day by day against the old baseline.
 
-Stock OHLC uses pinned TejHQ adjusted NSE history. NIFTYBEES raw bhavcopy OHLC is split-adjusted and reconciled to NSE historical trades; the official NSE NIFTY 50 index supplies the session calendar.
+Stock OHLC uses pinned TejHQ adjusted NSE history. NIFTYBEES raw bhavcopy OHLC is split-adjusted and reconciled to NSE historical trades; a pinned NSE holiday calendar plus observed NIFTY 50 dates supplies the session calendar.
 
     python portfolio_rules.py --years 10 --oos-frac 0.35 --cost-pct 0.30
 
