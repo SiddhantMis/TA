@@ -264,7 +264,7 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     for t in range(START + 1, n):
         ew_eq[t] = ew_eq[t - 1] * (1 + (dr[t] if np.isfinite(dr[t]) else 0.0))
     series = {**{k: v["equity"] for k, v in runs.items()},
-              "NIFTYBEES_split_adjusted_buyhold": bench_eq, "EW_universe_daily": ew_eq}
+              "NIFTYBEES_adjusted_buyhold": bench_eq, "EW_universe_daily": ew_eq}
     if P["index_is_distinct"]:
         ic = P["index_close"]
         index_eq = np.full(n, np.nan); index_eq[START:] = ic[START:] / ic[START]
