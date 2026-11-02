@@ -21,38 +21,49 @@ Price data is a separate limitation. Yahoo Finance may not return histories for 
 The portfolio backtest is capped at 2026-10-13, the membership source's stated coverage-through date, rather than extrapolating this calendar into later sessions.
 
 
-## Price-history audit results (workflow run #41484828635)
+## Adjusted-price and coverage audit (workflow run [#41521787219](https://github.com/SiddhantMis/TA/actions/runs/41521787219))
 
-The generated, reproducible audits are:
-- `results/pit_price_history_audit.csv`: every calendar symbol without a usable 253-bar history, membership-window overlap, first/last membership dates, provider outcome, and returned bar count.
-- `results/pit_daily_coverage_audit.csv`: active-member bar coverage for each backtest session.
+The reproducible outputs are:
+- `results/pit_price_history_audit.csv`: all missing or sub-253-bar PIT histories, with membership-window overlap and loader status.
+- `results/pit_daily_coverage_audit.csv`: daily active-member coverage on the common comparison calendar.
+- `results/tejhq_symbol_continuity_audit.csv`: one row per PIT symbol with aliases, ISIN/chain counts, bar count, first/last dates and status.
+- `results/tejhq_source_metadata.md`: pinned dataset revision, adjustment validation, source scope and data terms.
+- `results/pit_session_calendar_audit.csv`: full NSE calendar, source-bar flags, and explicit comparison inclusion/exclusion.
+- `results/pit_tejhq_coverage_audit.csv`: coverage-only TejHQ API re-probe of the 27 active-window symbols that still lack a full 253-bar history.
+- `results/pit_tejhq_initial_coverage_probe.csv`: preserved 105-symbol probe from workflow run [#41492471661](https://github.com/SiddhantMis/TA/actions/runs/41492471661).
+- `results/portfolio_rules_report.md` and `results/bench_check.md`: strategy comparison and independent NSE benchmark reconciliation.
 
-For the 2017-11-08 through 2026-10-13 test window:
-- 806 of 970 calendar symbols loaded; 164 did not meet the 253-bar requirement.
-- 105 of 878 symbols with a membership interval overlapping the test window lacked 253 usable bars; 59 additional missing symbols had no overlap with this test window.
-- Of those 105, 85 returned no history and 20 returned fewer than 253 bars.
-- 19 of the 105 were still members at the end of the calendar, all first entering on 2026-03-30 or 2026-09-30. Their recent entry dates explain why they cannot yet supply the 252-session momentum lookback. The other 86 were former constituents; 84 returned no history and two returned only one bar. These former-member gaps are the material residual survivorship/data-availability concern.
+### Historical symbol coverage
 
-## Zero-stock-bar sessions
+The integrated loader uses one pinned TejHQ `prices_adjusted` NSE parquet revision (`f7fa8343af92cf1289f3960c9267ed23fa9dbbcb)) for the stock universe. It loaded 951 symbol histories with at least one bar; 920 of 970 PIT symbols have the full 253-bar minimum, 31 have some but insufficient history, and 19 have no history. Of 878 symbols whose membership intervals overlap the tested window, 27 lack the 253-bar minimum: 22 are short-history cases and five return no history. Another 23 missing/unusable symbols do not overlap the tested window.
 
-The audit found eight dates in the ETF benchmark calendar on which none of the 806 loaded stock histories had a bar:
-`2019-02-13`, `2019-03-29`, `2020-02-01`, `2023-11-12`, `2024-01-20`, `2024-03-02`, `2024-05-18`, and `2026-02-01`.
+The 27-row TejHQ API audit returned history for the same 22 short-history symbols with the same bar counts as the adjusted-parquet loader; the other five returned no history. The API probe is coverage-only and does not feed raw prices into the backtest. The earlier 105-symbol probe returned some history for 102/105 symbols: 82 had at least 253 bars, 20 had fewer, and three had none. These two probes use different input sets and should not be combined into one coverage denominator.
 
-These are not all ordinary holidays. The 2019-02-13 and 2019-03-29 dates are weekdays with NIFTY 50 index history. The other six are documented special sessions: Budget-day trading on 2020-02-01 and 2026-02-01, Muhurat trading on 2023-11-12, and special live sessions on 2024-01-20, 2024-03-02, and 2024-05-18.
+The continuity audit covers all 970 PIT symbols and resolves 937 instrument chains across 1,146 ISINs. It records 116 symbols with multiple ISINs and 115 with multiple aliases. The chain rule is the same ISIN, or a new ISIN for the same symbol when the gap is at most 30 calendar days; ambiguous overlapping different-ISIN intervals and duplicate symbol/session rows fail validation. The five symbols with no resolved chain and no history are BAGMANE, BIRET, EMBASSY, SGPC and SHTV. BAGMANE, BIRET and EMBASSY first appear in the membership extract on 2026-09-30; SGPC and SHTV are former constituents with no returned history.
 
-The stock-price source therefore has missing session data even on real exchange sessions. The portfolio engine forward-fills stock OHLC for up to five sessions; on these dates that means stale stock marks while the ETF benchmark calendar advances. This is a calendar/data-source mismatch that can distort daily returns and comparisons. The dates are deliberately **not** silently removed or populated with fabricated prices. A decision-grade rerun needs constituent data that covers those sessions, or an explicit, consistently applied exclusion across the strategy and every benchmark with the omitted dates disclosed.
+The adjustment-factor check passed: adjusted close matches raw close multiplied by the published cumulative factor, and adjusted OHLC is checked on the same basis. TejHQ adjusts for splits, bonuses and dividends and retains raw volume/turnover, but does not scale mergers, demergers, rights or buybacks. Consequently, the source is consistent across the stock universe but is not complete for every corporate-action type.
 
-The PIT run and its metrics remain diagnostic, not decision-grade, until the former-constituent histories and the eight zero-stock-bar sessions are resolved. The membership calendar reduces one source of survivorship bias; it does not eliminate missing-return bias.
+### NSE session alignment and missing bars
 
-The underlying dataset is derived from public NSE Indices press releases and NSE exchange circulars. Nifty index names are trademarks of NSE Indices Limited; this repository is independent and not endorsed by NSE.
+The full calendar contains 2,480 NSE sessions from 2016-10-13 through 2026-10-13. Fourteen official sessions have no stock bar for any loaded symbol:
+`2016-10-30`, `2017-10-19`, `2018-11-07`, `2019-10-27`, `2020-02-01`, `2020-11-14`, `2021-11-04`, `2022-10-24`, `2023-11-12`, `2024-03-02`, `2024-05-18`, `2024-11-01`, `2025-10-21`, and `2026-02-01`. The 2024-03-02 session is explicitly included in the official calendar using [NSE Circular MSD/60677](https://nsearchives.nseindia.com/content/circulars/MSD60677.pdf); the NIFTY 50 index feed has no row for that date.
 
+To avoid a stale, flat stock portfolio mark being compared with a moving ETF/index benchmark, those 14 dates remain visible in the full audit but are excluded from every strategy and benchmark series. All variants and benchmarks therefore use the same 2,466 comparison sessions. There are no off-calendar stock dates, no missing NIFTYBEES bars, and no missing NIFTY 50 index bars on included comparison sessions. The benchmark is not forward-filled in the validated run. Missing stock opens, eligibility and returns are not forward-filled; close carry-forward is reserved for valuing existing holdings. The completed run reports zero held-position stale-close days.
 
-## TejHQ historical coverage recovery (2026-11-02)
+Daily active-member bar coverage on the comparison calendar is 98.6% minimum, 98.8% at the 10th percentile and 100% median; no session falls below 90% and none has zero active-member bars. The session audit retains all 2,480 dates and flags the 14 exclusions explicitly.
 
-Workflow run [41492471661](https://github.com/SiddhantMis/TA/actions/runs/41492471661) probed the 105 PIT symbols that lacked a usable Yahoo history. The independent TejHQ EOD API returned some history for 102/105; 82 had at least 253 bars, 20 had fewer than 253, and three had no history (BAGMANE, SGPC, SHTV). This was a coverage-only probe: no OHLCV rows were retained. The complete 105-row result is preserved as `results/pit_tejhq_initial_coverage_probe.csv`. A symbol with any history is not automatically eligible: the strategy still requires 253 usable bars.
+### Strategy comparison and interpretation
 
-The integrated TejHQ adjusted-parquet loader then recovered a broader consistent stock history: the latest completed run loaded 946/970 PIT symbols, leaving 24 missing or unusable. Five of 878 symbols overlapping the backtest window still lacked a 253-bar history; 19 other missing symbols had no overlap with the tested window. The five active-window gaps were BAGMANE, BIRET, EMBASSY, SGPC and SHTV. BAGMANE, BIRET and EMBASSY first enter the membership extract on 2026-09-30 and are too new for a 253-session lookback by the 2026-10-13 cutoff; SGPC and SHTV are former constituents for which the adjusted source returned no history. These gaps remain explicit and are not filled with synthetic prices.
+All variants use the same PIT membership calendar, 2,466 comparison sessions, 2017-10-23 through 2026-10-13 test dates after the 253-bar warm-up, 2023-08-18 IS/OOS split, 0.30% round-trip transaction cost and zero cash allocation. The full comparison is in `results/portfolio_rules_report.md`.
 
-The integrated loader pins the Hugging Face dataset revision, maps PIT tickers through TejHQ's ISIN/symbol-history intervals, checks adjusted OHLC against the published cumulative adjustment factor, and retains raw exchange volume/turnover for liquidity. TejHQ documents its instrument-chain rule as the same ISIN, or a new ISIN for the same symbol when the gap is at most 30 calendar days. The data provider adjusts for splits, bonuses and dividends, but does not scale mergers, demergers, rights or buybacks. The strategy comparison therefore remains diagnostic, not decision-grade, until the missing active histories, PIT membership limitations and unsupported corporate actions are resolved.
+For context only, the V2 live-rule variant reports 17.8% full-period CAGR, 20.8% volatility, 0.89 Sharpe and -31.5% maximum drawdown; the V1 baseline reports 20.3%, 20.9%, 0.99 and -28.4%. OOS V2 reports 25.7% CAGR and -25.6% maximum drawdown, versus 26.8% and -20.5% for V1. These are backtest outputs, not validated forecasts or evidence to change live rules.
 
-TejHQ's data terms (updated 2026-10-30) permit personal research and backtesting, but state that TejHQ holds no NSE/BSE data licence and that its MIT licence covers the pipeline/SDK code, not the market data. The underlying exchange terms still apply; commercial use or redistribution requires separate rights review. See [TejHQ data terms](https://tejhq.dev/data-terms) and the [dataset card](https://huggingface.co/datasets/tejhq/indian-markets).
+The NIFTYBEES benchmark is split-adjusted for its 10:1 face-value split effective 2019-12-19 and reconciled against TejHQ raw bars: common-date OHLC differences are zero. The ETF is not dividend-adjusted, and the NSE NIFTY 50 series used is a price index, not a total-return index. This is a further return-basis limitation versus dividend-adjusted stock prices.
+
+### Remaining quality and licensing limits
+
+This remains **NOT DECISION-GRADE**. The 27 active-window symbols without 253 bars, the PIT membership source's 44 documented cardinality failures (501–504 names on some dates and a 499-name 2026 snapshot), approximate `snapshot_floor` starts, and unsupported corporate actions can still bias results. The membership calendar reduces survivorship bias but does not eliminate missing-return bias.
+
+TejHQ's data terms (updated 2026-10-30) permit personal research and backtesting, but state that TejHQ holds no NSE/BSE data licence and its MIT licence covers code, not market data. Exchange terms still apply; commercial use or redistribution requires separate rights review. No raw market-price rows are committed to this repository. See [TejHQ data terms](https://tejhq.dev/data-terms) and the [dataset card](https://huggingface.co/datasets/tejhq/indian-markets).
+
+The research branch changes only data loading, validation, comparison-session selection and audit/report generation. It does not change `portfolio.py`, the live portfolio rules or the main branch. The PR remains draft pending review of the residual coverage, membership and corporate-action limitations.
