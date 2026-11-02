@@ -15,6 +15,7 @@ class PortfolioMissingBarTests(unittest.TestCase):
         open_ = close * 0.999
         self.missing_pos = 254
         open_[self.missing_pos] = np.nan
+        close[self.missing_pos] = np.nan
         self.frame = pd.DataFrame({
             "Open": open_,
             "High": close * 1.01,
@@ -42,7 +43,7 @@ class PortfolioMissingBarTests(unittest.TestCase):
         self.assertTrue(np.isnan(prepared["C_raw"][self.missing_pos, 0]))
         self.assertAlmostEqual(
             prepared["C"][self.missing_pos, 0],
-            self.frame["Close"].iloc[self.missing_pos],
+            self.frame["Close"].iloc[self.missing_pos - 1],
         )
 
     def test_simulator_does_not_execute_at_a_synthetic_open(self):
