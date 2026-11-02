@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Compare raw vs Yahoo-repaired NIFTYBEES data and validate the NIFTY 50 regime proxy."""
+"""Compare raw vs Yahoo-repaired NIFTYBEES data and validate the NIFTY 50 regime proxy.
+
+The Yahoo repair path uses SciPy for some unit-mixup checks; requirements.txt installs it.
+"""
 import os
 
 import numpy as np
