@@ -250,13 +250,13 @@ def run_portfolio(frames, mkt_close, bench_open, label, oos_frac=0.35, cost_pct=
 
 
 # --------------------------------------------------------------------- main ---
-def _load(tickers, years, store, tag):
+def _load(tickers, years, store, tag, min_bars=401):
     for t in tickers:
         if t in store:
             continue
         try:
             df = B.load_history(t, years)
-            if df is not None and len(df) > 400:
+            if df is not None and len(df) >= min_bars:
                 store[t] = df
             else:
                 print(f"[skip] {t}: not enough history", file=sys.stderr)
