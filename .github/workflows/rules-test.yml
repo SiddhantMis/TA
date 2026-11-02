@@ -27,9 +27,9 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: data_cache
-          key: tejhq-frames-v1-${{ github.run_id }}
+          key: tejhq-frames-v2-${{ github.run_id }}
           restore-keys: |
-            tejhq-frames-v1-
+            tejhq-frames-v2-
       - run: python test_nse_benchmark.py
       - run: python test_patterns.py
       - run: python test_pit_membership.py
@@ -46,7 +46,7 @@ jobs:
         if: always()
         with:
           path: data_cache
-          key: tejhq-frames-v1-${{ github.run_id }}
+          key: tejhq-frames-v2-${{ github.run_id }}
       - name: Upload PIT data quality reports
         if: always()
         uses: actions/upload-artifact@v4

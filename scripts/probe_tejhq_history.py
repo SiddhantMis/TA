@@ -66,7 +66,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", default="results/pit_price_history_audit.csv")
     parser.add_argument("--output", default="results/pit_tejhq_coverage_audit.csv")
-    parser.add_argument("--from-date", default="2017-11-08")
+    parser.add_argument("--from-date", default="2016-10-13")
     parser.add_argument("--to-date", default="2026-10-13")
     parser.add_argument("--pause", type=float, default=0.55)
     args = parser.parse_args(argv)

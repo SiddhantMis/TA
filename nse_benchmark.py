@@ -9,6 +9,7 @@ volume by 10. No price-jump heuristic is used.
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+import os
 from time import sleep
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -19,6 +20,10 @@ import requests
 NSE_BASE = "https://www.nseindia.com"
 NSE_HISTORY_URL = f"{NSE_BASE}/api/NextApi/apiClient/GetQuoteApi"
 NSE_BOOTSTRAP_URL = f"{NSE_BASE}/option-chain"
+NSE_INDEX_HISTORY_URL = f"{NSE_BASE}/api/historicalOR/indicesHistory"
+NSE_INDEX_BOOTSTRAP_URL = f"{NSE_BASE}/report-detail/eq_security"
+NIFTY50_INDEX_NAME = "NIFTY 50"
+NSE_INDEX_SOURCE_NAME = "NSE historicalOR/indicesHistory (NIFTY 50)"
 SOURCE_NAME = "NSE NextApi getHistoricalTradeData (NIFTYBEES, EQ)"
 NSE_SPLIT_CIRCULAR = "https://archives.nseindia.com/content/circulars/CML42873.pdf"
 NIFTYBEES_SPLITS = ({
@@ -33,6 +38,10 @@ HEADERS = {
     "Accept": "application/json, text/plain, */*",
     "Accept-Language": "en-US,en;q=0.9",
     "Referer": "https://www.nseindia.com/get-quotes/equity?symbol=NIFTYBEES",
+}
+INDEX_HEADERS = {
+    **HEADERS,
+    "Referer": "https://www.nseindia.com/reports-indices-historical-index-data",
 }
 
 
@@ -206,6 +215,228 @@ def fetch_niftybees_history(
             client.close()
 
 
+def _bootstrap_index(session: requests.Session, timeout: int) -> None:
+    response = session.get(NSE_INDEX_BOOTSTRAP_URL, timeout=timeout)
+    response.raise_for_status()
+
+
+def parse_nse_index_rows(rows: list[dict[str, Any]], start: date, end: date) -> pd.DataFrame:
+    """Parse the official NSE historical NIFTY 50 index response."""
+    required = {
+        "EOD_INDEX_NAME", "EOD_TIMESTAMP", "EOD_OPEN_INDEX_VAL",
+        "EOD_HIGH_INDEX_VAL", "EOD_LOW_INDEX_VAL", "EOD_CLOSE_INDEX_VAL",
+    }
+    records = []
+    for row in rows:
+        if not isinstance(row, dict) or not required.issubset(row):
+            raise RuntimeError("NSE NIFTY 50 response is missing required EOD fields")
+        index_name = " ".join(str(row["EOD_INDEX_NAME"]).upper().split())
+        if index_name != NIFTY50_INDEX_NAME:
+            raise RuntimeError(f"Unexpected NSE index name: {row['EOD_INDEX_NAME']!r}")
+        value = row["EOD_TIMESTAMP"]
+        day = pd.to_datetime(value, format="%d-%b-%Y", errors="coerce")
+        if pd.isna(day):
+            day = pd.to_datetime(value, dayfirst=True, errors="coerce")
+        if pd.isna(day):
+            raise RuntimeError(f"Could not parse NSE index date: {value!r}")
+        day = pd.Timestamp(day).normalize()
+        if day.date() < start or day.date() > end:
+            raise RuntimeError(f"NSE index date {day.date()} is outside requested window")
+        try:
+            opening, high, low, close = (
+                float(str(row[field]).replace(",", "").strip())
+                for field in (
+                    "EOD_OPEN_INDEX_VAL", "EOD_HIGH_INDEX_VAL",
+                    "EOD_LOW_INDEX_VAL", "EOD_CLOSE_INDEX_VAL",
+                )
+            )
+        except (TypeError, ValueError):
+            raise RuntimeError(f"Invalid NSE NIFTY 50 OHLC row for {day.date()}") from None
+        if min(opening, high, low, close) <= 0:
+            raise RuntimeError(f"Non-positive NSE NIFTY 50 OHLC row for {day.date()}")
+        if high + 0.01 < max(opening, low, close) or low - 0.01 > min(opening, high, close):
+            raise RuntimeError(f"Invalid NSE NIFTY 50 OHLC range for {day.date()}")
+        records.append({"Date": day, "Open": opening, "High": high, "Low": low, "Close": close})
+    if not records:
+        raise RuntimeError(f"NSE returned no NIFTY 50 rows for {start} through {end}")
+    frame = pd.DataFrame.from_records(records).set_index("Date").sort_index()
+    if frame.index.has_duplicates:
+        dates = frame.index[frame.index.duplicated()].strftime("%Y-%m-%d").tolist()
+        raise RuntimeError(f"Duplicate NSE NIFTY 50 dates: {dates[:8]}")
+    return frame
+
+
+def _request_index_chunk(session, start, end, timeout, retries):
+    params = {
+        "indexType": NIFTY50_INDEX_NAME,
+        "from": start.strftime("%d-%m-%Y"),
+        "to": end.strftime("%d-%m-%Y"),
+    }
+    retryable = {401, 403, 429, 500, 502, 503, 504}
+    last_error = None
+    for attempt in range(retries + 1):
+        try:
+            response = session.get(NSE_INDEX_HISTORY_URL, params=params, timeout=timeout)
+            if response.status_code in retryable:
+                last_error = requests.HTTPError(
+                    f"NSE index history returned HTTP {response.status_code}"
+                )
+                if response.status_code in {401, 403}:
+                    _bootstrap_index(session, timeout)
+                if attempt < retries:
+                    sleep(min(2 ** attempt, 15))
+                    continue
+                raise last_error
+            response.raise_for_status()
+            payload = response.json()
+            rows = payload.get("data") if isinstance(payload, dict) else None
+            if not isinstance(rows, list) or not rows:
+                raise RuntimeError(
+                    f"NSE returned an empty/invalid NIFTY 50 response for {start} through {end}"
+                )
+            return rows
+        except (requests.RequestException, ValueError) as exc:
+            last_error = exc
+            if attempt >= retries:
+                break
+            sleep(min(2 ** attempt, 15))
+    raise RuntimeError(f"NSE NIFTY 50 request failed for {start} through {end}: {last_error}") from last_error
+
+
+def fetch_nifty50_index_history(
+    start_date: date, end_date: date, *, session: requests.Session | None = None,
+    timeout: int = 25, retries: int = 3, pause_seconds: float = 0.2, max_days: int = 365,
+) -> pd.DataFrame:
+    """Fetch official NSE NIFTY 50 index OHLC and its exchange-session dates."""
+    if start_date > end_date:
+        raise ValueError("start_date must not be after end_date")
+    owns_session = session is None
+    client = session or requests.Session()
+    client.headers.update(INDEX_HEADERS)
+    try:
+        _bootstrap_index(client, timeout)
+        chunks = date_chunks(start_date, end_date, max_days=max_days)
+        parsed = []
+        for position, (chunk_start, chunk_end) in enumerate(chunks):
+            rows = _request_index_chunk(client, chunk_start, chunk_end, timeout, retries)
+            parsed.append(parse_nse_index_rows(rows, chunk_start, chunk_end))
+            if position < len(chunks) - 1 and pause_seconds > 0:
+                sleep(pause_seconds)
+        frame = pd.concat(parsed).sort_index()
+        if frame.index.has_duplicates:
+            dates = frame.index[frame.index.duplicated()].strftime("%Y-%m-%d").tolist()
+            raise RuntimeError(f"Duplicate NSE NIFTY 50 dates across chunks: {dates[:8]}")
+        frame.attrs.update({
+            "source": NSE_INDEX_SOURCE_NAME, "index_name": NIFTY50_INDEX_NAME,
+            "requested_start": start_date.isoformat(), "requested_end": end_date.isoformat(),
+        })
+        return frame
+    finally:
+        if owns_session:
+            client.close()
+
+
+def load_niftybees_raw_history(
+    start_date: date, end_date: date, *, cache_path: str | None = None,
+    refresh: bool = False, session: requests.Session | None = None,
+    pause_seconds: float = 1.0,
+) -> pd.DataFrame:
+    """Load raw NSE NIFTYBEES trades, using a private local cache when supplied."""
+    if cache_path and os.path.exists(cache_path) and not refresh:
+        try:
+            cached = pd.read_csv(cache_path, parse_dates=["Date"]).set_index("Date")
+            cached.index = pd.DatetimeIndex(cached.index).normalize()
+            start, end = pd.Timestamp(start_date), pd.Timestamp(end_date)
+            if (not cached.empty and not cached.index.has_duplicates
+                and cached.index.min() <= start + pd.Timedelta(days=15)
+                and cached.index.max() >= end - pd.Timedelta(days=10)):
+                frame = cached.loc[(cached.index >= start) & (cached.index <= end)].copy()
+                if not frame.empty:
+                    frame.attrs.update({
+                        "source": SOURCE_NAME, "raw_exchange_prices": True,
+                        "split_adjusted": False, "cache_hit": True,
+                    })
+                    return frame
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+    frame = fetch_niftybees_history(start_date, end_date, session=session, pause_seconds=pause_seconds)
+    if cache_path:
+        os.makedirs(os.path.dirname(cache_path) or ".", exist_ok=True)
+        frame.rename_axis("Date").to_csv(cache_path)
+    return frame
+
+
+def load_nifty50_index_history(
+    start_date: date, end_date: date, *, cache_path: str | None = None,
+    refresh: bool = False, session: requests.Session | None = None,
+    pause_seconds: float = 0.2,
+) -> pd.DataFrame:
+    """Load official NSE NIFTY 50 history, cached privately outside the repository."""
+    if cache_path and os.path.exists(cache_path) and not refresh:
+        try:
+            cached = pd.read_csv(cache_path, parse_dates=["Date"]).set_index("Date")
+            cached.index = pd.DatetimeIndex(cached.index).normalize()
+            start, end = pd.Timestamp(start_date), pd.Timestamp(end_date)
+            if (not cached.empty and not cached.index.has_duplicates
+                and cached.index.min() <= start + pd.Timedelta(days=15)
+                and cached.index.max() >= end - pd.Timedelta(days=10)):
+                frame = cached.loc[(cached.index >= start) & (cached.index <= end)].copy()
+                if not frame.empty:
+                    frame.attrs.update({
+                        "source": NSE_INDEX_SOURCE_NAME, "index_name": NIFTY50_INDEX_NAME,
+                        "cache_hit": True,
+                    })
+                    return frame
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+    frame = fetch_nifty50_index_history(start_date, end_date, session=session, pause_seconds=pause_seconds)
+    if cache_path:
+        os.makedirs(os.path.dirname(cache_path) or ".", exist_ok=True)
+        frame.rename_axis("Date").to_csv(cache_path)
+    return frame
+
+
+def reconcile_niftybees_sources(
+    nse_raw: pd.DataFrame, tejhq_raw: pd.DataFrame, *,
+    absolute_tolerance: float = 0.05, relative_tolerance: float = 0.0005,
+) -> dict[str, Any]:
+    """Require TejHQ raw NIFTYBEES bars to reconcile to NSE's trade-history API."""
+    if nse_raw is None or nse_raw.empty or tejhq_raw is None or tejhq_raw.empty:
+        raise RuntimeError("NIFTYBEES source reconciliation requires both non-empty histories")
+    nse_dates = pd.DatetimeIndex(pd.to_datetime(nse_raw.index)).normalize()
+    tej_dates = pd.DatetimeIndex(pd.to_datetime(tejhq_raw.index)).normalize()
+    missing_in_tejhq = nse_dates.difference(tej_dates)
+    if len(missing_in_tejhq):
+        sample = missing_in_tejhq.strftime("%Y-%m-%d").tolist()[:8]
+        raise RuntimeError(f"TejHQ NIFTYBEES history is missing {len(missing_in_tejhq)} NSE bars: {sample}")
+    common = nse_dates.intersection(tej_dates).sort_values()
+    if len(common) == 0:
+        raise RuntimeError("NIFTYBEES sources have no overlapping trade dates")
+    left, right = nse_raw.reindex(common), tejhq_raw.reindex(common)
+    max_abs, max_rel = 0.0, 0.0
+    for column in PRICE_COLUMNS:
+        a = pd.to_numeric(left[column], errors="coerce").to_numpy(float)
+        b = pd.to_numeric(right[column], errors="coerce").to_numpy(float)
+        if not (pd.Series(a).notna().all() and pd.Series(b).notna().all()):
+            raise RuntimeError(f"NIFTYBEES reconciliation has missing {column} values")
+        absolute = abs(a - b)
+        relative = absolute / pd.Series(abs(a)).clip(lower=1e-12).to_numpy(float)
+        max_abs, max_rel = max(max_abs, float(absolute.max())), max(max_rel, float(relative.max()))
+    if max_abs > absolute_tolerance or max_rel > relative_tolerance:
+        raise RuntimeError(
+            f"NIFTYBEES source reconciliation failed: max absolute OHLC difference={max_abs:.4f}, "
+            f"max relative={max_rel:.6%}"
+        )
+    extra = tej_dates.difference(nse_dates)
+    return {
+        "nse_api_bars": int(len(nse_dates)), "tejhq_bars": int(len(tej_dates)),
+        "common_bars": int(len(common)), "tejhq_extra_bars": int(len(extra)),
+        "nse_api_missing_in_tejhq": int(len(missing_in_tejhq)),
+        "max_abs_ohlc_diff": max_abs, "max_rel_ohlc_diff": max_rel,
+        "tejhq_extra_dates": extra.strftime("%Y-%m-%d").tolist()[:20],
+    }
+
+
 def apply_niftybees_split_adjustments(frame: pd.DataFrame) -> pd.DataFrame:
     """Express raw NSE prices and volume in current NIFTYBEES unit terms."""
     if frame is None or frame.empty:
@@ -235,7 +466,7 @@ def apply_niftybees_split_adjustments(frame: pd.DataFrame) -> pd.DataFrame:
         })
     out.attrs.update(frame.attrs)
     out.attrs.update({
-        "source": SOURCE_NAME,
+        "source": frame.attrs.get("source", SOURCE_NAME),
         "split_adjusted": True,
         "corporate_actions": actions_applied,
         "price_basis": "NIFTYBEES current Rs 1 face-value units",
@@ -255,7 +486,7 @@ def load_niftybees_history(
         raise ValueError("years must be at least 1")
     end = end_date or datetime.now(ZoneInfo("Asia/Kolkata")).date()
     start = (pd.Timestamp(end) - pd.DateOffset(years=years)).date()
-    raw = fetch_niftybees_history(
+    raw = load_niftybees_raw_history(
         start, end, session=session, pause_seconds=pause_seconds
     )
     adjusted = apply_niftybees_split_adjustments(raw)

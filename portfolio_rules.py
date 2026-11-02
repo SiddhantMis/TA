@@ -43,8 +43,11 @@ import sys
 import numpy as np
 import pandas as pd
 
-import backtest as B
-from nse_benchmark import load_niftybees_history
+from nse_benchmark import (
+    apply_niftybees_split_adjustments, load_niftybees_raw_history,
+    load_nifty50_index_history, reconcile_niftybees_sources,
+)
+from tejhq_data import load_niftybees_raw_frame
 import pattern_lab as PL
 from nifty500_pit import (
     DEFAULT_MEMBERSHIP_FILE, EXPECTED_INDEX_SIZE, MEMBERSHIP_COVERAGE_THROUGH,
@@ -103,10 +106,20 @@ def prepare(frames: dict, bench_df: pd.DataFrame, liquid_top: int = LIQUID_TOP,
         where=expected > 0,
     )
 
-    bc = pd.to_numeric(bench_df["Close"], errors="coerce").reindex(idx)
-    bsma = bc.rolling(200, min_periods=200).mean()
+    bc_raw = pd.to_numeric(bench_df["Close"], errors="coerce").reindex(idx)
+    bc_observed = bc_raw.dropna()
+    if bc_observed.empty:
+        raise ValueError("NIFTYBEES has no observed closes on the NSE session calendar")
+    # The 200-DMA is calculated on actual ETF observations, not repeated stale closes.
+    bsma_observed = bc_observed.rolling(200, min_periods=200).mean()
+    bull_observed = (bc_observed > bsma_observed).where(bsma_observed.notna())
+    bull = bull_observed.reindex(idx).ffill()
+    bull_known = bull.notna()
+    bc = bc_observed.reindex(idx).ffill()
     if index_df is not None:
         ic = pd.to_numeric(index_df["Close"], errors="coerce").reindex(idx)
+        if ic.isna().any():
+            raise ValueError("Official NIFTY 50 index has missing closes on its session calendar")
     else:
         ic = bc.copy()
     isma = ic.rolling(200, min_periods=200).mean()
@@ -120,15 +133,18 @@ def prepare(frames: dict, bench_df: pd.DataFrame, liquid_top: int = LIQUID_TOP,
             "pit_mask": pit_mask.to_numpy(bool), "pit_expected_count": expected,
             "pit_available_count": available, "pit_coverage_pct": coverage_pct,
             "membership_calendar": calendar,
-            "bull": (bc > bsma).fillna(False).to_numpy(bool), "bull_known": bsma.notna().to_numpy(bool),
+            "bull": bull.fillna(False).to_numpy(bool), "bull_known": bull_known.to_numpy(bool),
             "bull_index": (ic > isma).fillna(False).to_numpy(bool), "bull_index_known": isma.notna().to_numpy(bool),
-            "bench_close": bc.to_numpy(float), "index_close": ic.to_numpy(float),
+            "bench_close": bc.to_numpy(float), "bench_close_observed": bc_raw.to_numpy(float),
+            "bench_stale": (~bc_raw.notna() & bc.notna()).to_numpy(bool),
+            "index_close": ic.to_numpy(float),
             "index_is_distinct": index_df is not None}
 
 
 def cross_check_benchmark(etf: pd.DataFrame, index: pd.DataFrame, min_corr: float = 0.95) -> float:
     """The ETF and the index it tracks must move together day to day; if not, one of the series is still wrong."""
-    j = pd.concat([etf["Close"].pct_change(), index["Close"].pct_change()], axis=1, keys=["etf", "idx"]).dropna()
+    common = pd.concat([etf["Close"], index["Close"]], axis=1, keys=["etf", "idx"]).dropna()
+    j = common.pct_change(fill_method=None).dropna()
     corr = float(j.corr().iloc[0, 1]) if len(j) > 100 else float("nan")
     if not corr >= min_corr:
         raise RuntimeError(f"benchmark cross-check failed: daily-return correlation with ^NSEI is {corr:.3f} (< {min_corr}); "
@@ -143,7 +159,7 @@ def validate_benchmark(df: pd.DataFrame, label="NIFTYBEES", max_abs_daily_return
     close = pd.to_numeric(df["Close"], errors="coerce")
     if close.isna().any() or (close <= 0).any():
         raise RuntimeError(f"{label} benchmark contains missing/non-positive closes")
-    returns = close.pct_change()
+    returns = close.pct_change(fill_method=None)
     bad = returns[returns.abs() > max_abs_daily_return]
     if not bad.empty:
         samples = ", ".join(f"{d.date()} {v * 100:+.1f}%" for d, v in bad.head(8).items())
@@ -424,7 +440,7 @@ def build_session_calendar_audit(
     stock_set = set(stock_dates)
     return pd.DataFrame({
         "date": all_dates.strftime("%Y-%m-%d"),
-        "nse_niftybees_session": [day in nse_set for day in all_dates],
+        "nse_nifty50_session": [day in nse_set for day in all_dates],
         "adjusted_benchmark_bar": [day in benchmark_set for day in all_dates],
         "nifty50_index_bar": [day in index_set for day in all_dates],
         "stock_symbol_bars": [int(stock_counts.get(day, 0)) for day in all_dates],
@@ -456,7 +472,8 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
               loader_diagnostics: dict | None = None,
               audit_outputs: dict | None = None,
               source_metadata: dict | None = None):
-    quality = validate_benchmark(bench_df, "adjusted NIFTYBEES")
+    observed_benchmark = bench_df.loc[bench_df["Close"].notna(), ["Close"]]
+    quality = validate_benchmark(observed_benchmark, "adjusted NIFTYBEES")
     index_quality = (
         validate_benchmark(index_df, "NIFTY 50 price index")
         if index_df is not None else None
@@ -562,6 +579,13 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     adjustment_scope = source_metadata.get("adjustment_scope", "not recorded") if source_metadata else "not recorded"
     stale_days = sum(v.get("stale_holding_days", 0) for v in runs.values())
     max_stale = max((v.get("max_stale_sessions", 0) for v in runs.values()), default=0)
+    benchmark_stale = P["bench_stale"][START:]
+    benchmark_stale_days = int(benchmark_stale.sum())
+    benchmark_stale_max = 0
+    current_stale = 0
+    for stale in benchmark_stale:
+        current_stale = current_stale + 1 if stale else 0
+        benchmark_stale_max = max(benchmark_stale_max, current_stale)
     quality_issues = []
     if len(missing_test_window):
         quality_issues.append(f"{len(missing_test_window)} active-window symbols lack a full 253-bar history")
@@ -569,6 +593,11 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
         quality_issues.append(f"{len(zero_rows)} official sessions have zero active-member bars")
     if len(zero_stock_rows):
         quality_issues.append(f"{len(zero_stock_rows)} official sessions have zero bars across the loaded stock universe")
+    if benchmark_stale_days:
+        quality_issues.append(
+            f"{benchmark_stale_days} official sessions have no NIFTYBEES bar "
+            f"(maximum consecutive gap {benchmark_stale_max}); only the prior regime state is carried"
+        )
     if max_stale > 5:
         quality_issues.append(f"a held position had up to {max_stale} consecutive sessions without an actual close")
     if source_metadata and any(term in adjustment_scope.lower() for term in ("merger", "demerger", "rights", "buyback")):
@@ -591,9 +620,9 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
            f"Worst coverage sessions (date: active bars/expected, coverage, all loaded-symbol bars): {worst_detail}",
            "Missing opens are never forward-filled; close carry-forward is used only to value existing holdings, while eligibility, returns and stops use observed closes.",
            f"Stale-close diagnostics: {stale_days} held-position stale-close days across variants; maximum consecutive stale sessions={max_stale}.",
-           f"Benchmark: NIFTYBEES adjusted close series; {quality['bars']} bars; max abs daily move {quality['max_abs_daily_return_pct']:.2f}%",
-           *([f"Regime diagnostic: ^NSEI price index quality gate passed; {index_quality['bars']} bars; max abs daily move {index_quality['max_abs_daily_return_pct']:.2f}%"] if index_quality else []),
-           "NIFTY50_price_index is a PRICE index (not a total-return index).",
+           f"Benchmark: {source_metadata.get('benchmark_source', 'NIFTYBEES split-adjusted close')} | {quality['bars']} observed bars; max abs daily move {quality['max_abs_daily_return_pct']:.2f}%; stale official sessions={benchmark_stale_days} (max consecutive {benchmark_stale_max})",
+           *([f"Session calendar / regime diagnostic: {source_metadata.get('session_calendar_source', 'official NSE NIFTY 50 index history')} | {index_quality['bars']} bars; max abs daily move {index_quality['max_abs_daily_return_pct']:.2f}%"] if index_quality else []),
+           "NIFTY50_price_index is an official NSE PRICE index (not a total-return index).",
            "CAGR / vol / Sharpe(rf=0) / max drawdown (daily)"]
     for per in ("FULL", "IS", "OOS"):
         out += ["", f"-- {per} --", f"{'':<28}{'CAGR':>8}{'vol':>8}{'Sharpe':>8}{'maxDD':>9}"]
@@ -654,7 +683,7 @@ def main(argv=None):
     ap.add_argument("--years", type=int, default=10)
     ap.add_argument("--oos-frac", type=float, default=0.35)
     ap.add_argument("--cost-pct", type=float, default=0.30)
-    ap.add_argument("--cache", default="data_cache/tejhq_frames_10y.pkl")
+    ap.add_argument("--cache", default="data_cache/tejhq_frames_10y_v2.pkl")
     ap.add_argument("--data-source", choices=("tejhq", "yahoo"), default="tejhq",
                     help="price history source; research default is one consistent TejHQ adjusted NSE dataset")
     ap.add_argument("--membership-file", default=DEFAULT_MEMBERSHIP_FILE)
@@ -663,55 +692,69 @@ def main(argv=None):
     a = ap.parse_args(argv)
     os.makedirs(a.outdir, exist_ok=True)
     membership = load_membership_calendar(a.membership_file)
+    if a.data_source != "tejhq":
+        sys.exit("The PIT data-quality comparison requires TejHQ adjusted NSE prices; Yahoo mode is not a consistent source.")
+    end_date = MEMBERSHIP_COVERAGE_THROUGH.date()
+    start_date = (pd.Timestamp(end_date) - pd.DateOffset(years=a.years)).date()
     tickers = [f"{symbol}.NS" for symbol in sorted(membership["symbol"].unique())]
-    official_bench = load_niftybees_history(a.years)
-    if official_bench is None:
-        sys.exit("could not fetch NIFTYBEES.NS official NSE session calendar")
-    official_bench = official_bench.loc[official_bench.index <= MEMBERSHIP_COVERAGE_THROUGH]
-    if official_bench.empty:
-        sys.exit("official NSE NIFTYBEES history does not overlap PIT membership coverage")
-    validate_benchmark(official_bench, "official NSE NIFTYBEES session calendar")
 
-    index = B.load_history("^NSEI", a.years)
-    if index is None:
-        sys.exit("could not fetch ^NSEI")
-    index = index.loc[index.index <= MEMBERSHIP_COVERAGE_THROUGH]
+    nse_benchmark_raw = load_niftybees_raw_history(
+        start_date, end_date, cache_path="data_cache/niftybees_nse_raw.csv", refresh=a.refresh,
+    )
+    index = load_nifty50_index_history(
+        start_date, end_date, cache_path="data_cache/nifty50_index.csv", refresh=a.refresh,
+    )
+    if index.empty:
+        sys.exit("could not fetch official NSE NIFTY 50 index history")
 
     frames, loader_diagnostics = PL.load_frames(
         tickers, a.years, a.cache, a.refresh, min_bars=253,
         return_diagnostics=True, source=a.data_source, membership_df=membership,
+        start_date=start_date, end_date=end_date,
     )
     source_metadata = loader_diagnostics.pop("_source", {})
     symbol_audit = loader_diagnostics.pop("_symbol_audit", [])
     if not frames:
         sys.exit(f"no stock histories loaded from {a.data_source}")
 
-    # Use the official NSE NIFTYBEES trade dates as the master calendar. The ETF
-    # benchmark is independently split-adjusted by nse_benchmark.py; stock bars
-    # never define the calendar, and off-calendar stock rows are rejected.
+    tej_benchmark_raw, _ = load_niftybees_raw_frame(
+        start_date.isoformat(), end_date.isoformat(),
+        cache_dir="data_cache/tejhq_parquet", refresh=a.refresh,
+        revision=source_metadata.get("dataset_revision"),
+    )
+    benchmark_reconciliation = reconcile_niftybees_sources(nse_benchmark_raw, tej_benchmark_raw)
+    official_bench = apply_niftybees_split_adjustments(tej_benchmark_raw)
+    validate_benchmark(official_bench, "TejHQ raw NIFTYBEES, split-adjusted")
+
+    # Official NSE NIFTY 50 index dates define the exchange-session calendar.
+    # NIFTYBEES is the live regime instrument; it may have no trade on an official
+    # session, in which case only its last observed regime state is carried.
     bench = official_bench[["Open", "Close"]].copy()
-    official_sessions = normalise_session_index(official_bench.index)
+    official_sessions = normalise_session_index(index.index)
     benchmark_sessions = normalise_session_index(bench.index)
     index_sessions = normalise_session_index(index.index)
     session_audit = build_session_calendar_audit(
         official_sessions, benchmark_sessions, index_sessions, frames
     )
-    session_audit.to_csv(
-        os.path.join(a.outdir, "pit_session_calendar_audit.csv"), index=False
-    )
+    session_audit.to_csv(os.path.join(a.outdir, "pit_session_calendar_audit.csv"), index=False)
     missing_benchmark = official_sessions.difference(benchmark_sessions)
     extra_benchmark = benchmark_sessions.difference(official_sessions)
     missing_index = official_sessions.difference(index_sessions)
     extra_index = index_sessions.difference(official_sessions)
-    extra_stock = session_audit.loc[
-        session_audit["extra_stock_session"], "date"
-    ].tolist()
-    if len(missing_benchmark) or len(extra_benchmark) or len(missing_index) or len(extra_index) or extra_stock:
+    extra_stock = session_audit.loc[session_audit["extra_stock_session"], "date"].tolist()
+    missing_benchmark_mask = pd.Series(official_sessions.isin(missing_benchmark), index=official_sessions)
+    max_benchmark_gap = 0
+    current_gap = 0
+    for missing in missing_benchmark_mask.to_numpy(bool):
+        current_gap = current_gap + 1 if missing else 0
+        max_benchmark_gap = max(max_benchmark_gap, current_gap)
+    if extra_benchmark or missing_index or extra_index or extra_stock or max_benchmark_gap > 1:
         sys.exit(
             "NSE session alignment failed: "
-            f"missing benchmark={len(missing_benchmark)}, extra benchmark={len(extra_benchmark)}, "
-            f"missing NIFTY50 index={len(missing_index)}, extra NIFTY50 index={len(extra_index)}, "
-            f"off-calendar stock dates={len(extra_stock)}; "
+            f"missing benchmark={len(missing_benchmark)} (max consecutive {max_benchmark_gap}), "
+            f"extra benchmark={len(extra_benchmark)}, missing NIFTY50 index={len(missing_index)}, "
+            f"extra NIFTY50 index={len(extra_index)}, off-calendar stock dates={len(extra_stock)}; "
+            f"first missing benchmark dates={missing_benchmark.strftime('%Y-%m-%d').tolist()[:10]}, "
             f"first stock dates={extra_stock[:10]}"
         )
     bench.index = normalise_session_index(bench.index)
@@ -719,6 +762,19 @@ def main(argv=None):
     index.index = normalise_session_index(index.index)
     index = index.reindex(official_sessions)
     corr = cross_check_benchmark(bench, index)
+    source_metadata.update({
+        "benchmark_source": "TejHQ raw NSE bhavcopy NIFTYBEES OHLC, split-adjusted; reconciled to NSE NextApi",
+        "benchmark_adjustment_scope": "10:1 face-value split only; no dividend adjustment applied to the ETF",
+        **{f"benchmark_{key}": value for key, value in benchmark_reconciliation.items()},
+        "session_calendar_source": index.attrs.get("source", "NSE historicalOR/indicesHistory"),
+        "session_calendar_start": start_date.isoformat(),
+        "session_calendar_end": end_date.isoformat(),
+        "session_calendar_bars": int(len(index)),
+        "benchmark_missing_official_sessions": int(len(missing_benchmark)),
+        "benchmark_max_consecutive_missing_sessions": int(max_benchmark_gap),
+        "zero_stock_bar_sessions": int(session_audit["zero_stock_bar_session"].sum()),
+        "off_calendar_stock_dates": int(len(extra_stock)),
+    })
     audit_outputs = {}
     _, text = run_rules(
         frames, bench, a.oos_frac, a.cost_pct, index_df=index,
@@ -735,7 +791,7 @@ def main(argv=None):
         ).any():
             sys.exit("Session audit stock-bar counts do not reconcile with the daily coverage audit")
         session_audit["zero_active_member_bar_session"] = (
-            session_audit["nse_niftybees_session"]
+            session_audit["nse_nifty50_session"]
             & session_audit["active_member_bars"].fillna(0).eq(0)
         )
     audit_outputs["pit_session_calendar_audit"] = session_audit
@@ -753,16 +809,15 @@ def main(argv=None):
         f"Stock universe: TejHQ adjusted NSE OHLC (dataset revision {source_metadata.get('dataset_revision', 'unknown')}), "
         "back-adjusted for splits, bonuses and dividends; raw exchange volume/turnover retained; "
         "mergers/demergers/rights/buybacks are not scaled. "
-        "Benchmark: official NSE NIFTYBEES traded OHLC, adjusted for the 10:1 face-value split effective "
-        "2019-12-19; ETF NAV reflects dividends received from its underlying holdings. "
-        "NSE NIFTYBEES sessions are the master calendar; missing/extra benchmark or index sessions and "
-        "off-calendar stock dates are rejected. Missing opens are never forward-filled; close carry-forward "
-        "is used only to mark existing holdings to market.\n"
-        if a.data_source == "tejhq" else
-        "Yahoo Finance auto-adjusted stock OHLCV; official NSE NIFTYBEES benchmark is split-adjusted and "
-        "its sessions are retained as the master calendar. Off-calendar stock dates are rejected.\n"
+        "Benchmark: TejHQ raw NSE bhavcopy NIFTYBEES OHLC, split-adjusted for the 10:1 face-value split "
+        "effective 2019-12-19 and reconciled against NSE NextApi; the ETF is not dividend-adjusted. "
+        "Session calendar: official NSE NIFTY 50 index history (historicalOR/indicesHistory), independent "
+        "of ETF trade dates. Missing NIFTYBEES bars are never price-filled; only the last observed ETF "
+        "regime state and mark are carried across at most one isolated official session. Missing stock "
+        "opens, eligibility and returns are never forward-filled; close carry-forward is used only to "
+        "mark existing holdings to market.\n"
     )
-    text = (source_note + f"Daily-return correlation benchmark vs ^NSEI {corr:.3f}\n") + text
+    text = source_note + f"Daily-return correlation split-adjusted NIFTYBEES vs official NSE NIFTY 50: {corr:.3f}\n" + text
     with open(os.path.join(a.outdir, "portfolio_rules_report.md"), "w", encoding="utf-8") as fh:
         fh.write("```\n" + text + "\n```\n")
     print(text)

@@ -67,6 +67,30 @@ class TejHQAdjustedLoaderTests(unittest.TestCase):
             self.assertEqual(diagnostics["MISSING.NS"]["status"], "no_history")
             self.assertEqual(diagnostics["_source"]["dataset_revision"], "fixture")
 
+    def test_include_raw_preserves_exchange_ohlc_for_benchmark_reconciliation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            history_path = Path(tmp) / "symbol_history.parquet"
+            price_path = Path(tmp) / "nse_2026.parquet"
+            self._write_history(history_path, [
+                ("INE000A01001", "NIFTYBEES", "2026-01-02", "2026-01-05"),
+            ])
+            self._write_prices(price_path, [
+                ("2026-01-02", "NIFTYBEES", "EQ", "INE000A01001", 100.0, 105.0, 95.0, 102.0, 1000, 102000.0, 0.5, 51.0),
+            ])
+            with self._mock_download(history_path, price_path):
+                frames, _ = load_adjusted_frames(
+                    ["NIFTYBEES.NS"], "2026-01-01", "2026-01-31",
+                    cache_dir=tmp, min_bars=1, revision="fixture", include_raw=True,
+                )
+            frame = frames["NIFTYBEES.NS"]
+            self.assertAlmostEqual(frame.iloc[0]["Open"], 50.0)
+            self.assertAlmostEqual(frame.iloc[0]["Close"], 51.0)
+            self.assertAlmostEqual(frame.iloc[0]["RawOpen"], 100.0)
+            self.assertAlmostEqual(frame.iloc[0]["RawHigh"], 105.0)
+            self.assertAlmostEqual(frame.iloc[0]["RawLow"], 95.0)
+            self.assertAlmostEqual(frame.iloc[0]["RawClose"], 102.0)
+
+
     def test_retains_short_history_and_marks_it_insufficient(self):
         with tempfile.TemporaryDirectory() as tmp:
             history_path = Path(tmp) / "symbol_history.parquet"

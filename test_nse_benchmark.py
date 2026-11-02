@@ -67,6 +67,40 @@ def test_nse_parser_accepts_actual_lower_camel_case_api_rows():
     assert frame.iloc[0]["Close"] == 894.36
     assert frame.iloc[0]["Volume"] == 18590
 
+def _index_row(day, opening, high, low, close):
+    return {
+        "EOD_INDEX_NAME": "NIFTY 50", "EOD_TIMESTAMP": day,
+        "EOD_OPEN_INDEX_VAL": opening, "EOD_HIGH_INDEX_VAL": high,
+        "EOD_LOW_INDEX_VAL": low, "EOD_CLOSE_INDEX_VAL": close,
+    }
+
+
+def test_official_nifty50_index_parser_uses_exchange_local_eod_timestamp():
+    from nse_benchmark import parse_nse_index_rows
+
+    frame = parse_nse_index_rows(
+        [_index_row("03-Nov-2016", 8500, 8550, 8480, 8520),
+         _index_row("04-Nov-2016", 8520, 8580, 8510, 8560)],
+        date(2016, 11, 3), date(2016, 11, 4),
+    )
+    assert frame.index.tolist() == [pd.Timestamp("2016-11-03"), pd.Timestamp("2016-11-04")]
+    assert frame.iloc[0]["Close"] == 8520
+
+
+def test_official_nifty50_parser_rejects_wrong_index_and_duplicate_dates():
+    from nse_benchmark import parse_nse_index_rows
+    import pytest
+
+    with pytest.raises(RuntimeError, match="Unexpected NSE index name"):
+        parse_nse_index_rows(
+            [_index_row("03-Nov-2016", 8500, 8550, 8480, 8520) | {"EOD_INDEX_NAME": "NIFTY BANK"}],
+            date(2016, 11, 3), date(2016, 11, 3),
+        )
+    row = _index_row("03-Nov-2016", 8500, 8550, 8480, 8520)
+    with pytest.raises(RuntimeError, match="Duplicate NSE NIFTY 50 dates"):
+        parse_nse_index_rows([row, row], date(2016, 11, 3), date(2016, 11, 3))
+
+
 def test_split_adjustment_converts_only_pre_ex_date_prices_and_volume():
     rows = [
         _row("2019-12-18", 1289.95, 1294.32, 1282.10, 1292.54, 21946),

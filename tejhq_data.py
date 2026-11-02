@@ -133,6 +133,31 @@ def map_symbol_chains(
     return mapping
 
 
+def load_niftybees_raw_frame(
+    start_date: str, end_date: str, *, cache_dir: str = "data_cache/tejhq_parquet",
+    refresh: bool = False, revision: str | None = None,
+) -> tuple[pd.DataFrame, dict[str, dict]]:
+    """Load raw NIFTYBEES OHLC from TejHQ's NSE bhavcopy-derived parquet fields."""
+    frames, diagnostics = load_adjusted_frames(
+        ["NIFTYBEES.NS"], start_date, end_date, cache_dir=cache_dir,
+        refresh=refresh, membership_df=None, min_bars=1, revision=revision,
+        include_raw=True,
+    )
+    frame = frames.get("NIFTYBEES.NS")
+    if frame is None or frame.empty:
+        raise RuntimeError("TejHQ has no NIFTYBEES raw NSE history in the requested range")
+    raw = frame[["RawOpen", "RawHigh", "RawLow", "RawClose", "Volume"]].rename(
+        columns={"RawOpen": "Open", "RawHigh": "High", "RawLow": "Low", "RawClose": "Close"}
+    ).copy()
+    raw.attrs.update(frame.attrs)
+    raw.attrs.update({
+        "source": "TejHQ raw NSE bhavcopy OHLC (prices_adjusted parquet raw fields)",
+        "raw_exchange_prices": True, "split_adjusted": False,
+        "requested_start": start_date, "requested_end": end_date,
+    })
+    return raw, diagnostics
+
+
 def load_adjusted_frames(
     tickers: Iterable[str],
     start_date: str,
@@ -142,6 +167,7 @@ def load_adjusted_frames(
     membership_df: pd.DataFrame | None = None,
     min_bars: int = 253,
     revision: str | None = None,
+    include_raw: bool = False,
 ) -> tuple[dict[str, pd.DataFrame], dict[str, dict]]:
     """Return adjusted OHLCV frames keyed by Yahoo-style ticker (SYMBOL.NS).
 
@@ -251,6 +277,10 @@ def load_adjusted_frames(
 
         for col in ("open", "high", "low", "volume", "turnover"):
             part[col] = pd.to_numeric(part[col], errors="coerce")
+        part["raw_open"] = part["open"].copy()
+        part["raw_high"] = part["high"].copy()
+        part["raw_low"] = part["low"].copy()
+        part["raw_close"] = raw_close
         part["open"] *= factor
         part["high"] *= factor
         part["low"] *= factor
@@ -273,7 +303,8 @@ def load_adjusted_frames(
         row_count += len(part)
         parts.append(part[[
             "date", "symbol", "isin", "chain_id", "open", "high", "low",
-            "close", "volume", "turnover",
+            "close", "volume", "turnover", "raw_open", "raw_high", "raw_low",
+            "raw_close",
         ]])
 
     if not parts:
@@ -292,14 +323,31 @@ def load_adjusted_frames(
             if selected["date"].duplicated().any():
                 sample = selected.loc[selected["date"].duplicated(False), ["date", "symbol", "isin"]].head(8)
                 raise RuntimeError(f"{symbol}: multiple price bars after symbol-chain mapping: {sample.to_dict('records')}")
-            frame = pd.DataFrame({
+            frame_data = {
                 "Open": selected["open"].to_numpy(float),
                 "High": selected["high"].to_numpy(float),
                 "Low": selected["low"].to_numpy(float),
                 "Close": selected["close"].to_numpy(float),
                 "Volume": selected["volume"].to_numpy(float),
                 "Turnover": selected["turnover"].to_numpy(float),
-            }, index=pd.DatetimeIndex(selected["date"], name="Date")).sort_index()
+            }
+            if include_raw:
+                frame_data.update({
+                    "RawOpen": selected["raw_open"].to_numpy(float),
+                    "RawHigh": selected["raw_high"].to_numpy(float),
+                    "RawLow": selected["raw_low"].to_numpy(float),
+                    "RawClose": selected["raw_close"].to_numpy(float),
+                })
+            frame = pd.DataFrame(
+                frame_data, index=pd.DatetimeIndex(selected["date"], name="Date")
+            ).sort_index()
+            if include_raw:
+                frame.attrs.update({
+                    "source": "TejHQ raw OHLC fields from NSE prices_adjusted parquet",
+                    "dataset_revision": revision,
+                    "raw_exchange_prices": True,
+                    "split_adjusted": False,
+                })
             frames[f"{symbol}.NS"] = frame
             bars = int(len(frame))
             status = "loaded" if bars >= min_bars else "insufficient_history"

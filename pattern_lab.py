@@ -233,14 +233,22 @@ def run_lab(frames: dict, oos_frac=0.35, cost_pct=0.30, liquid_top=200):
 
 # ----------------------------------------------------------------------- main --
 def load_frames(tickers, years, cache, refresh, min_bars=401, return_diagnostics=False,
-                source="yahoo", membership_df=None):
+                source="yahoo", membership_df=None, start_date=None, end_date=None):
     if source not in {"yahoo", "tejhq"}:
         raise ValueError(f"unknown price source: {source}")
     if source == "tejhq":
         from tejhq_data import get_dataset_revision, load_adjusted_frames
 
-        end = pd.Timestamp.now().normalize()
-        start = end - pd.DateOffset(years=years)
+        end = (
+            pd.Timestamp(end_date).normalize()
+            if end_date is not None else pd.Timestamp.now().normalize()
+        )
+        start = (
+            pd.Timestamp(start_date).normalize()
+            if start_date is not None else end - pd.DateOffset(years=years)
+        )
+        if end < start:
+            raise ValueError("end_date must be on or after start_date")
         requested = sorted(set(tickers))
         membership_hash = (
             hashlib.sha256(
