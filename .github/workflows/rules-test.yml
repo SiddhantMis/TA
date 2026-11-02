@@ -29,7 +29,7 @@ jobs:
       - run: python test_nse_benchmark.py
       - run: python test_patterns.py
       - run: python test_pit_membership.py
-      - run: python -m py_compile portfolio_rules.py nifty500_pit.py pattern_lab.py portfolio.py
+      - run: python -m py_compile portfolio_rules.py nifty500_pit.py pattern_lab.py portfolio.py tejhq_data.py
       - name: Run NSE benchmark validation
         run: python bench_check.py
       - name: Run the rules test
@@ -40,7 +40,7 @@ jobs:
         if: always()
         with:
           path: data_cache
-          key: frames-v2-${{ github.run_id }}
+          key: tejhq-frames-v1-${{ github.run_id }}
       - name: Commit report back to the branch
         run: |
           git config user.name "github-actions[bot]"
