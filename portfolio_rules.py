@@ -11,17 +11,19 @@ Questions, answered with the same data, costs and a DAILY engine (stops need dai
 Pre-registered (nothing is tuned after seeing results):
   universe  Nifty 500 list; point-in-time top-200 by 126-day traded value; close above own 200-day average
   rank      12-1 return (252 sessions back to 21 back), highest first;  20 slots, equal weight of current equity
-  filter    BULL = NIFTYBEES adjusted close above its own 200-day average on the signal day (as in PR #3)
+  filter    BULL = split/dividend-repaired NIFTYBEES adjusted close above its 200-day average (as in PR #3)
+  diagnostic compare: ^NSEI 200-DMA regime as a separate variant; it does not replace the live ETF rule
   target    PR #3's build_target_holdings: incumbents stay if still eligible and rank <= 30, then fill from ranks <= 20
   execute   signal after the close, trade at the NEXT session's open, 0.30% round trip on traded value, cash earns 0%
   stops     trailing stop from the highest close since entry; checked on closes, sold at the next open, slot stays
             in cash until the next rebalance
 Variants:
-  V1_baseline      month-end signal, no buffer, filter on  (what portfolio.py tested)
-  V3_live_nobuf    28th-of-month signal, no buffer, filter on  (isolates the timing change)
-  V2_live          28th-of-month signal, buffer 30, filter on  (the live rules)
+  V1_baseline      month-end signal, no buffer, repaired ETF filter
+  V3_live_nobuf    repaired ETF filter, no buffer, corrected 28th trigger (isolates timing)
+  V2_live          corrected 28th trigger, buffer 30, repaired ETF filter (the live rules)
   V4a_stop20       V2 + 20% trailing stop         V4b_stop30   V2 + 30% trailing stop
-  V5_nofilter      V2 without the market filter    V6_half      V2 but half exposure (not cash) when the filter says BEAR
+  V5_nofilter      V2 without the market filter    V6_half      V2 but half exposure when ETF filter says BEAR
+  V7_nifty50       same live rules, but ^NSEI 200-DMA regime (diagnostic alternative only)
 Decision rules:
   stop helps    if max drawdown improves by >= 5 points (full AND out-of-sample) and CAGR falls by <= 2 points (IS AND OOS)
   buffer helps  if turnover falls >= 20% and CAGR does not fall by more than 1 point
@@ -47,7 +49,8 @@ START = 253
 
 
 # ------------------------------------------------------------------- data ---
-def prepare(frames: dict, bench_df: pd.DataFrame, liquid_top: int = LIQUID_TOP) -> dict:
+def prepare(frames: dict, bench_df: pd.DataFrame, liquid_top: int = LIQUID_TOP,
+            index_df: pd.DataFrame | None = None) -> dict:
     idx = bench_df.index
     cols = list(frames)
     O = pd.concat({t: frames[t].Open for t in cols}, axis=1).reindex(idx)
@@ -60,12 +63,37 @@ def prepare(frames: dict, bench_df: pd.DataFrame, liquid_top: int = LIQUID_TOP) 
     valid = C.notna() & sma200.notna() & mom.notna()
     elig = valid & liquid & (C > sma200)
     rank = mom.where(elig).rank(axis=1, ascending=False, method="first")
-    bc = bench_df["Close"]
+    bc = pd.to_numeric(bench_df["Close"], errors="coerce").reindex(idx)
     bsma = bc.rolling(200, min_periods=200).mean()
+    if index_df is not None:
+        ic = pd.to_numeric(index_df["Close"], errors="coerce").reindex(idx)
+    else:
+        ic = bc.copy()
+    isma = ic.rolling(200, min_periods=200).mean()
     return {"idx": idx, "cols": cols, "O": O.ffill(limit=5).to_numpy(float), "C": C.ffill(limit=5).to_numpy(float),
             "rank": rank.to_numpy(float), "univ": (valid & liquid).to_numpy(bool),
-            "bull": (bc > bsma).to_numpy(bool), "bull_known": bsma.notna().to_numpy(bool),
-            "bench_close": bc.to_numpy(float)}
+            "bull": (bc > bsma).fillna(False).to_numpy(bool), "bull_known": bsma.notna().to_numpy(bool),
+            "bull_index": (ic > isma).fillna(False).to_numpy(bool), "bull_index_known": isma.notna().to_numpy(bool),
+            "bench_close": bc.to_numpy(float), "index_close": ic.to_numpy(float),
+            "index_is_distinct": index_df is not None}
+
+
+def validate_benchmark(df: pd.DataFrame, label="NIFTYBEES", max_abs_daily_return=0.25):
+    """Fail closed on benchmark price jumps large enough to indicate an unhandled split/data error."""
+    if df is None or df.empty or "Close" not in df:
+        raise RuntimeError(f"{label} benchmark history is missing or empty")
+    close = pd.to_numeric(df["Close"], errors="coerce")
+    if close.isna().any() or (close <= 0).any():
+        raise RuntimeError(f"{label} benchmark contains missing/non-positive closes")
+    returns = close.pct_change()
+    bad = returns[returns.abs() > max_abs_daily_return]
+    if not bad.empty:
+        samples = ", ".join(f"{d.date()} {v * 100:+.1f}%" for d, v in bad.head(8).items())
+        raise RuntimeError(
+            f"{label} benchmark quality gate failed: {len(bad)} daily returns exceed "
+            f"{max_abs_daily_return * 100:.0f}% ({samples}). Refusing to calculate strategy metrics."
+        )
+    return {"bars": int(len(close)), "max_abs_daily_return_pct": float(returns.abs().max() * 100)}
 
 
 def month_end_signals(idx) -> set:
@@ -74,10 +102,27 @@ def month_end_signals(idx) -> set:
 
 
 def rule28_signals(idx) -> set:
-    """PR #3's trigger: the first scan on or after the 28th of a month (a month with no trading day >= 28 gets none)."""
+    """First observed session on/after the 28th; if none, use the last session of a completed month.
+
+    The final observed month is not assumed complete: a mid-month download must not
+    create a premature signal. A completed February whose final session is the 27th
+    therefore rebalances on the 27th, once a following-month session is present.
+    """
     s = pd.Series(np.arange(len(idx)), index=idx)
-    late = s[idx.day >= 28]
-    return set(late.groupby([late.index.year, late.index.month]).first().tolist())
+    if len(s) == 0:
+        return set()
+    last_month = (idx[-1].year, idx[-1].month)
+    first_month = (idx[0].year, idx[0].month)
+    signals = set()
+    for (year, month), group in s.groupby([s.index.year, s.index.month]):
+        late = group[group.index.day >= 28]
+        if not late.empty:
+            signals.add(int(late.iloc[0]))
+        elif (int(year), int(month)) != last_month and (
+            (int(year), int(month)) != first_month or idx[0].day == 1
+        ):
+            signals.add(int(group.iloc[-1]))
+    return signals
 
 
 # ------------------------------------------------------------------ rules ---
@@ -96,7 +141,8 @@ def select_target(rank_row, incumbents, buffer: bool, size=SIZE, retain=RETAIN) 
     return [int(j) for j in target]
 
 
-def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0.30, size=SIZE, retain=RETAIN, start=START):
+def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0.30,
+             size=SIZE, retain=RETAIN, start=START, regime_source="etf"):
     """Daily engine. regime: 'cash' (BEAR -> no stocks), 'half' (BEAR -> half exposure), 'off' (ignore the filter)."""
     idx, O, C = P["idx"], P["O"], P["C"]
     n, side = len(idx), cost_pct / 200.0
@@ -115,7 +161,12 @@ def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0
             equity_before = cash + sum(q * o[j] for j, q in sh.items())
             if reb:
                 s = t - 1
-                bull = bool(P["bull"][s]) and bool(P["bull_known"][s])
+                if regime_source == "index":
+                    bull = bool(P["bull_index"][s]) and bool(P["bull_index_known"][s])
+                elif regime_source == "etf":
+                    bull = bool(P["bull"][s]) and bool(P["bull_known"][s])
+                else:
+                    raise ValueError(f"Unknown regime_source: {regime_source}")
                 exposure = 1.0 if (regime == "off" or bull) else (0.5 if regime == "half" else 0.0)
                 target = select_target(P["rank"][s], list(sh), buffer, size, retain) if exposure > 0 else []
                 for j in list(sh):
@@ -168,14 +219,20 @@ def compare_stop(base, stop):
     return "STOP HELPS" if not why else "NO: " + "; ".join(why)
 
 
-def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30):
-    P = prepare(frames, bench_df)
+def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30,
+              index_df: pd.DataFrame | None = None):
+    quality = validate_benchmark(bench_df, "Repaired NIFTYBEES")
+    P = prepare(frames, bench_df, index_df=index_df)
     idx = P["idx"]
     me, r28 = month_end_signals(idx), rule28_signals(idx)
-    cfg = {"V1_baseline": dict(signals=me, buffer=False), "V3_live_nobuf": dict(signals=r28, buffer=False),
-           "V2_live": dict(signals=r28, buffer=True), "V4a_stop20": dict(signals=r28, buffer=True, trail=0.20),
+    cfg = {"V1_baseline": dict(signals=me, buffer=False),
+           "V3_live_nobuf": dict(signals=r28, buffer=False),
+           "V2_live": dict(signals=r28, buffer=True),
+           "V4a_stop20": dict(signals=r28, buffer=True, trail=0.20),
            "V4b_stop30": dict(signals=r28, buffer=True, trail=0.30),
-           "V5_nofilter": dict(signals=r28, buffer=True, regime="off"), "V6_half": dict(signals=r28, buffer=True, regime="half")}
+           "V5_nofilter": dict(signals=r28, buffer=True, regime="off"),
+           "V6_half": dict(signals=r28, buffer=True, regime="half"),
+           "V7_nifty50_filter": dict(signals=r28, buffer=True, regime_source="index")}
     runs = {k: simulate(P, cost_pct=cost_pct, **v) for k, v in cfg.items()}
     n = len(idx)
     split = START + int((n - 1 - START) * (1 - oos_frac))
@@ -190,28 +247,43 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     ew_eq = np.full(n, np.nan); ew_eq[START] = 1.0
     for t in range(START + 1, n):
         ew_eq[t] = ew_eq[t - 1] * (1 + (dr[t] if np.isfinite(dr[t]) else 0.0))
-    series = {**{k: v["equity"] for k, v in runs.items()}, "Nifty50_buyhold": bench_eq, "EW_universe_daily": ew_eq}
+    series = {**{k: v["equity"] for k, v in runs.items()},
+              "NIFTYBEES_adjusted_buyhold": bench_eq, "EW_universe_daily": ew_eq}
+    if P["index_is_distinct"]:
+        ic = P["index_close"]
+        index_eq = np.full(n, np.nan); index_eq[START:] = ic[START:] / ic[START]
+        series["NIFTY50_price_index"] = index_eq
     spans = {"FULL": (START, n - 1), "IS": (START, split), "OOS": (split, n - 1)}
     M = {(k, p): metrics(e, a, b) for k, e in series.items() for p, (a, b) in spans.items()}
     d0, d1, ds = idx[START].date(), idx[-1].date(), idx[split].date()
     out = [f"Portfolio rules: {len(frames)} stocks, daily engine {d0} to {d1}, IS/OOS split {ds}, cost {cost_pct}% round trip, cash 0%",
+           f"Benchmark: NIFTYBEES auto-adjusted with yfinance repair=True; {quality['bars']} bars; max abs daily move {quality['max_abs_daily_return_pct']:.2f}%",
+           "NIFTY50_price_index is a PRICE index (not a total-return index).",
            "CAGR / vol / Sharpe(rf=0) / max drawdown (daily)"]
     for per in ("FULL", "IS", "OOS"):
-        out += ["", f"-- {per} --", f"{'':<18}{'CAGR':>8}{'vol':>8}{'Sharpe':>8}{'maxDD':>9}"]
+        out += ["", f"-- {per} --", f"{'':<28}{'CAGR':>8}{'vol':>8}{'Sharpe':>8}{'maxDD':>9}"]
         for k in series:
             m = M[(k, per)]
-            out.append(f"{k:<18}" + ("n/a" if m is None else f"{m['cagr'] * 100:>7.1f}%{m['vol'] * 100:>7.1f}%{m['sharpe']:>8.2f}{m['maxdd'] * 100:>8.1f}%"))
-    out += ["", "-- activity --", f"{'':<18}{'rebalances':>11}{'avg turnover':>14}{'stop-outs':>10}{'days in cash':>14}"]
+            out.append(f"{k:<28}" + ("n/a" if m is None else f"{m['cagr'] * 100:>7.1f}%{m['vol'] * 100:>7.1f}%{m['sharpe']:>8.2f}{m['maxdd'] * 100:>8.1f}%"))
+    out += ["", "-- activity --", f"{'':<28}{'rebalances':>11}{'avg turnover':>14}{'stop-outs':>10}{'days in cash':>14}"]
     for k, v in runs.items():
-        out.append(f"{k:<18}{len(v['turnover']):>11}{(np.mean(v['turnover']) if v['turnover'] else 0):>14.2f}{v['stops']:>10}{v['cash_days'] / max(1, n - START) * 100:>13.0f}%")
-    bull = P["bull"] & P["bull_known"]
+        out.append(f"{k:<28}{len(v['turnover']):>11}{(np.mean(v['turnover']) if v['turnover'] else 0):>14.2f}{v['stops']:>10}{v['cash_days'] / max(1, n - START) * 100:>13.0f}%")
     bear_days = [t for t in range(START + 1, n) if P["bull_known"][t - 1] and not P["bull"][t - 1]]
     bull_days = [t for t in range(START + 1, n) if P["bull_known"][t - 1] and P["bull"][t - 1]]
-    ann = lambda arr, days: float(np.prod([1 + arr[t] for t in days if np.isfinite(arr[t])]) ** (252 / max(1, len(days))) - 1)
-    nb = np.full(n, np.nan); nb[1:] = bc[1:] / bc[:-1] - 1
-    out += ["", f"-- what the market filter sees: {len(bear_days)} BEAR days ({len(bear_days) / max(1, len(bear_days) + len(bull_days)) * 100:.0f}% of the period), {len(bull_days)} BULL days --",
-            f"annualised return on BEAR days:  Nifty50 {ann(nb, bear_days) * 100:+.1f}%   same-universe equal-weight {ann(dr, bear_days) * 100:+.1f}%",
-            f"annualised return on BULL days:  Nifty50 {ann(nb, bull_days) * 100:+.1f}%   same-universe equal-weight {ann(dr, bull_days) * 100:+.1f}%"]
+    ann = lambda arr, days: float(np.prod([1 + arr[t] for t in days if np.isfinite(arr[t])]) ** (252 / max(1, sum(np.isfinite(arr[t]) for t in days))) - 1)
+    etf_ret = np.full(n, np.nan); etf_ret[1:] = bc[1:] / bc[:-1] - 1
+    index_close = P["index_close"]
+    index_ret = np.full(n, np.nan); index_ret[1:] = index_close[1:] / index_close[:-1] - 1
+    out += ["", f"-- what the repaired NIFTYBEES filter sees: {len(bear_days)} BEAR days ({len(bear_days) / max(1, len(bear_days) + len(bull_days)) * 100:.0f}% of known-regime days), {len(bull_days)} BULL days --",
+            f"annualised adjusted ETF return on ETF-BEAR days: {ann(etf_ret, bear_days) * 100:+.1f}%; same-universe equal-weight: {ann(dr, bear_days) * 100:+.1f}%",
+            f"annualised adjusted ETF return on ETF-BULL days: {ann(etf_ret, bull_days) * 100:+.1f}%; same-universe equal-weight: {ann(dr, bull_days) * 100:+.1f}%"]
+    if P["index_is_distinct"]:
+        ibear = [t for t in range(START + 1, n) if P["bull_index_known"][t - 1] and not P["bull_index"][t - 1]]
+        ibull = [t for t in range(START + 1, n) if P["bull_index_known"][t - 1] and P["bull_index"][t - 1]]
+        common = [t for t in range(START + 1, n) if P["bull_known"][t - 1] and P["bull_index_known"][t - 1]]
+        disagree = sum(P["bull"][t - 1] != P["bull_index"][t - 1] for t in common)
+        out += [f"^NSEI filter: {len(ibear)} BEAR / {len(ibull)} BULL days; disagrees with repaired ETF regime on {disagree}/{len(common)} common days",
+                f"annualised ^NSEI price-index return on ^NSEI-BEAR days: {ann(index_ret, ibear) * 100:+.1f}%; same-universe equal-weight: {ann(dr, ibear) * 100:+.1f}%"]
     out += ["", "-- comparisons (rules fixed in advance) --"]
     def line(a, b, label):
         ok = True; why = []
@@ -222,20 +294,22 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
         x, y = M[(a, "FULL")], M[(b, "FULL")]
         if x is None or y is None or x["maxdd"] < y["maxdd"] - 0.03:
             ok = False; why.append("max drawdown > 3 points worse")
-        out.append(f"{label:<44}" + ("~ SAME as baseline" if ok else "DIFFERENT: " + "; ".join(why)))
+        out.append(f"{label:<52}" + ("~ SAME as baseline" if ok else "DIFFERENT: " + "; ".join(why)))
     line("V2_live", "V1_baseline", "live rules vs old baseline")
     line("V3_live_nobuf", "V1_baseline", "28th trigger vs month-end (timing only)")
     t2 = np.mean(runs["V2_live"]["turnover"]) if runs["V2_live"]["turnover"] else 0
     t3 = np.mean(runs["V3_live_nobuf"]["turnover"]) if runs["V3_live_nobuf"]["turnover"] else 0
     d_cagr = (M[("V2_live", "FULL")]["cagr"] - M[("V3_live_nobuf", "FULL")]["cagr"]) if M[("V2_live", "FULL")] and M[("V3_live_nobuf", "FULL")] else float("nan")
-    out.append(f"{'buffer 30 vs none':<44}turnover {t2:.2f} vs {t3:.2f} ({(1 - t2 / t3) * 100 if t3 else 0:+.0f}% lower); CAGR {d_cagr * 100:+.1f} pts -> "
+    out.append(f"{'buffer 30 vs none':<52}turnover {t2:.2f} vs {t3:.2f} ({(1 - t2 / t3) * 100 if t3 else 0:+.0f}% lower); CAGR {d_cagr * 100:+.1f} pts -> "
                + ("BUFFER HELPS" if t3 and t2 <= 0.8 * t3 and d_cagr >= -0.01 else "NOT SHOWN TO HELP"))
     for k in ("V4a_stop20", "V4b_stop30"):
-        out.append(f"{k + ' vs V2_live':<44}" + compare_stop({p: M[("V2_live", p)] for p in ("FULL", "IS", "OOS")}, {p: M[(k, p)] for p in ("FULL", "IS", "OOS")}))
-    for k in ("V5_nofilter", "V6_half"):
+        out.append(f"{k + ' vs V2_live':<52}" + compare_stop({p: M[("V2_live", p)] for p in ("FULL", "IS", "OOS")}, {p: M[(k, p)] for p in ("FULL", "IS", "OOS")}))
+    for k in ("V5_nofilter", "V6_half", "V7_nifty50_filter"):
         a, b = M[(k, "FULL")], M[("V2_live", "FULL")]
         if a and b:
-            out.append(f"{k + ' vs V2_live':<44}CAGR {((a['cagr'] - b['cagr']) * 100):+.1f} pts, max drawdown {((a['maxdd'] - b['maxdd']) * 100):+.1f} pts (full period)")
+            oos_a, oos_b = M[(k, "OOS")], M[("V2_live", "OOS")]
+            out.append(f"{k + ' vs V2_live':<52}FULL CAGR {(a['cagr'] - b['cagr']) * 100:+.1f} pts; FULL maxDD {(a['maxdd'] - b['maxdd']) * 100:+.1f} pts; "
+                       f"OOS CAGR {(oos_a['cagr'] - oos_b['cagr']) * 100:+.1f} pts; OOS maxDD {(oos_a['maxdd'] - oos_b['maxdd']) * 100:+.1f} pts")
     return series, "\n".join(out)
 
 
@@ -250,11 +324,15 @@ def main(argv=None):
     ap.add_argument("--outdir", default="results")
     a = ap.parse_args(argv)
     os.makedirs(a.outdir, exist_ok=True)
-    bench = B.load_history("NIFTYBEES.NS", a.years)
+    bench = B.load_history("NIFTYBEES.NS", a.years, repair=True)
     if bench is None:
         sys.exit("could not fetch NIFTYBEES.NS")
+    validate_benchmark(bench, "Repaired NIFTYBEES")
+    index = B.load_history("^NSEI", a.years)
+    if index is None:
+        sys.exit("could not fetch ^NSEI")
     frames = PL.load_frames(LD.load_universe(), a.years, a.cache, a.refresh)
-    _, text = run_rules(frames, bench, a.oos_frac, a.cost_pct)
+    _, text = run_rules(frames, bench, a.oos_frac, a.cost_pct, index_df=index)
     open(os.path.join(a.outdir, "portfolio_rules_report.md"), "w").write("```\n" + text + "\n```\n")
     print(text)
 
