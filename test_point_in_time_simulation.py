@@ -20,6 +20,7 @@ class PointInTimeSimulationTests(unittest.TestCase):
                 "High": close * 1.01,
                 "Low": close * 0.99,
                 "Close": close,
+                "RawClose": close,
                 "Volume": np.full(len(close), 100_000.0),
             }, index=self.sessions)
         self.actions = pd.DataFrame(columns=["symbol", "ex_date", "type"])
