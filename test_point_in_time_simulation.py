@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from point_in_time_simulation import score_snapshot
+from point_in_time_simulation import score_snapshot, simulate_sample
 
 
 class PointInTimeSimulationTests(unittest.TestCase):
@@ -59,6 +59,32 @@ class PointInTimeSimulationTests(unittest.TestCase):
             item["symbol"] == "AAA" and item["reason"] == "not_253_consecutive_observed_sessions"
             for item in result["excluded"]
         ))
+
+    def test_future_unsupported_action_invalidates_affected_horizon_only(self):
+        sessions = pd.bdate_range("2023-01-02", periods=400)
+        signal_pos = 260
+        signal_date = sessions[signal_pos]
+        frames = {}
+        picks = []
+        for i in range(20):
+            symbol = f"S{i:02d}"
+            ticker = f"{symbol}.NS"
+            picks.append({"symbol": symbol, "ticker": ticker, "leader_rank": i + 1})
+            frames[ticker] = pd.DataFrame({
+                "Open": np.full(len(sessions), 100.0),
+                "Close": np.full(len(sessions), 110.0),
+            }, index=sessions)
+        tri = pd.DataFrame({"Close": np.linspace(100, 120, len(sessions))}, index=sessions)
+        actions = pd.DataFrame([{
+            "symbol": "S00", "ex_date": sessions[signal_pos + 40], "type": "demerger"
+        }])
+        snapshot = {"signal_date": signal_date, "market_regime": "BULL", "ranked": picks}
+        stocks, returns = simulate_sample(snapshot, sessions, frames, tri, "S1", actions)
+        first = next(row for row in stocks if row["ticker"] == "S00.NS")
+        self.assertEqual(first["1M_return_status"], "ok")
+        self.assertEqual(first["3M_return_status"], "unsupported_corporate_action_during_hold")
+        self.assertTrue(returns[0]["complete_stock_prices"])
+        self.assertFalse(returns[1]["complete_stock_prices"])
 
 
 if __name__ == "__main__":
