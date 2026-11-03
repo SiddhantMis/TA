@@ -6,13 +6,12 @@ from datetime import timedelta
 import pandas as pd
 import requests
 
-URL = "https://www.niftyindices.com/Backpage.aspx/getTotalReturnIndexString"
+# NSE changed the historical-data API route from /Backpage.aspx/ to /BackPage/.
+URL = "https://www.niftyindices.com/BackPage/getTotalReturnIndexString"
 LANDING_URL = "https://www.niftyindices.com/reports/historical-data"
 
 
 def _warm_session(client):
-    # NSE Indices may return an HTML anti-bot/interstitial page unless the
-    # session first visits the public historical-data page and receives cookies.
     response = client.get(LANDING_URL, timeout=30)
     response.raise_for_status()
 
@@ -20,23 +19,29 @@ def _warm_session(client):
 def _post_tri_request(client, body):
     last_error = None
     for attempt in range(3):
+        response = None
         try:
             response = client.post(URL, json=body, timeout=60)
             response.raise_for_status()
             decoded = response.json()
-            if not isinstance(decoded, dict) or "d" not in decoded:
-                raise ValueError("JSON response did not contain the expected 'd' field")
-            payload = decoded["d"]
-            if isinstance(payload, str):
-                payload = json.loads(payload)
+
+            # Current NSE endpoint returns the array directly. Accept the older
+            # {"d": "..."} envelope as a compatibility fallback.
+            if isinstance(decoded, dict) and "d" in decoded:
+                payload = decoded["d"]
+                if isinstance(payload, str):
+                    payload = json.loads(payload)
+            else:
+                payload = decoded
+
             if not isinstance(payload, list):
-                raise ValueError("NSE response field 'd' was not a list")
+                raise ValueError("NSE TRI response was not a JSON array")
             return payload
         except (ValueError, requests.exceptions.RequestException) as exc:
             last_error = exc
             if attempt == 2:
-                content_type = getattr(response, "headers", {}).get("Content-Type", "unknown") if "response" in locals() else "unknown"
-                snippet = getattr(response, "text", "")[:240].replace("\\n", " ") if "response" in locals() else ""
+                content_type = response.headers.get("Content-Type", "unknown") if response is not None else "unknown"
+                snippet = response.text[:240].replace("\\n", " ") if response is not None else ""
                 raise RuntimeError(
                     "NSE Indices TRI request did not return valid JSON after 3 attempts "
                     f"(last error: {exc}; content-type: {content_type}; body: {snippet!r})"
@@ -55,15 +60,22 @@ def load_nifty500_tri_history(start_date, end_date, session=None):
         "Origin": "https://www.niftyindices.com",
         "X-Requested-With": "XMLHttpRequest",
         "Referer": LANDING_URL,
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/134.0.0.0 Safari/537.36",
     })
     _warm_session(client)
     rows, cursor = [], start
     while cursor <= end:
         last = min(end, cursor + timedelta(days=364))
-        cinfo = "{'name':'NIFTY 500','startDate':'" + cursor.strftime("%d-%b-%Y") + "','endDate':'" + last.strftime("%d-%b-%Y") + "','indexName':'NIFTY 500'}"
+        cinfo = (
+            "{'name':'NIFTY 500','startDate':'"
+            + cursor.strftime("%d-%b-%Y")
+            + "','endDate':'"
+            + last.strftime("%d-%b-%Y")
+            + "','indexName':'NIFTY 500'}"
+        )
         rows.extend(_post_tri_request(client, {"cinfo": cinfo}))
         cursor = last + timedelta(days=1)
+
     frame = pd.DataFrame(rows)
     if frame.empty or "Date" not in frame or "TotalReturnsIndex" not in frame:
         raise RuntimeError("NSE Indices returned no valid NIFTY 500 TRI data")
