@@ -247,7 +247,7 @@ def markdown_table(frame):
     if frame.empty:
         return "_No rows._"
     columns = list(frame.columns)
-    rows = frame.fillna("").astype(str).values.tolist()
+    rows = frame.astype("object").where(pd.notna(frame), "").astype(str).values.tolist()
     def clean(value):
         return str(value).replace("|", "\\|").replace("\n", " ")
     header = "| " + " | ".join(clean(x) for x in columns) + " |"
@@ -305,7 +305,7 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
             "active_pit_members": len(members), "eligible_after_data_and_trend": snapshot["eligible_count"],
             "liquid_top200_count": snapshot["ranked_count"],
             "selected_top20_count": len(snapshot["ranked"]),
-            "unsupported_action_events_known": int(actions["ex_date"].le(as_of).sum()) if not actions.empty else 0,
+            "unsupported_action_events_known": int((actions["ex_date"].le(as_of) & actions["symbol"].isin(members)).sum()) if not actions.empty else 0,
         })
         stock_rows, return_rows = simulate_sample(snapshot, calendar, frames, tri, sample_id)
         stock_results.extend(stock_rows)
@@ -332,6 +332,12 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
         "",
         "## Sample dates", "",
         markdown_table(pd.DataFrame(samples)), "",
+        "## Selected stocks", "",
+        markdown_table(pd.DataFrame(stock_results)[[
+            "sample_id", "signal_date", "ticker", "leader_rank", "momentum_12_1_pct",
+            "close_on_signal", "avg_traded_value_126d", "1M_net_return_pct",
+            "3M_net_return_pct", "6M_net_return_pct",
+        ]]), "",
         "## Returns", "",
         markdown_table(pd.DataFrame(return_results)), "",
         "## Interpretation notes", "",
