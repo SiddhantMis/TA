@@ -177,7 +177,7 @@ def _price_at(frames, ticker, column, session):
     return float(value) if pd.notna(value) and np.isfinite(value) and value > 0 else None
 
 
-def simulate_sample(snapshot, calendar, frames, tri, sample_id):
+def simulate_sample(snapshot, calendar, frames, tri, sample_id, actions):
     signal_date = snapshot["signal_date"]
     pos = calendar.get_loc(signal_date)
     entry_pos = pos + 1
@@ -190,22 +190,34 @@ def simulate_sample(snapshot, calendar, frames, tri, sample_id):
         row = {
             "sample_id": sample_id, "signal_date": signal_date.date().isoformat(),
             "entry_date": entry_date.date().isoformat(), **pick,
-            "entry_open": entry,
+            "entry_open_adjusted": entry,
         }
         for label, offset in HORIZONS.items():
             exit_pos = entry_pos + offset - 1
             exit_date = calendar[exit_pos]
             exit_close = _price_at(frames, ticker, "Close", exit_date)
-            row[f"{label}_exit_date"] = exit_date.date().isoformat()
-            row[f"{label}_exit_close"] = exit_close
-            row[f"{label}_gross_return_pct"] = (
-                (exit_close / entry - 1) * 100 if entry and exit_close else None
-            )
-            if entry and exit_close:
+            has_unsupported_event = False
+            if not actions.empty:
+                has_unsupported_event = bool((
+                    actions["symbol"].eq(pick["symbol"])
+                    & actions["ex_date"].gt(signal_date)
+                    & actions["ex_date"].le(exit_date)
+                ).any())
+            row[f"${label}_exit_date"] = exit_date.date().isoformat()
+            row[f"${label}_exit_close_adjusted"] = exit_close
+            row[f"${label}_unsupported_action_during_hold"] = has_unsupported_event
+            if entry and exit_close and not has_unsupported_event:
+                row[f"${label}_gross_return_pct"] = (exit_close / entry - 1) * 100
                 net_factor = (exit_close / entry) * (1 - ROUND_TRIP_COST / 2) / (1 + ROUND_TRIP_COST / 2)
-                row[f"{label}_net_return_pct"] = (net_factor - 1) * 100
+                row[f"${label}_net_return_pct"] = (net_factor - 1) * 100
+                row[f"${label}_return_status"] = "ok"
             else:
-                row[f"{label}_net_return_pct"] = None
+                row[f"${label}_gross_return_pct"] = None
+                row[f"${label}_net_return_pct"] = None
+                row[f"${label}_return_status"] = (
+                    "unsupported_corporate_action_during_hold" if has_unsupported_event
+                    else "missing_entry_or_exit_price"
+                )
         stock_rows.append(row)
 
     for label, offset in HORIZONS.items():
@@ -216,7 +228,7 @@ def simulate_sample(snapshot, calendar, frames, tri, sample_id):
             ) * 100
         except (KeyError, TypeError, ValueError):
             benchmark_return = None
-        vals = [row[f"{label}_net_return_pct"] for row in stock_rows]
+        vals = [row[f"${label}_net_return_pct"] for row in stock_rows]
         complete = len(vals) == PORTFOLIO_SIZE and all(value is not None for value in vals)
         raw_basket = float(np.mean(vals)) if complete else None
         investable = raw_basket if snapshot["market_regime"] == "BULL" else 0.0
@@ -236,11 +248,11 @@ def simulate_sample(snapshot, calendar, frames, tri, sample_id):
                 investable > benchmark_return if complete and benchmark_return is not None else None
             ),
             "missing_tickers": ",".join(
-                row["ticker"] for row in stock_rows if row[f"{label}_net_return_pct"] is None
+                row["ticker"] + ":" + row[f"${label}_return_status"]
+                for row in stock_rows if row[f"${label}_net_return_pct"] is None
             ),
         })
     return stock_rows, returns
-
 
 def markdown_table(frame):
     """Render a small dependency-free Markdown table."""
@@ -307,7 +319,7 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
             "selected_top20_count": len(snapshot["ranked"]),
             "unsupported_action_events_known": int((actions["ex_date"].le(as_of) & actions["symbol"].isin(members)).sum()) if not actions.empty else 0,
         })
-        stock_rows, return_rows = simulate_sample(snapshot, calendar, frames, tri, sample_id)
+        stock_rows, return_rows = simulate_sample(snapshot, calendar, frames, tri, sample_id, actions)
         stock_results.extend(stock_rows)
         return_results.extend(return_rows)
         print(f"{sample_id}: {as_of.date()} regime={snapshot['market_regime']} "
@@ -323,10 +335,10 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
         "- Universe: actual NIFTY 500 members on each signal date",
         "- Ranking: top 200 by 126-session average traded value, then top 20 by 12–1 relative strength among stocks above their 200-DMA",
         "- Momentum benchmark / market regime: TejHQ adjusted NIFTYBEES history; performance benchmark: official NIFTY 500 TRI",
-        "- Entry: next exchange session open; exits: 21, 63 and 126 exchange sessions after entry",
+        "- Entry: next exchange session adjusted open; exits: adjusted close after 21, 63 and 126 exchange sessions",
         f"- Costs: {ROUND_TRIP_COST * 100:.2f}% round-trip, applied symmetrically to entry and exit",
-        "- Unsupported corporate actions: only events with ex-dates on or before each signal date reset that symbol's lookback; future events do not affect earlier samples",
-        "- Missing selected-stock exit/entry prices: basket return marked incomplete; no survivor reweighting",
+        "- Unsupported corporate actions: only events with ex-dates on or before each signal date reset that symbol's lookback; future events do not affect ranking, but an unsupported event during a holding window invalidates that stock's return for the affected horizon",
+        "- Missing selected-stock entry/exit prices or unsupported corporate actions during a holding window: basket return marked incomplete; no survivor reweighting",
         "- Market filter: raw top-20 basket shown for diagnosis; investable portfolio is 100% cash when NIFTYBEES is at/below its 200-DMA",
         "- Benchmark comparison uses NIFTY 500 TRI close on signal date through each exit close; stock entries occur next-session open, so the benchmark window includes the signal-close-to-entry-open overnight interval",
         "",
@@ -335,8 +347,8 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
         "## Selected stocks", "",
         markdown_table(pd.DataFrame(stock_results)[[
             "sample_id", "signal_date", "ticker", "leader_rank", "momentum_12_1_pct",
-            "close_on_signal", "avg_traded_value_126d", "1M_net_return_pct",
-            "3M_net_return_pct", "6M_net_return_pct",
+            "close_on_signal", "avg_traded_value_126d", "1M_net_return_pct", "3M_net_return_pct", "6M_net_return_pct",
+            "1M_return_status", "3M_return_status", "6M_return_status",
         ]]), "",
         "## Returns", "",
         markdown_table(pd.DataFrame(return_results)), "",
