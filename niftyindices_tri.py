@@ -1,39 +1,77 @@
 """Official NSE Indices NIFTY 500 Total Return Index history loader."""
 import json
+import time
 from datetime import timedelta
+
 import pandas as pd
 import requests
 
 URL = "https://www.niftyindices.com/Backpage.aspx/getTotalReturnIndexString"
+LANDING_URL = "https://www.niftyindices.com/reports/historical-data"
+
+
+def _warm_session(client):
+    # NSE Indices may return an HTML anti-bot/interstitial page unless the
+    # session first visits the public historical-data page and receives cookies.
+    response = client.get(LANDING_URL, timeout=30)
+    response.raise_for_status()
+
+
+def _post_tri_request(client, body):
+    last_error = None
+    for attempt in range(3):
+        try:
+            response = client.post(URL, json=body, timeout=60)
+            response.raise_for_status()
+            decoded = response.json()
+            if not isinstance(decoded, dict) or "d" not in decoded:
+                raise ValueError("JSON response did not contain the expected 'd' field")
+            payload = decoded["d"]
+            if isinstance(payload, str):
+                payload = json.loads(payload)
+            if not isinstance(payload, list):
+                raise ValueError("NSE response field 'd' was not a list")
+            return payload
+        except (ValueError, requests.exceptions.RequestException) as exc:
+            last_error = exc
+            if attempt == 2:
+                content_type = getattr(response, "headers", {}).get("Content-Type", "unknown") if "response" in locals() else "unknown"
+                snippet = getattr(response, "text", "")[:240].replace("\\n", " ") if "response" in locals() else ""
+                raise RuntimeError(
+                    "NSE Indices TRI request did not return valid JSON after 3 attempts "
+                    f"(last error: {exc}; content-type: {content_type}; body: {snippet!r})"
+                ) from exc
+            _warm_session(client)
+            time.sleep(1.5 * (attempt + 1))
+    raise RuntimeError(f"NSE Indices TRI request failed: {last_error}")
+
 
 def load_nifty500_tri_history(start_date, end_date, session=None):
     start, end = pd.Timestamp(start_date).date(), pd.Timestamp(end_date).date()
     client = session or requests.Session()
-    client.headers.update({"Content-Type":"application/json; charset=UTF-8",
-        "X-Requested-With":"XMLHttpRequest",
-        "Referer":"https://www.niftyindices.com/reports/historical-data",
-        "User-Agent":"Mozilla/5.0 (compatible; TAResearch/1.0)"})
+    client.headers.update({
+        "Accept": "application/json, text/javascript, */*; q=0.01",
+        "Content-Type": "application/json; charset=UTF-8",
+        "Origin": "https://www.niftyindices.com",
+        "X-Requested-With": "XMLHttpRequest",
+        "Referer": LANDING_URL,
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
+    })
+    _warm_session(client)
     rows, cursor = [], start
     while cursor <= end:
         last = min(end, cursor + timedelta(days=364))
         cinfo = "{'name':'NIFTY 500','startDate':'" + cursor.strftime("%d-%b-%Y") + "','endDate':'" + last.strftime("%d-%b-%Y") + "','indexName':'NIFTY 500'}"
-        response = client.post(URL, json={"cinfo":cinfo}, timeout=60)
-        response.raise_for_status()
-        payload = response.json().get("d")
-        if isinstance(payload, str):
-            payload = json.loads(payload)
-        if not isinstance(payload, list):
-            raise RuntimeError("Unexpected NSE Indices TRI response")
-        rows.extend(payload)
+        rows.extend(_post_tri_request(client, {"cinfo": cinfo}))
         cursor = last + timedelta(days=1)
     frame = pd.DataFrame(rows)
     if frame.empty or "Date" not in frame or "TotalReturnsIndex" not in frame:
         raise RuntimeError("NSE Indices returned no valid NIFTY 500 TRI data")
     frame["Date"] = pd.to_datetime(frame["Date"], format="%d %b %Y", errors="coerce")
     frame["Close"] = pd.to_numeric(frame["TotalReturnsIndex"], errors="coerce")
-    frame = frame.dropna(subset=["Date","Close"])
-    frame = frame.loc[frame["Date"].dt.date.between(start,end),["Date","Close"]]
-    frame = frame.drop_duplicates("Date",keep="last").set_index("Date").sort_index()
+    frame = frame.dropna(subset=["Date", "Close"])
+    frame = frame.loc[frame["Date"].dt.date.between(start, end), ["Date", "Close"]]
+    frame = frame.drop_duplicates("Date", keep="last").set_index("Date").sort_index()
     if frame.empty or frame["Close"].le(0).any():
         raise RuntimeError("NIFTY 500 TRI contains invalid values")
     return frame
