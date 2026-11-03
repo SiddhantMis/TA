@@ -273,7 +273,7 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
     )
     # TRI is the official performance benchmark; NIFTYBEES is the established
     # relative-strength and market-regime series used by the strategy.
-    tri = load_nifty500_tri_history(POST_COVID_START, DATA_END)
+    tri = load_nifty500_tri_history(DATA_START, DATA_END)
     tri.index = pd.DatetimeIndex(tri.index).tz_localize(None)
     bees = frames.get("NIFTYBEES.NS")
     if bees is None or bees.empty:
@@ -281,9 +281,11 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
     bees = bees.copy()
     bees.index = pd.DatetimeIndex(bees.index).tz_localize(None)
     calendar = pd.DatetimeIndex(tri.index.intersection(bees.index)).sort_values()
-    calendar = calendar[(calendar >= pd.Timestamp(POST_COVID_START))]
+    bees = bees.loc[calendar].copy()
+    # Preserve pre-COVID lookback history while restricting signal dates to post-COVID.
+    post_covid_position = int(calendar.searchsorted(pd.Timestamp(POST_COVID_START)))
     # Six-month follow-up must be observable for every sampled point.
-    eligible_positions = np.arange(253, len(calendar) - 126)
+    eligible_positions = np.arange(post_covid_position, len(calendar) - 126)
     if len(eligible_positions) < sample_count:
         raise RuntimeError("Not enough post-COVID sessions with full 6-month forward coverage")
     rng = np.random.default_rng(seed)
