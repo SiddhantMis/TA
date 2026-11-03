@@ -52,14 +52,14 @@ jobs:
           python -m py_compile point_in_time_simulation.py test_point_in_time_simulation.py
       - name: Run five random historical simulations
         env:
-          SEED: \${{ inputs.seed || '20261103' }}
-          SAMPLES: \${{ inputs.samples || '5' }}
+          SEED: ${{ inputs.seed || '20261103' }}
+          SAMPLES: ${{ inputs.samples || '5' }}
         run: |
           python point_in_time_simulation.py --seed "$SEED" --samples "$SAMPLES" --outdir point-in-time-simulation
       - name: Upload simulation reports
         uses: actions/upload-artifact@v4
         with:
-          name: point-in-time-momentum-simulation-\${{ github.run_id }}
+          name: point-in-time-momentum-simulation-${{ github.run_id }}
           path: point-in-time-simulation/**
           if-no-files-found: error
           retention-days: 30
