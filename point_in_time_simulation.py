@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from nifty500_pit import load_membership_calendar, normalise_symbol
+from nifty500_pit import load_membership_calendar
 from tejhq_data import get_dataset_revision, load_adjusted_frames
 from niftyindices_tri import load_nifty500_tri_history
 
@@ -247,11 +247,11 @@ def markdown_table(frame):
     columns = list(frame.columns)
     rows = frame.fillna("").astype(str).values.tolist()
     def clean(value):
-        return str(value).replace("|", "\\|").replace("\\n", " ")
+        return str(value).replace("|", "\\|").replace("\n", " ")
     header = "| " + " | ".join(clean(x) for x in columns) + " |"
     divider = "| " + " | ".join("---" for _ in columns) + " |"
     body = ["| " + " | ".join(clean(x) for x in row) + " |" for row in rows]
-    return "\\n".join([header, divider, *body])
+    return "\n".join([header, divider, *body])
 
 
 def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simulation"):
