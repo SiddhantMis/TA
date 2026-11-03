@@ -127,7 +127,9 @@ def score_snapshot(as_of, symbols, frames, benchmark, actions):
         if not np.isfinite(sma200) or float(close.iloc[-1]) <= sma200:
             excluded.append({"symbol": symbol, "reason": "not_above_200dma"})
             continue
-        traded_value = close * volume
+        # Raw exchange close x raw volume is the actual traded-value basis;
+        # adjusted prices are reserved for momentum and trend calculations.
+        traded_value = raw_close * volume
         avg_traded_value = float(traded_value.iloc[-126:].mean())
         if not np.isfinite(avg_traded_value) or avg_traded_value <= 0:
             excluded.append({"symbol": symbol, "reason": "invalid_126d_traded_value"})
@@ -266,7 +268,7 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
     tickers = [f"{symbol}.NS" for symbol in symbols] + ["NIFTYBEES.NS"]
     frames, diagnostics = load_adjusted_frames(
         tickers, DATA_START, DATA_END, cache_dir="data_cache/tejhq_parquet",
-        membership_df=membership, min_bars=1, revision=revision,
+        membership_df=membership, min_bars=1, revision=revision, include_raw=True,
     )
     actions = load_unsupported_actions(
         DATA_START, DATA_END, "data_cache/tejhq_actions", revision
