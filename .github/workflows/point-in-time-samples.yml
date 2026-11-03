@@ -1,0 +1,65 @@
+name: Five Random Post-COVID Momentum Simulations
+
+on:
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: Reproducible random seed
+        required: true
+        default: "20261103"
+        type: string
+      samples:
+        description: Number of historical dates
+        required: true
+        default: "5"
+        type: string
+  push:
+    branches:
+      - research/pit-data-quality
+    paths:
+      - point_in_time_simulation.py
+      - test_point_in_time_simulation.py
+      - nifty500_pit.py
+      - tejhq_data.py
+      - niftyindices_tri.py
+      - universe/nifty500_membership_history.csv
+      - .github/workflows/point-in-time-samples.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: point-in-time-momentum-samples
+  cancel-in-progress: false
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run point-in-time regression tests
+        run: |
+          python -m unittest -v test_point_in_time_simulation.py
+          python -m py_compile point_in_time_simulation.py test_point_in_time_simulation.py
+      - name: Run five random historical simulations
+        env:
+          SEED: \${{ inputs.seed || '20261103' }}
+          SAMPLES: \${{ inputs.samples || '5' }}
+        run: |
+          python point_in_time_simulation.py --seed "$SEED" --samples "$SAMPLES" --outdir point-in-time-simulation
+      - name: Upload simulation reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: point-in-time-momentum-simulation-\${{ github.run_id }}
+          path: point-in-time-simulation/**
+          if-no-files-found: error
+          retention-days: 30
