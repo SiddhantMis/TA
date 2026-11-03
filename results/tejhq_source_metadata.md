@@ -4,7 +4,7 @@
 - data_terms_summary: personal research/backtesting permitted; TejHQ holds no NSE/BSE data licence; MIT covers code, not data; exchange terms still apply to commercial use and redistribution
 - data_terms_url: https://tejhq.dev/data-terms
 - dataset_id: tejhq/indian-markets
-- dataset_revision: f7fa8343af92cf1289f3960c9267ed23fa9dbbcb
+- dataset_revision: 0303d8c95b4519765a9d5556fd9c2d430f8f81d8
 - end_date: 2026-10-13
 - instrument_chain_rule: same ISIN is continuous; a new ISIN joins only when the same symbol resumes within 30 calendar days
 - instrument_chains: 937
@@ -19,7 +19,11 @@
 - cached_end_date: 2026-10-13
 - cache_reused: True
 - benchmark_source: NSE NextApi raw NIFTYBEES OHLC, supplemented only by TejHQ raw NSE bhavcopy bars on validated NSE-calendar sessions absent from NextApi; common dates reconciled
-- benchmark_adjustment_scope: 10:1 face-value split only; no dividend adjustment applied to the ETF
+- benchmark_adjustment_scope: NIFTYBEES split-adjusted for live regime filter; official NIFTY 500 TRI is performance benchmark
+- nifty500_tri_source: NSE Indices historical Total Returns Index Values endpoint
+- nifty500_tri_bars: 2466
+- unsupported_action_events: 780
+- symbols_quarantined_after_unsupported_actions: 223
 - benchmark_nse_api_bars: 2477
 - benchmark_tejhq_bars: 2466
 - benchmark_common_bars: 2463

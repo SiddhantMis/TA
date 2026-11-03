@@ -20,7 +20,7 @@ Adjustment record: [{'ex_date': '2019-12-19', 'price_factor': 0.1, 'volume_facto
   2019-12-19 close=130.200 volume=271593
   2019-12-20 close=130.340 volume=246690
   2019-12-23 close=129.930 volume=318322
-== Yahoo adjusted-price diagnostic: 2471 bars; >25% daily moves: 2
+== Yahoo adjusted-price diagnostic: 2469 bars; >25% daily moves: 2
   2019-12-19 -89.9%
   2019-12-23 +896.9%
 == Yahoo split window (diagnostic only)

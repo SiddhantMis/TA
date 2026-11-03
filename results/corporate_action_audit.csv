@@ -1,0 +1,781 @@
+exchange,symbol,isin,company,ex_date,record_date,type,ratio_num,ratio_den,cash_amount,face_value_from,face_value_to,raw_subject,source_file,loaded_symbol_series
+NSE,AARTIDRUGS,INE767A01016,Aarti Drugs Limited,2016-11-01,2016-11-02,buyback,,,,,,Buy Back,actions/nse_2016.parquet,True
+NSE,AARTIIND,INE769A01020,Aarti Industries Limited,2016-11-01,2016-11-02,buyback,,,,,,Buy Back,actions/nse_2016.parquet,True
+NSE,ALLCARGO,INE418H01029,Allcargo Logistics Limited,2016-11-17,2016-11-18,buyback,,,,,,Buy Back,actions/nse_2016.parquet,True
+NSE,CNOVAPETRO,INE672K01025,CIL Nova Petrochemicals Limited,2016-10-24,2016-10-25,rights,1.0,1.0,,,,Rights  1:1 @ Premium Rs 4.50 Per Share,actions/nse_2016.parquet,False
+NSE,ECLERX,INE738I01010,eClerx Services Limited,2016-10-27,2016-10-28,buyback,,,,,,Buy Back,actions/nse_2016.parquet,True
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2016-12-08,2016-12-09,buyback,,,,,,Interest Payement/Buyback,actions/nse_2016.parquet,True
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2016-12-08,2016-12-09,buyback,,,,,,Buyback,actions/nse_2016.parquet,True
+NSE,INFINITE,INE486J01014,Infinite Computer Solutions (India) Limited,2016-12-22,2016-12-23,buyback,,,,,,Buy Back,actions/nse_2016.parquet,True
+NSE,KPRMILL,INE930H01015,K.P.R. Mill Limited,2016-12-29,2016-12-31,buyback,,,,,,Buy Back,actions/nse_2016.parquet,True
+NSE,KTKBANK,INE614B01018,The Karnataka Bank Limited,2016-10-24,2016-10-25,rights,1.0,2.0,,,,Rights 1:2 @ Premium Rs 60/- Per Share,actions/nse_2016.parquet,True
+NSE,LMW,INE269B01029,LMW Limited,2016-11-07,2016-11-08,buyback,,,,,,Buy Back,actions/nse_2016.parquet,False
+NSE,NAVNETEDUL,INE060A01024,Navneet Education Limited,2016-11-24,2016-11-25,buyback,,,,,,Buy Back,actions/nse_2016.parquet,True
+NSE,ORIENTPPR,INE592A01026,Orient Paper & Industries Limited,2016-11-18,2016-11-21,rights,1.0,28.0,,,,Rights 1:28 @ Prem Rs 67/- Per Share,actions/nse_2016.parquet,False
+NSE,VTL,INE825A01012,Vardhman Textiles Limited,2016-12-08,2016-12-09,buyback,,,,,,Buy Back,actions/nse_2016.parquet,True
+NSE,ADVANIHOTR,INE199C01026,Advani Hotels & Resorts (India) Limited,2017-02-07,2017-02-08,other,,,,,,Int Div Re 0.40 Per Share,actions/nse_2017.parquet,False
+NSE,APARINDS,INE372A01015,Apar Industries Limited,2017-01-19,2017-01-20,buyback,,,,,,Buyback,actions/nse_2017.parquet,True
+NSE,BALRAMCHIN,INE119A01028,Balrampur Chini Mills Limited,2017-01-12,2017-01-13,buyback,,,,,,Buy Back,actions/nse_2017.parquet,True
+NSE,BAYERCROP,INE462A01022,Bayer Cropscience Limited,2017-08-07,2017-08-08,buyback,,,,,,Buy Back,actions/nse_2017.parquet,True
+NSE,BBOX,INE676A01019,Black Box Limited,2017-09-14,,other,,,,,,Annual General Meteing,actions/nse_2017.parquet,True
+NSE,CANBK,INE476A01014,Canara Bank,2017-02-17,2017-02-20,rights,1.0,10.0,,,,Rights 1:10 @ Prem Rs 197/- Per Share,actions/nse_2017.parquet,True
+NSE,COLPAL,INE259A01022,Colgate Palmolive (India) Limited,2017-12-18,2017-12-19,other,,,,,,Int Div - Rs 4/- Per Share (Purpose Revised),actions/nse_2017.parquet,True
+NSE,DHANUKA,INE435G01025,Dhanuka Agritech Limited,2017-01-12,2017-01-13,buyback,,,,,,Buy Back,actions/nse_2017.parquet,True
+NSE,ENGINERSIN,INE510A01010,Engineers India Limited,2017-06-28,2017-06-29,buyback,,,,,,Buyback,actions/nse_2017.parquet,True
+NSE,FRETAIL,INE752P01024,Future Retail Limited,2017-11-29,2017-11-30,other,,,,,,Scheme Of Arrangement,actions/nse_2017.parquet,True
+NSE,GAEL,INE036B01022,Gujarat Ambuja Exports Limited,2017-02-09,2017-02-10,buyback,,,,,,Buy Back,actions/nse_2017.parquet,True
+NSE,GRASIM,INE047A01013,Grasim Industries Limited,2017-07-19,2017-07-20,other,,,,,,Scheme Of Arrangement,actions/nse_2017.parquet,True
+NSE,HCL-INSYS,INE236A01020,HCL Infosystems Limited,2017-10-31,2017-11-01,rights,10.0,21.0,,,,Rights 10:21 @ Premium Rs 45/-,actions/nse_2017.parquet,True
+NSE,HEXAWARE,INE093A01033,Hexaware Technologies Limited,2017-01-05,2017-01-06,buyback,,,,,,Buyback,actions/nse_2017.parquet,False
+NSE,HFCL,INE548A01028,HFCL Limited,2017-09-15,,other,,,,,,Annual General Meetin,actions/nse_2017.parquet,True
+NSE,HIRECT,INE835D01023,Hind Rectifiers Limited,2017-10-17,2017-10-18,rights,1.0,10.0,,,,Rights 1:10 @ Premium Rs 78/-,actions/nse_2017.parquet,False
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2017-03-02,2017-03-03,buyback,,,,,,Interest Payment/Buyback,actions/nse_2017.parquet,True
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2017-03-02,2017-03-03,buyback,,,,,,Buy Back,actions/nse_2017.parquet,True
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2017-03-09,2017-03-10,buyback,,,,,,Interest Payment/Buy Back,actions/nse_2017.parquet,True
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2017-03-09,2017-03-10,buyback,,,,,,Buy Back,actions/nse_2017.parquet,True
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2017-12-14,2017-12-15,other,,,,,,Interest Payment,actions/nse_2017.parquet,True
+NSE,IFGLREFRAC,INE023B01012,IFGL Refractories Limited,2017-09-14,2017-09-15,merger,,,,,,Scheme Of Amalgamation,actions/nse_2017.parquet,False
+NSE,IIFL,INE530B01024,IIFL Finance Limited,2017-10-17,2017-10-18,other,,,,,,Scheme Of Arrangement,actions/nse_2017.parquet,True
+NSE,INDHOTEL,INE053A01029,The Indian Hotels Company Limited,2017-10-04,2017-10-05,rights,1.0,5.0,,,,Rights 1:5 @ Premium Rs 74/-,actions/nse_2017.parquet,True
+NSE,INFY,INE009A01021,Infosys Limited,2017-10-31,2017-11-01,buyback,,,,,,Buyback,actions/nse_2017.parquet,True
+NSE,INTELLECT,INE306R01017,Intellect Design Arena Limited,2017-07-17,2017-07-18,rights,5.0,22.0,,,,Rights 5:22 @ Premium Rs 81/-,actions/nse_2017.parquet,True
+NSE,JAGRAN,INE199G01027,Jagran Prakashan Limited,2017-02-22,2017-02-24,buyback,,,,,,Buy Back,actions/nse_2017.parquet,True
+NSE,JBCHEPHARM,INE572A01028,JB Chemicals & Pharmaceuticals Limited,2017-06-01,2017-06-02,buyback,,,,,,Buyback,actions/nse_2017.parquet,True
+NSE,JSWHL,INE824G01012,JSW Holdings Limited,2017-05-25,,other,,,,,,Annual Book Closure,actions/nse_2017.parquet,True
+NSE,KARURVYSYA,INE036D01010,Karur Vysya Bank Limited,2017-10-12,2017-10-13,rights,1.0,6.0,,,,Rights 1:6 @ Premium Rs 74/-,actions/nse_2017.parquet,True
+NSE,KINGFA,INE473D01015,Kingfa Science & Technology (India) Limited,2017-03-09,2017-03-10,rights,18.0,91.0,,,,Rights 18:91 @ Prem Rs 740,actions/nse_2017.parquet,False
+NSE,KSCL,INE455I01011,Kaveri Seed Company Limited,2017-06-15,2017-06-16,buyback,,,,,,Buyback,actions/nse_2017.parquet,True
+NSE,LAKSHVILAS,INE694C01018,Lakshmi Vilas Bank Limited,2017-12-05,2017-12-06,rights,1.0,3.0,,,,Rights 1:3 @ Premium Rs 112/-,actions/nse_2017.parquet,True
+NSE,LOVABLE,INE597L01014,Lovable Lingerie Limited,2017-12-07,2017-12-08,buyback,,,,,,Buyback,actions/nse_2017.parquet,True
+NSE,MAHLIFE,INE813A01018,Mahindra Lifespace Developers Limited,2017-03-30,2017-03-31,rights,1.0,4.0,,,,Rights 1:4 @ Premium Rs 282/-,actions/nse_2017.parquet,True
+NSE,MARATHON,INE182D01012,Marathon Nextgen Realty Limited,2017-05-11,2017-05-12,buyback,,,,,,Buyback,actions/nse_2017.parquet,False
+NSE,MAYURUNIQ,INE040D01012,Mayur Uniquoters Ltd,2017-11-29,2017-12-02,buyback,,,,,,Buyback,actions/nse_2017.parquet,True
+NSE,MINDTREE,INE018I01017,MindTree Limited,2017-07-10,2017-07-11,buyback,,,,,,Buyback,actions/nse_2017.parquet,False
+NSE,MPHASIS,INE356A01018,MphasiS Limited,2017-03-30,2017-03-31,buyback,,,,,,Buyback,actions/nse_2017.parquet,True
+NSE,NHPC,INE848E01016,NHPC Limited,2017-02-17,2017-02-20,buyback,,,,,,Buyback,actions/nse_2017.parquet,True
+NSE,NLCINDIA,INE589A01014,NLC India Limited,2017-02-09,2017-02-10,buyback,,,,,,Buy Back,actions/nse_2017.parquet,True
+NSE,NUCLEUS,INE096B01018,Nucleus Software Exports Limited,2017-06-29,2017-06-30,buyback,,,,,,Buyback,actions/nse_2017.parquet,False
+NSE,OIL,INE274J01014,Oil India Limited,2017-04-03,2017-04-05,buyback,,,,,,Buyback,actions/nse_2017.parquet,True
+NSE,OMAXAUTO,INE090B01011,Omax Autos Limited,2017-09-18,,other,,,,,,Annual General  Meeting,actions/nse_2017.parquet,False
+NSE,OMKARCHEM,INE474L01016,Omkar Speciality Chemicals Limited,2017-06-12,2017-06-13,other,,,,,,Scheme Of Arrangement,actions/nse_2017.parquet,False
+NSE,PALREDTEC,INE218G01033,Palred Technologies Limited,2017-09-20,,other,,,,,,Annual General Meting,actions/nse_2017.parquet,False
+NSE,PTL,INE034D01031,PTL Enterprises Limited,2017-03-27,2017-03-29,other,,,,,,Scheme Of Arrangement,actions/nse_2017.parquet,False
+NSE,RELCAPITAL,INE013A01015,Reliance Capital Limited,2017-09-05,2017-09-06,other,,,,,,Scheme Of Arrangement,actions/nse_2017.parquet,True
+NSE,RGL,INE722H01016,Renaissance Global Limited,2017-06-09,2017-06-12,buyback,,,,,,Buyback,actions/nse_2017.parquet,False
+NSE,SASKEN,INE231F01020,Sasken Technologies Limited,2017-01-05,2017-01-06,buyback,,,,,,Buyback,actions/nse_2017.parquet,False
+NSE,SHALPAINTS,INE849C01018,Shalimar Paints Limited,2017-12-28,2017-12-29,rights,6.0,32.0,,,,Rights 6:32 @ Premium Rs 138/-,actions/nse_2017.parquet,False
+NSE,SHIVTEX,INE705C01012,Shiva Texyarn Limited,2017-11-03,2017-11-06,other,,,,,,Scheme Of Arrangement,actions/nse_2017.parquet,False
+NSE,SINTEX,INE429C01027,Sintex Industries Limited,2017-05-25,2017-05-26,other,,,,,,Scheme Of Arrangement,actions/nse_2017.parquet,True
+NSE,SKFINDIA,INE640A01023,SKF India Limited,2017-04-06,2017-04-07,buyback,,,,,,Buy Back,actions/nse_2017.parquet,True
+NSE,SMSPHARMA,INE812G01017,SMS Pharmaceuticals Limited,2017-06-22,2017-06-23,other,,,,,,Scheme Of Arrangement,actions/nse_2017.parquet,False
+NSE,SOBHA,INE671H01015,Sobha Limited,2017-08-24,2017-08-28,buyback,,,,,,Buyback,actions/nse_2017.parquet,True
+NSE,SOUTHBANK,INE683A01015,The South Indian Bank Limited,2017-02-16,2017-02-17,rights,1.0,3.0,,,,Rights 1:3 @ Premium Rs 13/- Per Share,actions/nse_2017.parquet,True
+NSE,SUMEETINDS,INE235C01010,Sumeet Industries Limited,2017-12-15,2017-12-18,rights,3.0,7.0,,,,Rights 3:7 @ Premium Rs 14/-,actions/nse_2017.parquet,False
+NSE,SUPERSPIN,INE662A01027,Super Spinning Mills Limited,2017-11-23,,other,,,,,,Annual General Meeing,actions/nse_2017.parquet,False
+NSE,TCS,INE467B01029,Tata Consultancy Services Limited,2017-05-05,2017-05-08,buyback,,,,,,Buyback,actions/nse_2017.parquet,True
+NSE,TECHNO,INE286K01024,Techno Electric & Engineering Company Limited,2017-03-02,2017-03-03,buyback,,,,,,Buy Back,actions/nse_2017.parquet,True
+NSE,THERMAX,INE152A01029,Thermax Limited,2017-07-27,,other,,,,,,Annual General Meeing/Ividend - Rs 6 Per Share,actions/nse_2017.parquet,True
+NSE,TTKPRESTIG,INE690A01010,TTK Prestige Limited,2017-06-15,2017-06-16,buyback,,,,,,Buyback,actions/nse_2017.parquet,True
+NSE,UNITEDTEA,INE458F01011,The United Nilgiri Tea Estates Company Limited,2017-03-30,2017-03-31,other,,,,,,Int Div Re 1/- Per Share (Purpose Revised),actions/nse_2017.parquet,False
+NSE,VARDHACRLC,INE116G01013,Vardhman Acrylics Limited,2017-01-12,2017-01-13,buyback,,,,,,Buyback,actions/nse_2017.parquet,False
+NSE,VINATIORGA,INE410B01029,Vinati Organics Limited,2017-08-31,2017-09-01,buyback,,,,,,Buyback,actions/nse_2017.parquet,True
+NSE,VIPCLOTHNG,INE450G01024,VIP Clothing Limited,2017-11-17,2017-11-20,rights,1.0,4.0,,,,Rights 1:4 @ Premium Rs 24/-,actions/nse_2017.parquet,False
+NSE,VSSL,INE050M01012,Vardhman Special Steels Limited,2017-04-07,2017-04-10,rights,2.0,3.0,,,,Rights 2:3 @ Premium Rs 40/-,actions/nse_2017.parquet,False
+NSE,WELENT,INE625G01013,Welspun Enterprises Limited,2017-02-13,2017-02-14,buyback,,,,,,Buy Back,actions/nse_2017.parquet,False
+NSE,WIPRO,INE075A01022,Wipro Limited,2017-09-14,2017-09-15,buyback,,,,,,Buyback,actions/nse_2017.parquet,True
+NSE,ZEEMEDIA,INE966H01019,Zee Media Corporation Limited,2017-10-05,2017-10-06,other,,,,,,Scheme Of Arrangement,actions/nse_2017.parquet,False
+NSE,AARTIDRUGS,INE767A01016,Aarti Drugs Limited,2018-01-18,2018-01-19,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,AARTIIND,INE769A01020,Aarti Industries Limited,2018-01-04,2018-01-05,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,ACE,INE731H01025,Action Construction Equipment Limited,2018-06-14,,other,,,,,,Meeting Of Equity Shareholders,actions/nse_2018.parquet,True
+NSE,ADANIENT,INE423A01024,Adani Enterprises Limited,2018-04-05,2018-04-06,other,,,,,,Scheme Of Arrangement,actions/nse_2018.parquet,True
+NSE,ADANIENT,INE423A01024,Adani Enterprises Limited,2018-09-06,2018-09-07,other,,,,,,Scheme Of Arrangement,actions/nse_2018.parquet,True
+NSE,ALEMBICLTD,INE426A01027,Alembic Limited,2018-03-22,2018-03-23,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,ARVIND,INE034A01011,Arvind Limited,2018-11-28,2018-11-29,demerger,,,,,,Demerger,actions/nse_2018.parquet,True
+NSE,AURIONPRO,INE132H01018,Aurionpro Solutions Limited,2018-08-14,2018-08-17,demerger,,,,,,Scheme Of Demerger,actions/nse_2018.parquet,False
+NSE,BALRAMCHIN,INE119A01028,Balrampur Chini Mills Limited,2018-03-05,2018-03-06,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,BEL,INE263A01016,Bharat Electronics Limited,2018-02-08,2018-02-09,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,BHEL,INE257A01018,Bharat Heavy Electricals Limited,2018-11-05,2018-11-06,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,BOSCHLTD,INE323A01026,Bosch Limited,2018-12-20,2018-12-21,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,CESC,INE486A01013,CESC Limited,2018-10-30,2018-10-31,other,,,,,,Composite Scheme Of Arrangement,actions/nse_2018.parquet,True
+NSE,COCHINSHIP,INE704P01017,Cochin Shipyard Limited,2018-10-30,2018-10-31,buyback,,,,,,Buy Back,actions/nse_2018.parquet,True
+NSE,COX&KINGS,INE008I01018,Cox & Kings Limited,2018-10-25,2018-10-26,demerger,,,,,,Scheme Of Demerger,actions/nse_2018.parquet,True
+NSE,CYIENT,INE136B01020,Cyient Limited,2018-10-30,2018-10-31,other,,,,,,Int Div -Rs 6 Per Sh,actions/nse_2018.parquet,True
+NSE,DBCORP,INE950I01011,D.B.Corp Limited,2018-07-17,2018-07-18,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,DELPHIFX,INE726L01019,DELPHI WORLD MONEY LIMITED,2018-08-14,2018-08-16,buyback,,,,,,Buyback,actions/nse_2018.parquet,False
+NSE,DHANI,INE274G01010,Dhani Services Limited,2018-02-09,2018-02-12,rights,3.0,16.0,,,,Rights 3:16 @ Premium Rs 238/-,actions/nse_2018.parquet,True
+NSE,ECLERX,INE738I01010,eClerx Services Limited,2018-02-02,2018-02-05,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,FDC,INE258B01022,FDC Limited,2018-02-26,2018-02-27,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,GANDHITUBE,INE524B01027,Gandhi Special Tubes Limited,2018-02-08,2018-02-09,buyback,,,,,,Buyback,actions/nse_2018.parquet,False
+NSE,GAYAPROJ,INE336H01015,Gayatri Projects Limited,2018-01-30,2018-01-31,other,,,,,,Scheme Of Arrangement,actions/nse_2018.parquet,True
+NSE,HATSUN,INE473B01035,Hatsun Agro Product Limited,2018-05-31,2018-06-01,rights,1.0,16.0,,,,Interim Dividend- Rs 3 Per Share / Rights 1:16 @ Premium Rs 554 Per Share,actions/nse_2018.parquet,True
+NSE,HCC,INE549A01026,Hindustan Construction Company Limited,2018-11-20,2018-11-22,rights,49.0,100.0,,,,Rights 49:100 @ Premium Rs 9/-,actions/nse_2018.parquet,True
+NSE,HCLTECH,INE860A01027,HCL Technologies Limited,2018-08-02,,other,,,,,,Int Div- 2 Per Share (Purpose Revised),actions/nse_2018.parquet,True
+NSE,HCLTECH,INE860A01027,HCL Technologies Limited,2018-08-30,2018-08-31,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2018-02-28,2018-03-01,other,,,,,,Interest Payment,actions/nse_2018.parquet,True
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2018-03-08,2018-03-09,other,,,,,,Interest Payment,actions/nse_2018.parquet,True
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2018-12-13,2018-12-14,other,,,,,,Interest Payment,actions/nse_2018.parquet,True
+NSE,IOC,INE242A01010,Indian Oil Corporation Limited,2018-12-21,2018-12-25,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,JAGRAN,INE199G01027,Jagran Prakashan Limited,2018-06-14,2018-06-15,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,JBCHEPHARM,INE572A01028,JB Chemicals & Pharmaceuticals Limited,2018-09-11,2018-09-12,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,JSWDULUX,INE133A01011,JSW Dulux Limited,2018-06-06,2018-06-07,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,JUSTDIAL,INE599M01018,Just Dial Limited,2018-10-11,2018-10-12,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,KIOCL,INE880L01014,KIOCL Limited,2018-09-28,2018-10-01,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,KPRMILL,INE930H01015,K.P.R. Mill Limited,2018-03-06,2018-03-07,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,KSCL,INE455I01011,Kaveri Seed Company Limited,2018-08-02,2018-08-03,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,LT,INE018A01030,Larsen & Toubro Limited,2018-10-12,2018-10-15,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,MAXVIL,INE154U01015,Max Ventures and Industries Limited,2018-06-21,2018-06-22,rights,67.0,66.0,,,,Rights 67:66 @ Premium Rs 51/-,actions/nse_2018.parquet,False
+NSE,MINDTREE,INE018I01017,MindTree Limited,2018-10-25,2018-10-26,other,,,,,,Interim Div - Rs 3 Per Share,actions/nse_2018.parquet,False
+NSE,MOIL,INE490G01020,MOIL Limited,2018-02-16,2018-02-20,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,MONNETISPA,INE743C01013,Monnet Ispat and Energy Limited,2018-08-29,2018-08-30,other,,,,,,Capital Reduction Rs 10 To Rs 3.30 / Consolidation Rs 3.30 To Rs.10,actions/nse_2018.parquet,True
+NSE,MPHASIS,INE356A01018,MphasiS Limited,2018-10-24,2018-10-25,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,NATIONALUM,INE139A01026,National Aluminium Company Limited,2018-10-25,2018-10-26,buyback,,,,,,Buy Back,actions/nse_2018.parquet,True
+NSE,NAVNETEDUL,INE060A01024,Navneet Education Limited,2018-08-30,2018-08-31,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,NHPC,INE848E01016,NHPC Limited,2018-11-29,2018-11-30,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,NILAINFRA,INE937C01029,Nila Infrastructures Limited,2018-06-14,2018-06-15,other,,,,,,Scheme Of Arrangement,actions/nse_2018.parquet,False
+NSE,NLCINDIA,INE589A01014,NLC India Limited,2018-10-23,2018-10-24,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,OIL,INE274J01014,Oil India Limited,2018-11-30,2018-12-03,buyback,,,,,,Buy Back,actions/nse_2018.parquet,True
+NSE,ORBTEXP,INE231G01010,Orbit Exports Limited,2018-01-18,2018-01-19,buyback,,,,,,Buyback,actions/nse_2018.parquet,False
+NSE,ORIENTPPR,INE592A01026,Orient Paper & Industries Limited,2018-01-11,2018-01-12,other,,,,,,Scheme Of Arrangement,actions/nse_2018.parquet,False
+NSE,PEL,INE140A01024,Piramal Enterprises Limited,2018-01-31,2018-02-01,rights,1.0,23.0,,,,Rights 1:23 @ Premium Rs 2378/-,actions/nse_2018.parquet,True
+NSE,PIDILITIND,INE318A01026,Pidilite Industries Limited,2018-02-09,2018-02-12,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,REDINGTON,INE891D01018,Redington Limited,2018-09-27,2018-09-28,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,SADBHIN,INE764L01010,Sadbhav Infrastructure Project Limited,2018-11-26,2018-11-27,other,,,,,,Interim Div - Re 0.20 Per Share,actions/nse_2018.parquet,True
+NSE,SHALPAINTS,INE849C01018,Shalimar Paints Limited,2018-11-06,2018-11-09,rights,3.0,2.0,,,,Rights 3:2 @ Premium Rs 62.50/-,actions/nse_2018.parquet,False
+NSE,SJVN,INE002L01015,SJVN Limited,2018-01-17,2018-01-18,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,SKFINDIA,INE640A01023,SKF India Limited,2018-12-20,2018-12-21,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,SMARTLINK,INE178C01020,Smartlink Holdings Limited,2018-05-17,2018-05-18,buyback,,,,,,Buyback,actions/nse_2018.parquet,False
+NSE,SOTL,INE035D01012,Savita Oil Technologies Limited,2018-02-08,2018-02-09,buyback,,,,,,Buyback,actions/nse_2018.parquet,False
+NSE,STAR,INE939A01011,Strides Pharma Science Limited,2018-04-06,2018-04-09,other,,,,,,Scheme Of Arrangement,actions/nse_2018.parquet,True
+NSE,SUNDARMFIN,INE660A01013,Sundaram Finance Limited,2018-02-01,2018-02-02,other,,,,,,Scheme Of Arrangement,actions/nse_2018.parquet,True
+NSE,SWARAJENG,INE277A01016,Swaraj Engines Limited,2018-01-11,2018-01-12,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,TALWALKARS,INE502K01016,Talwalkars Better Value Fitness Limited,2018-03-27,2018-03-28,other,,,,,,Scheme Of Arrangement,actions/nse_2018.parquet,False
+NSE,TATASTEEL,INE081A01012,Tata Steel Limited,2018-01-31,2018-02-01,rights,,,,,,Rights - 4:25 Fully Paid Up Shares @ Premium Rs 500/- Per Share / 2:25 Partly Paid Up Shares @ Premium Rs 605/- Per Share,actions/nse_2018.parquet,True
+NSE,TCS,INE467B01029,Tata Consultancy Services Limited,2018-08-14,2018-08-18,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,TCS,INE467B01029,Tata Consultancy Services Limited,2018-10-23,2018-10-24,other,,,,,,Int Div Rs 4 Per Sh,actions/nse_2018.parquet,True
+NSE,TIIL,INE545H01011,Technocraft Industries (India) Limited,2018-01-11,2018-01-12,buyback,,,,,,Buyback,actions/nse_2018.parquet,False
+NSE,TRITURBINE,INE152M01016,Triveni Turbine Limited,2018-12-27,2018-12-28,buyback,,,,,,Buy Back,actions/nse_2018.parquet,True
+NSE,UNICHEMLAB,INE351A01019,Unichem Laboratories Limited,2018-02-15,2018-02-16,buyback,,,,,,Buyback,actions/nse_2018.parquet,True
+NSE,VIKASECO,INE806A01020,Vikas EcoTech Limited,2018-11-19,2018-11-21,demerger,,,,,,Scheme Of Arrangement Of Demerger,actions/nse_2018.parquet,False
+NSE,VIYASH,INE807F01027,Viyash Scientific Limited,2018-04-06,2018-04-09,other,,,,,,Scheme Of Arrangement,actions/nse_2018.parquet,False
+NSE,5PAISA,INE618L01018,5Paisa Capital Limited,2019-05-28,2019-05-29,rights,1.0,1.0,,,,Rights 1:1 @ Premium Rs 70 Per Share,actions/nse_2019.parquet,False
+NSE,AARTIDRUGS,INE767A01016,Aarti Drugs Limited,2019-03-28,2019-03-29,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,AARTIIND,INE769A01020,Aarti Industries Limited,2019-07-03,2019-07-04,demerger,,,,,,Scheme Of Demerger,actions/nse_2019.parquet,True
+NSE,ABB,INE117A01022,ABB India Limited,2019-12-20,2019-12-23,demerger,,,,,,Demerger,actions/nse_2019.parquet,True
+NSE,ABREL,INE055A01016,Aditya Birla Real Estate Limited,2019-10-11,2019-10-14,demerger,,,,,,Demerger,actions/nse_2019.parquet,True
+NSE,ADANIPORTS,INE742F01042,Adani Ports and Special Economic Zone Limited,2019-06-20,2019-06-21,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,AGI,INE415A01038,AGI Greenpac Limited,2019-08-19,2019-08-20,demerger,,,,,,Demerger,actions/nse_2019.parquet,False
+NSE,AJANTPHARM,INE031B01015,Ajanta Pharma Limited,2019-02-11,2019-02-12,buyback,,,,,,Buy Back,actions/nse_2019.parquet,True
+NSE,ALEMBICLTD,INE426A01027,Alembic Limited,2019-08-26,2019-08-27,demerger,,,,,,Demerger,actions/nse_2019.parquet,True
+NSE,BALRAMCHIN,INE119A01028,Balrampur Chini Mills Limited,2019-04-16,2019-04-18,buyback,,,,,,Buy Back,actions/nse_2019.parquet,True
+NSE,BHARATGEAR,INE561C01019,Bharat Gears Limited,2019-04-02,2019-04-03,rights,1.0,7.0,,,,Rights 1:7 @ Premium Rs 95 Per Share,actions/nse_2019.parquet,False
+NSE,BHARTIARTL,INE397D01024,Bharti Airtel Limited,2019-04-23,2019-04-24,rights,19.0,67.0,,,,Rights 19:67 @ Premium Rs 215 Per Share,actions/nse_2019.parquet,True
+NSE,BSE,INE118H01025,BSE Limited,2019-07-26,2019-07-29,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,BSOFT,INE836A01035,BIRLASOFT LIMITED,2019-01-24,2019-01-25,other,,,,,,Composite Scheme Of Arrangement,actions/nse_2019.parquet,True
+NSE,COALINDIA,INE522F01014,Coal India Limited,2019-02-14,2019-02-15,buyback,,,,,,Buy Back,actions/nse_2019.parquet,True
+NSE,DCM,INE498A01018,DCM  Limited,2019-05-30,2019-05-31,demerger,,,,,,Demerger,actions/nse_2019.parquet,False
+NSE,DHANI,INE274G01010,Dhani Services Limited,2019-12-18,2019-12-19,buyback,,,,,,Buy Back,actions/nse_2019.parquet,True
+NSE,DHANUKA,INE435G01025,Dhanuka Agritech Limited,2019-01-01,2019-01-02,buyback,,,,,,Buy Back,actions/nse_2019.parquet,True
+NSE,ECLERX,INE738I01010,eClerx Services Limited,2019-05-09,2019-05-10,buyback,,,,,,Buy Back,actions/nse_2019.parquet,True
+NSE,ERIS,INE406M01024,Eris Lifesciences Limited,2019-07-12,2019-07-15,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,EXPLEOSOL,INE201K01015,Expleo Solutions Limited,2019-04-11,2019-04-12,buyback,,,,,,Buy Back,actions/nse_2019.parquet,False
+NSE,FDC,INE258B01022,FDC Limited,2019-06-06,2019-06-07,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,GANDHITUBE,INE524B01027,Gandhi Special Tubes Limited,2019-08-14,2019-08-16,buyback,,,,,,Buyback,actions/nse_2019.parquet,False
+NSE,GEECEE,INE916G01016,GeeCee Ventures Limited,2019-06-06,2019-06-07,buyback,,,,,,Buyback,actions/nse_2019.parquet,False
+NSE,GFLLIMITED,INE538A01037,GFL Limited,2019-08-06,2019-08-07,demerger,,,,,,Demerger,actions/nse_2019.parquet,False
+NSE,GREAVESCOT,INE224A01018,Greaves Cotton Limited,2019-07-11,2019-07-12,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,GREENPLY,INE461C01020,Greenply Industries Limited,2019-07-12,2019-07-15,demerger,,,,,,Demerger,actions/nse_2019.parquet,True
+NSE,HEG,INE545A01016,HEG Limited,2019-02-07,2019-02-09,buyback,,,,,,Buy Back,actions/nse_2019.parquet,False
+NSE,HTMEDIA,INE501G01024,HT Media Limited,2019-04-09,2019-04-10,demerger,,,,,,Demerger,actions/nse_2019.parquet,True
+NSE,IDEA,INE669E01016,Vodafone Idea Limited,2019-03-29,2019-04-02,rights,87.0,38.0,,,,Rights 87:38 @ Premium Of Rs 2.50 Per Share,actions/nse_2019.parquet,True
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2019-02-28,2019-03-01,other,,,,,,Interest Payment,actions/nse_2019.parquet,True
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2019-03-14,2019-03-15,other,,,,,,Interest Payment,actions/nse_2019.parquet,True
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2019-12-12,2019-12-13,other,,,,,,Interest Payment,actions/nse_2019.parquet,True
+NSE,IEX,INE022Q01012,Indian Energy Exchange Limited,2019-02-14,2019-02-15,buyback,,,,,,Buy Back,actions/nse_2019.parquet,True
+NSE,IIFL,INE530B01024,IIFL Finance Limited,2019-05-30,2019-05-31,other,,,,,,Scheme Of Arrangement,actions/nse_2019.parquet,True
+NSE,JBCHEPHARM,INE572A01028,JB Chemicals & Pharmaceuticals Limited,2019-11-21,2019-11-22,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,JINDALPOLY,INE197D01010,Jindal Poly Films Limited,2019-12-30,2019-12-31,demerger,,,,,,Demerger,actions/nse_2019.parquet,True
+NSE,KESORAMIND,INE087A01019,Kesoram Industries Limited,2019-12-24,2019-12-26,demerger,,,,,,Demerger,actions/nse_2019.parquet,True
+NSE,KPRMILL,INE930H01015,K.P.R. Mill Limited,2019-06-18,2019-06-19,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,KREBSBIO,INE268B01013,Krebs Biochemicals and Industries Limited,2019-01-31,2019-02-01,rights,21.0,100.0,,,,Rights 21:100 @ Premium Rs 76 Per Share,actions/nse_2019.parquet,False
+NSE,KSCL,INE455I01011,Kaveri Seed Company Limited,2019-11-21,2019-11-22,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,LGBFORGE,INE201J01017,LGB Forge Limited,2019-01-03,2019-01-04,rights,588.0,1000.0,,,,Rights 588:1000@ Premium Rs 2/-,actions/nse_2019.parquet,False
+NSE,MMFL,INE227C01017,MM Forgings Limited,2019-02-22,2019-02-25,other,,,,,,Interim Div - Rs 2.50 Per Share,actions/nse_2019.parquet,False
+NSE,MOIL,INE490G01020,MOIL Limited,2019-11-26,2019-11-27,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,MONTECARLO,INE950M01013,Monte Carlo Fashions Limited,2019-02-21,2019-02-22,buyback,,,,,,Buy Back,actions/nse_2019.parquet,False
+NSE,NHPC,INE848E01016,NHPC Limited,2019-02-18,2019-02-20,other,,,,,,Int Div - Rs 0.71 Per Sh,actions/nse_2019.parquet,True
+NSE,NIITLTD,INE161A01038,NIIT Limited,2019-10-17,2019-10-18,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,NMDC,INE584A01023,NMDC Limited,2019-01-17,2019-01-18,buyback,,,,,,Buy Back,actions/nse_2019.parquet,True
+NSE,ONGC,INE213A01011,Oil & Natural Gas Corporation Limited,2019-01-03,2019-01-04,buyback,,,,,,Buy Back,actions/nse_2019.parquet,True
+NSE,PATELENG,INE244B01030,Patel Engineering Limited,2019-09-17,2019-09-18,rights,7.0,5.0,,,,Rights 7:5 @ Premium Rs 8/- Per Share,actions/nse_2019.parquet,False
+NSE,PEL,INE140A01024,Piramal Enterprises Limited,2019-12-30,2019-12-31,rights,11.0,83.0,,,,Rights 11:83 @ Premium Rs 1298/-,actions/nse_2019.parquet,True
+NSE,PENPEBS,INE455O01019,Pennar Engineered Building Systems Limited,2019-06-07,2019-06-10,merger,,,,,,Scheme Of Amalgamation,actions/nse_2019.parquet,False
+NSE,PRAKASH,INE603A01013,Prakash Industries Limited,2019-04-23,2019-04-24,demerger,,,,,,Demerger,actions/nse_2019.parquet,False
+NSE,QUICKHEAL,INE306L01010,Quick Heal Technologies Limited,2019-04-25,2019-04-26,buyback,,,,,,Buy Back,actions/nse_2019.parquet,False
+NSE,RSYSTEMS,INE411H01024,R Systems International Limited,2019-01-31,2019-02-01,buyback,,,,,,Buy Back,actions/nse_2019.parquet,False
+NSE,SASKEN,INE231F01020,Sasken Technologies Limited,2019-07-04,2019-07-05,buyback,,,,,,Buyback,actions/nse_2019.parquet,False
+NSE,SHANTIGEAR,INE631A01022,Shanthi Gears Limited,2019-02-07,2019-02-08,buyback,,,,,,Buy Back,actions/nse_2019.parquet,False
+NSE,SHK,INE500L01026,S H Kelkar and Company Limited,2019-06-19,2019-06-20,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,SMARTLINK,INE178C01020,Smartlink Holdings Limited,2019-08-09,2019-08-13,buyback,,,,,,Buyback,actions/nse_2019.parquet,False
+NSE,SOTL,INE035D01012,Savita Oil Technologies Limited,2019-06-11,2019-06-12,buyback,,,,,,Buyback,actions/nse_2019.parquet,False
+NSE,STARCEMENT,INE460H01021,Star Cement Limited,2019-07-04,2019-07-05,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,TATACOMM,INE151A01013,Tata Communications Limited,2019-09-17,2019-09-18,demerger,,,,,,Demerger,actions/nse_2019.parquet,True
+NSE,TATAINVEST,INE672A01018,Tata Investment Corporation Limited,2019-01-10,2019-01-11,buyback,,,,,,Buy Back,actions/nse_2019.parquet,True
+NSE,TATASTLLP,INE674A01014,Tata Steel Long Products Limited,2019-06-24,2019-06-25,rights,15.0,7.0,,,,Rights 15:7@ Premium Rs 490 Per Share,actions/nse_2019.parquet,True
+NSE,TECHM,INE669C01028,Tech Mahindra Limited,2019-03-05,2019-03-06,buyback,,,,,,Buy Back,actions/nse_2019.parquet,True
+NSE,TECHNOE,INE285K01026,Techno Electric & Engineering Company Limited,2019-01-02,2019-01-03,buyback,,,,,,Buy Back,actions/nse_2019.parquet,True
+NSE,TEXRAIL,INE621L01012,Texmaco Rail & Engineering Limited,2019-09-24,2019-09-25,rights,19.0,100.0,,,,Rights 19:100 @ Premium Rs 45.70/-,actions/nse_2019.parquet,True
+NSE,THOMASCOOK,INE332A01027,Thomas Cook  (India)  Limited,2019-12-05,2019-12-06,demerger,,,,,,Demerger,actions/nse_2019.parquet,True
+NSE,TRIVENI,INE256C01024,Triveni Engineering & Industries Limited,2019-06-18,2019-06-19,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,TTML,INE517B01013,Tata Teleservices (Maharashtra) Limited,2019-07-11,2019-07-12,merger,,,,,,De-Merger,actions/nse_2019.parquet,True
+NSE,WELCORP,INE191B01025,Welspun Corp Limited,2019-07-04,2019-07-05,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,WIPRO,INE075A01022,Wipro Limited,2019-06-20,2019-06-21,buyback,,,,,,Buyback,actions/nse_2019.parquet,True
+NSE,ZUARI,INE840M01016,Zuari Agro Chemicals Limited,2019-09-13,2019-09-16,rights,,,,,,Rights:14 Compulosry Convertible Debentures For Every 15 Equity Shares,actions/nse_2019.parquet,False
+NSE,SUVEN,INE495B01038,Suven Life Sciences Limited,2020-01-21,2020-01-22,demerger,,,,,,Demerger,actions/nse_2020.parquet,True
+NSE,ASTERDM,INE914M01019,Aster DM Healthcare Limited,2020-01-23,2020-01-24,buyback,,,,,,Buy Back,actions/nse_2020.parquet,True
+NSE,BAJAJELEC,INE193E01025,Bajaj Electricals Limited,2020-02-05,2020-02-06,rights,13.0,118.0,,,,Rights 13:118 @ Premium Rs 308/-,actions/nse_2020.parquet,True
+NSE,BROOKS,INE650L01011,Brooks Laboratories Limited,2020-02-11,2020-02-12,rights,9.0,20.0,,,,Rights 9:20 @ Premium Rs 10/-,actions/nse_2020.parquet,False
+NSE,ARROWGREEN,INE570D01018,Arrow Greentech Limited,2020-02-12,2020-02-13,rights,1.0,5.0,,,,Rights 1:5 @ Premium Rs 26/-,actions/nse_2020.parquet,False
+NSE,ARCHIDPLY,INE877I01016,Archidply Industries Limited,2020-02-13,2020-02-14,demerger,,,,,,Demerger,actions/nse_2020.parquet,False
+NSE,SHREEPUSHK,INE712K01011,Shree Pushkar Chemicals & Fertilisers Limited,2020-02-27,2020-02-28,other,,,,,,Int Div-Rs 0.5 Per Sh,actions/nse_2020.parquet,False
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2020-02-27,2020-02-28,other,,,,,,Interest Payment,actions/nse_2020.parquet,True
+NSE,TATACHEM,INE092A01019,Tata Chemicals Limited,2020-03-04,2020-03-05,demerger,,,,,,Demerger,actions/nse_2020.parquet,True
+NSE,THOMASCOOK,INE332A01027,Thomas Cook  (India)  Limited,2020-03-05,2020-03-07,buyback,,,,,,Buy Back,actions/nse_2020.parquet,True
+NSE,BORORENEW,INE666D01022,BOROSIL RENEWABLES LIMITED,2020-03-06,2020-03-09,demerger,,,,,,Demerger,actions/nse_2020.parquet,True
+NSE,COFORGE,INE591G01017,Coforge Limited,2020-03-11,2020-03-12,buyback,,,,,,Buy Back,actions/nse_2020.parquet,True
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2020-03-12,2020-03-13,other,,,,,,Interest Payment,actions/nse_2020.parquet,True
+NSE,ARVINDFASN,INE955V01021,Arvind Fashions Limited,2020-03-17,2020-03-18,rights,16.0,47.0,,,,Rights 16:47 @ Premium Rs 146/-,actions/nse_2020.parquet,True
+NSE,GRANULES,INE101D01012,Granules India Limited,2020-03-19,2020-03-20,buyback,,,,,,Buyback,actions/nse_2020.parquet,True
+NSE,SHARDAMOTR,INE597I01010,Sharda Motor Industries Limited,2020-03-26,2020-03-27,demerger,,,,,,Demerger,actions/nse_2020.parquet,False
+NSE,TIPSMUSIC,INE716B01029,Tips Music Limited,2020-03-31,2020-04-03,buyback,,,,,,Buyback,actions/nse_2020.parquet,False
+NSE,CORALFINAC,INE558D01013,Coral India Finance & Housing Limited,2020-04-16,2020-04-17,buyback,,,,,,Buy Back,actions/nse_2020.parquet,False
+NSE,RELIANCE,INE002A01018,Reliance Industries Limited,2020-05-13,2020-05-14,rights,1.0,15.0,,,,Rights 1:15 @ Premium Rs 1247,actions/nse_2020.parquet,True
+NSE,TANLA,INE483C01032,Tanla Platforms Limited,2020-06-09,2020-06-10,buyback,,,,,,Buyback,actions/nse_2020.parquet,True
+NSE,REFEX,INE056I01017,Refex Industries Limited,2020-06-16,2020-06-17,rights,5.0,14.0,,,,Rights 5:14@ Premium Rs 35/-,actions/nse_2020.parquet,False
+NSE,ABFRL,INE647O01011,Aditya Birla Fashion and Retail Limited,2020-06-30,2020-07-01,rights,9.0,77.0,,,,Rights 9:77 Partly Paid @ Premium Rs 100/-,actions/nse_2020.parquet,True
+NSE,JUSTDIAL,INE599M01018,Just Dial Limited,2020-07-02,2020-07-03,buyback,,,,,,Buyback,actions/nse_2020.parquet,True
+NSE,BALRAMCHIN,INE119A01028,Balrampur Chini Mills Limited,2020-07-02,2020-07-03,buyback,,,,,,Buyback,actions/nse_2020.parquet,True
+NSE,PVRINOX,INE191H01014,PVR INOX Limited,2020-07-09,2020-07-10,rights,7.0,94.0,,,,Rights 7:94 @ Premium Rs 774/-,actions/nse_2020.parquet,True
+NSE,SHRIRAMFIN,INE721A01013,Shriram Finance Limited,2020-07-09,2020-07-10,rights,3.0,26.0,,,,Rights 3:26 @ Premium Rs 560/-,actions/nse_2020.parquet,True
+NSE,M&MFIN,INE774D01016,Mahindra & Mahindra Financial Services Limited,2020-07-22,2020-07-23,rights,1.0,1.0,,,,Rights 1:1 @ Premium Rs 48/-,actions/nse_2020.parquet,True
+NSE,GDL,INE852F01015,Gateway Distriparks Limited,2020-07-23,2020-07-24,rights,4.0,27.0,,,,Rights 4:27 @ Premium Rs 62/-,actions/nse_2020.parquet,True
+NSE,SPENCERS,INE020801028,Spencer's Retail Limited,2020-07-28,2020-07-29,rights,2.0,15.0,,,,Rights 2:15 @ Premium Rs 70/-,actions/nse_2020.parquet,False
+NSE,SATIN,INE836B01017,Satin Creditcare Network Limited,2020-08-04,2020-08-05,rights,48.0,125.0,,,,Rights 48:125 @ Premium Rs 50/-,actions/nse_2020.parquet,False
+NSE,GOKUL,INE020J01029,Gokul Refoils and Solvent Limited,2020-08-13,2020-08-14,buyback,,,,,,Buyback,actions/nse_2020.parquet,False
+NSE,UNOMINDA,INE405E01023,UNO Minda Limited,2020-08-14,2020-08-17,rights,1.0,27.0,,,,Rights 1:27 @ Premium Rs 248/-,actions/nse_2020.parquet,True
+NSE,FDC,INE258B01022,FDC Limited,2020-08-20,2020-08-21,buyback,,,,,,Buyback,actions/nse_2020.parquet,True
+NSE,MPSLTD,INE943D01017,MPS Limited,2020-08-21,2020-08-24,buyback,,,,,,Buyback,actions/nse_2020.parquet,False
+NSE,PRIVISCL,INE959A01019,Privi Speciality Chemicals Limited,2020-08-21,2020-08-24,demerger,,,,,,Demerger,actions/nse_2020.parquet,True
+NSE,TRIVENI,INE256C01024,Triveni Engineering & Industries Limited,2020-08-27,2020-08-28,buyback,,,,,,Buyback,actions/nse_2020.parquet,True
+NSE,RUSHIL,INE573K01017,Rushil Decor Limited,2020-09-10,2020-09-11,rights,1.0,3.0,,,,Rights 1:3 @ Premium Rs 40/-,actions/nse_2020.parquet,False
+NSE,DEEPAKFERT,INE501A01019,Deepak Fertilizers and Petrochemicals Corporation Limited,2020-09-16,2020-09-17,rights,3.0,20.0,,,,Rights 3:20 @ Premium Rs 123/-,actions/nse_2020.parquet,True
+NSE,PANACEABIO,INE922B01023,Panacea Biotec Limited,2020-09-21,2020-09-22,demerger,,,,,,Demerger,actions/nse_2020.parquet,False
+NSE,EIHOTEL,INE230A01023,EIH Limited,2020-09-22,2020-09-23,rights,8.0,85.0,,,,Rights 8:85 @ Premium Rs 63/-,actions/nse_2020.parquet,True
+NSE,MANINDS,INE993A01026,Man Industries (India) Limited,2020-09-24,2020-09-25,demerger,,,,,,Demerger,actions/nse_2020.parquet,False
+NSE,DHANUKA,INE435G01025,Dhanuka Agritech Limited,2020-09-25,2020-09-28,buyback,,,,,,Buyback,actions/nse_2020.parquet,True
+NSE,RITES,INE320J01015,RITES Limited,2020-09-29,2020-09-30,buyback,,,,,,Buyback,actions/nse_2020.parquet,True
+NSE,ANANTRAJ,INE242C01024,Anant Raj Limited,2020-10-06,2020-10-07,demerger,,,,,,Demerger,actions/nse_2020.parquet,True
+NSE,MOLDTKPAC,INE893J01011,Mold-Tek Packaging Limited,2020-10-21,2020-10-22,rights,1.0,50.0,,,,Rights 1:50 @ Premium Rs 175  With 6 Warrants For 50 Equity Shares,actions/nse_2020.parquet,False
+NSE,KIOCL,INE880L01014,KIOCL Limited,2020-10-28,2020-10-30,buyback,,,,,,Buyback,actions/nse_2020.parquet,True
+NSE,NESTLEIND,INE239A01016,Nestle India Limited,2020-10-29,2020-11-02,other,,,,,,Interim Dividned - Rs 135 Per Share,actions/nse_2020.parquet,True
+NSE,COSMOFIRST,INE757A01017,COSMO FIRST LIMITED,2020-11-06,2020-11-09,buyback,,,,,,Buyback,actions/nse_2020.parquet,False
+NSE,DEEPENR,INE677H01012,DEEP ENERGY RESOURCES LIMITED,2020-11-10,2020-11-11,demerger,,,,,,Demerger,actions/nse_2020.parquet,False
+NSE,AURUM,INE898S01029,Aurum PropTech Limited,2020-11-12,2020-11-13,buyback,,,,,,Buyback,actions/nse_2020.parquet,False
+NSE,NTPC,INE733E01010,NTPC Limited,2020-11-12,2020-11-13,other,,,,,,Buy-Back,actions/nse_2020.parquet,True
+NSE,AJANTPHARM,INE031B01015,Ajanta Pharma Limited,2020-11-12,2020-11-13,buyback,,,,,,Buyback,actions/nse_2020.parquet,True
+NSE,ASAHISONG,INE228I01012,Asahi Songwon Colors Limited,2020-11-19,2020-11-20,buyback,,,,,,Buyback,actions/nse_2020.parquet,False
+NSE,SHOPERSTOP,INE498B01016,Shoppers Stop Limited,2020-11-19,2020-11-20,rights,17.0,70.0,,,,Rights 17:70 @ Premium Rs 135/-,actions/nse_2020.parquet,True
+NSE,NMDC,INE584A01023,NMDC Limited,2020-11-20,2020-11-23,buyback,,,,,,Buy Back,actions/nse_2020.parquet,True
+NSE,MAYURUNIQ,INE040D01012,Mayur Uniquoters Ltd,2020-11-24,2020-11-25,buyback,,,,,,Buy Back,actions/nse_2020.parquet,True
+NSE,PRICOLLTD,INE726V01018,Pricol Limited,2020-11-24,2020-11-25,rights,2.0,7.0,,,,Rights 2:7 @ Premium Rs 29/-,actions/nse_2020.parquet,False
+NSE,TCS,INE467B01029,Tata Consultancy Services Limited,2020-11-26,2020-11-28,buyback,,,,,,Buyback,actions/nse_2020.parquet,True
+NSE,INTERISE,INE790Z23019,Interise Trust,2020-12-01,2020-12-02,other,,,,,,Interest Payment Rs 1.23 Per Unit/ Return Of Capital Rs 0.8799 Per Unit/ Other Income On Surplus - Rs 0.0479 Per Unit,actions/nse_2020.parquet,False
+NSE,WIPRO,INE075A01022,Wipro Limited,2020-12-10,2020-12-11,buyback,,,,,,Buyback,actions/nse_2020.parquet,True
+NSE,GARFIBRES,INE276A01018,Garware Technical Fibres Limited,2020-12-10,2020-12-11,buyback,,,,,,Buyback,actions/nse_2020.parquet,True
+NSE,CCAVENUE,INE483S01020,AvenuesAI Limited,2020-12-10,2020-12-11,demerger,,,,,,Demerger,actions/nse_2020.parquet,False
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2020-12-17,2020-12-19,other,,,,,,Interest Payment,actions/nse_2020.parquet,True
+NSE,JMA,INE412C01015,Jullundur Motor Agency (Delhi) Limited,2020-12-23,2020-12-24,buyback,,,,,,Buy Back,actions/nse_2020.parquet,False
+NSE,ENGINERSIN,INE510A01010,Engineers India Limited,2020-12-31,2021-01-01,buyback,,,,,,Buyback,actions/nse_2020.parquet,True
+NSE,AARTIDRUGS,INE767A01016,Aarti Drugs Limited,2021-03-30,2021-04-01,buyback,,,,,,Buyback,actions/nse_2021.parquet,True
+NSE,AKSHARCHEM,INE542B01011,AksharChem India Limited,2021-11-11,2021-11-12,buyback,,,,,,Buyback,actions/nse_2021.parquet,False
+NSE,ARCHIDPLY,INE877I01016,Archidply Industries Limited,2021-01-18,2021-01-19,buyback,,,,,,Buyback,actions/nse_2021.parquet,False
+NSE,ARVINDFASN,INE955V01021,Arvind Fashions Limited,2021-02-23,2021-02-24,rights,3.0,20.0,,,,Rights 3:20 @ Premium Rs 131/-,actions/nse_2021.parquet,True
+NSE,ASHAPURMIN,INE348A01023,Ashapura Minechem Limited,2021-09-21,2021-09-22,other,,,,,,Div - Rs 0.50 Per Sh,actions/nse_2021.parquet,False
+NSE,ASIANTILES,INE022I01019,Asian Granito India Limited,2021-09-08,2021-09-09,rights,19.0,29.0,,,,Rights 19:29 @ Premium Rs 90/-,actions/nse_2021.parquet,False
+NSE,BASML,INE186H01014,Bannari Amman Spinning Mills Limited,2021-09-08,2021-09-09,rights,21.0,20.0,,,,Rights 21:20@ Premium Rs 25/-,actions/nse_2021.parquet,False
+NSE,BEARDSELL,INE520H01014,Beardsell Limited,2021-12-16,2021-12-17,rights,1.0,3.0,,,,Rights 1:3 @ Premium Rs 8/-,actions/nse_2021.parquet,False
+NSE,BHARATGEAR,INE561C01019,Bharat Gears Limited,2021-10-28,2021-10-29,rights,1.0,10.0,,,,Rights 1:10 @ Premium Rs 95/-,actions/nse_2021.parquet,False
+NSE,BHARATRAS,INE838B01013,Bharat Rasayan Limited,2021-03-04,2021-03-05,buyback,,,,,,Buy Back,actions/nse_2021.parquet,True
+NSE,BHARTIARTL,INE397D01024,Bharti Airtel Limited,2021-09-27,2021-09-28,rights,1.0,14.0,,,,Rights 1:14 @ Premium Rs 530/-,actions/nse_2021.parquet,True
+NSE,CAMS,INE596I01012,Computer Age Management Services Limited,2021-02-17,2021-02-19,other,,,,,,Interim Divdend - Rs 7.60 Per Share,actions/nse_2021.parquet,True
+NSE,ECLERX,INE738I01010,eClerx Services Limited,2021-09-29,2021-09-30,buyback,,,,,,Buyback,actions/nse_2021.parquet,True
+NSE,GAIL,INE129A01019,GAIL (India) Limited,2021-01-27,2021-01-28,buyback,,,,,,Buyback,actions/nse_2021.parquet,True
+NSE,GANDHITUBE,INE524B01027,Gandhi Special Tubes Limited,2021-08-30,2021-08-31,buyback,,,,,,Buy Back,actions/nse_2021.parquet,False
+NSE,GFLLIMITED,INE538A01037,GFL Limited,2021-03-26,2021-03-30,demerger,,,,,,Demerger,actions/nse_2021.parquet,False
+NSE,GOLDIAM,INE025B01017,Goldiam International Limited,2021-10-26,2021-10-27,buyback,,,,,,Buy Back,actions/nse_2021.parquet,False
+NSE,GUJAPOLLO,INE826C01016,Gujarat Apollo Industries Limited,2021-02-25,2021-02-26,buyback,,,,,,Buyback,actions/nse_2021.parquet,False
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2021-03-04,2021-03-05,other,,,,,,Interest Payment,actions/nse_2021.parquet,True
+NSE,IDFCFIRSTB,INE092T01019,IDFC First Bank Limited,2021-03-10,2021-03-12,other,,,,,,Interest Payment,actions/nse_2021.parquet,True
+NSE,INDHOTEL,INE053A01029,The Indian Hotels Company Limited,2021-11-11,2021-11-13,rights,1.0,9.0,,,,Rights 1:9 @ Premium Rs 149/-,actions/nse_2021.parquet,True
+NSE,INDIGRID,INE219X23014,IndiGrid Infrastructure Trust,2021-03-26,2021-03-30,rights,1.0,5.0,,,,Rights 1:5@ Premium Rs 10/-,actions/nse_2021.parquet,False
+NSE,INFOBEAN,INE344S01016,InfoBeans Technologies Limited,2021-05-06,2021-05-07,buyback,,,,,,Buy Back,actions/nse_2021.parquet,False
+NSE,INTERISE,INE790Z23019,Interise Trust,2021-08-05,2021-08-06,other,,,,,,Interest - Rs 2 Per Unit/ Return On Capital Rs 0.82 Per Unit,actions/nse_2021.parquet,False
+NSE,INTERISE,INE790Z23019,Interise Trust,2021-11-09,2021-11-10,other,,,,,,Interest On Capital -   Rs 2.05 Per Unit/ Return On Capital - Rs 0.06 Per Unit/ Surplus - Rs 0.05 Per Unit,actions/nse_2021.parquet,False
+NSE,IRBINVIT,INE183W23014,IRB InvIT Fund,2021-08-11,2021-08-12,other,,,,,,Interest Amount - Rs 1.20 Per Unit / Return On Capital  Rs - 0.60 Per Unit,actions/nse_2021.parquet,False
+NSE,IRBINVIT,INE183W23014,IRB InvIT Fund,2021-10-26,2021-10-27,other,,,,,,Return On Capital - Re 1 Per Unit/ Interest Amount - Rs 1.20 Per Unit,actions/nse_2021.parquet,False
+NSE,JUBLPHARMA,INE700A01033,Jubilant Pharmova Limited,2021-02-04,2021-02-05,demerger,,,,,,Demerger,actions/nse_2021.parquet,True
+NSE,KDDL,INE291D01011,KDDL Limited,2021-03-30,2021-03-31,rights,7.0,75.0,,,,Rights 7:75 @ Premium Rs 220/-,actions/nse_2021.parquet,False
+NSE,KESORAMIND,INE087A01019,Kesoram Industries Limited,2021-09-16,2021-09-17,rights,133.0,274.0,,,,Rights 133:274 @ Premium Rs 40/-,actions/nse_2021.parquet,True
+NSE,LTF,INE498L01015,L&T Finance Limited,2021-01-21,2021-01-22,rights,17.0,74.0,,,,Rights 17:74@ Premium Rs 55 Per Share,actions/nse_2021.parquet,True
+NSE,MEGH,INE974H01013,Meghmani Organics Limited,2021-05-18,2021-05-19,demerger,,,,,,Merger/Demerger,actions/nse_2021.parquet,False
+NSE,MOIL,INE490G01020,MOIL Limited,2021-12-30,2021-12-31,buyback,,,,,,Buyback,actions/nse_2021.parquet,True
+NSE,MPSLTD,INE943D01017,MPS Limited,2021-12-16,2021-12-17,buyback,,,,,,Buyback,actions/nse_2021.parquet,False
+NSE,NATIONALUM,INE139A01026,National Aluminium Company Limited,2021-02-05,2021-02-08,buyback,,,,,,Buyback,actions/nse_2021.parquet,True
+NSE,NDLVENTURE,INE353A01023,NDL Ventures Limited,2021-10-22,2021-10-25,rights,2.0,5.0,,,,Rights 2:5 @ Premium Rs 290/-,actions/nse_2021.parquet,False
+NSE,NEOGEN,INE136S01016,Neogen Chemicals Limited,2021-12-23,,other,,,,,,Extra-Ordinary General Meting,actions/nse_2021.parquet,False
+NSE,NIITLTD,INE161A01038,NIIT Limited,2021-02-23,2021-02-24,buyback,,,,,,Buy Back,actions/nse_2021.parquet,True
+NSE,NUCLEUS,INE096B01018,Nucleus Software Exports Limited,2021-11-25,2021-11-27,buyback,,,,,,Buyback,actions/nse_2021.parquet,False
+NSE,OSEINTRUST,INE07Z523018,Oriental InfraTrust,2021-08-18,2021-08-20,other,,,,,,Interest - Rs 0.60 Per Unit,actions/nse_2021.parquet,False
+NSE,PATINTLOG,INE529D01014,Patel Integrated Logistics Limited,2021-02-17,2021-02-18,rights,27.0,47.0,,,,Rights 27:47,actions/nse_2021.parquet,False
+NSE,PATINTLOG,INE529D01014,Patel Integrated Logistics Limited,2021-10-28,2021-10-29,rights,613.0,399.0,,,,Rights 613:399,actions/nse_2021.parquet,False
+NSE,PRAXIS,INE546Y01022,Praxis Home Retail Limited,2021-09-07,2021-09-08,rights,11.0,8.0,,,,Rights 11:8 @ Premium Rs 6.35/-,actions/nse_2021.parquet,False
+NSE,QUICKHEAL,INE306L01010,Quick Heal Technologies Limited,2021-04-30,2021-05-03,buyback,,,,,,Buy Back,actions/nse_2021.parquet,False
+NSE,RPPINFRA,INE324L01013,R.P.P. Infra Projects Limited,2021-09-17,2021-09-20,rights,3.0,5.0,,,,Rights 3:5 @ Premium Rs 20/-,actions/nse_2021.parquet,False
+NSE,RSYSTEMS,INE411H01024,R Systems International Limited,2021-08-26,2021-08-27,buyback,,,,,,Buy Back,actions/nse_2021.parquet,False
+NSE,SDBL,INE480C01012,Som Distilleries & Breweries Limited,2021-12-31,2022-01-03,rights,1.0,13.0,,,,Rights 1:13@ Premium Rs 30/-,actions/nse_2021.parquet,False
+NSE,SHIVAMAUTO,INE637H01016,Shivam Autotech Limited,2021-12-09,2021-12-10,rights,2.0,9.0,,,,Rights 2:9 @ Premium Rs 16/-,actions/nse_2021.parquet,False
+NSE,SHK,INE500L01026,S H Kelkar and Company Limited,2021-11-11,2021-11-12,buyback,,,,,,Buyback,actions/nse_2021.parquet,True
+NSE,SHRIPISTON,INE526E01018,Shriram Pistons & Rings Limited,2021-08-11,2021-08-12,buyback,,,,,,Buyback,actions/nse_2021.parquet,True
+NSE,SIGMAADV,INE933B01012,SIGMA ADVANCED SYSTEMS LIMITED,2021-07-12,2021-07-13,rights,2.0,3.0,,,,Rights 2:3,actions/nse_2021.parquet,False
+NSE,SIS,INE285J01010,SIS LIMITED,2021-04-08,2021-04-09,buyback,,,,,,Buyback,actions/nse_2021.parquet,True
+NSE,SMARTLINK,INE178C01020,Smartlink Holdings Limited,2021-02-26,2021-03-01,buyback,,,,,,Buy Back,actions/nse_2021.parquet,False
+NSE,SOTL,INE035D01012,Savita Oil Technologies Limited,2021-03-04,2021-03-05,buyback,,,,,,Buy Back,actions/nse_2021.parquet,False
+NSE,STARCEMENT,INE460H01021,Star Cement Limited,2021-08-25,2021-08-26,buyback,,,,,,Buy Back,actions/nse_2021.parquet,True
+NSE,SUPRAJIT,INE399C01030,Suprajit Engineering Limited,2021-02-18,2021-02-22,buyback,,,,,,Buy Back,actions/nse_2021.parquet,True
+NSE,TEXRAIL,INE621L01012,Texmaco Rail & Engineering Limited,2021-10-21,2021-10-22,rights,2.0,7.0,,,,Rights 2:7 @ Premium Rs 22/-,actions/nse_2021.parquet,True
+NSE,TSFINV,INE202Z01029,TSF INVESTMENTS LIMITED,2021-04-26,2021-04-27,rights,23.0,49.0,,,,Rights 23:49 @ Premium Rs 45/-,actions/nse_2021.parquet,False
+NSE,URJA,INE550C01020,Urja Global Limited,2021-01-14,2021-01-15,rights,7.0,71.0,,,,Rights 7:71 @ Premium Rs 4/-,actions/nse_2021.parquet,False
+NSE,VIKASECO,INE806A01020,Vikas EcoTech Limited,2021-06-09,2021-06-10,rights,13.0,10.0,,,,Rights 13:10 @ Premium Rs 0.35/-,actions/nse_2021.parquet,False
+NSE,VIKASECO,INE806A01020,Vikas EcoTech Limited,2021-11-24,2021-11-25,rights,12.0,25.0,,,,Rights 12:25@ Premium Rs 0.60/-,actions/nse_2021.parquet,False
+NSE,VIKASLIFE,INE161L01027,Vikas Lifecare Limited,2021-05-20,2021-05-21,rights,2.0,5.0,,,,Rights 2:5 @ Premium Re 0.85/-,actions/nse_2021.parquet,False
+NSE,VIKASLIFE,INE161L01027,Vikas Lifecare Limited,2021-10-29,2021-11-01,rights,4.0,21.0,,,,Rights 4:21 @ Premium Rs 1.80/-,actions/nse_2021.parquet,False
+NSE,VIRESCENT,INE0GYU23027,Virescent Renewable Energy Trust,2021-11-17,2021-11-20,other,,,,,,Interest Payment  - Rs 5.659 Per Unit,actions/nse_2021.parquet,False
+NSE,WEIZMANIND,INE080A01014,Weizmann Limited,2021-12-09,2021-12-10,buyback,,,,,,Buyback,actions/nse_2021.parquet,False
+NSE,WELSPUNLIV,INE192B01031,Welspun Living Limited,2021-05-24,2021-05-26,buyback,,,,,,Buy Back,actions/nse_2021.parquet,True
+NSE,AARTIIND,INE769A01020,Aarti Industries Limited,2022-10-19,2022-10-20,demerger,,,,,,Demerger,actions/nse_2022.parquet,True
+NSE,AEGISLOG,INE208C01025,Aegis Logistics Limited,2022-02-17,2022-02-18,other,,,,,,Interim Divdend - Rs 2 Per Share,actions/nse_2022.parquet,True
+NSE,AHLEAST,INE926K01017,Asian Hotels (East) Limited,2022-10-06,2022-10-07,demerger,,,,,,Demerger,actions/nse_2022.parquet,False
+NSE,AJANTPHARM,INE031B01015,Ajanta Pharma Limited,2022-01-13,2022-01-14,buyback,,,,,,Buyback,actions/nse_2022.parquet,True
+NSE,AJOONI,INE820Y01013,Ajooni Biotech Limited,2022-11-25,2022-11-25,rights,29.0,30.0,,,,Rights 29:30 @ Premium Rs 4/-,actions/nse_2022.parquet,False
+NSE,AKG,INE00Y801016,Akg Exim Limited,2022-12-16,2022-12-16,rights,2.0,1.0,,,,Rights 2:1 @ Premium Rs 2/-,actions/nse_2022.parquet,False
+NSE,APCL,INE071F01012,Anjani Portland Cement Limited,2022-12-16,2022-12-16,rights,1.0,2.0,,,,Rights 1:2 @ Premium Rs 187/-,actions/nse_2022.parquet,False
+NSE,ARSHIYA,INE968D01022,Arshiya Limited,2022-03-03,2022-03-04,demerger,,,,,,Demerger,actions/nse_2022.parquet,False
+NSE,ASAHISONG,INE228I01012,Asahi Songwon Colors Limited,2022-06-02,2022-06-03,buyback,,,,,,Buyback,actions/nse_2022.parquet,False
+NSE,ASIANTILES,INE022I01019,Asian Granito India Limited,2022-04-11,2022-04-12,rights,,,,,,Rights Issue 30:37@ Premium Rs 53/-,actions/nse_2022.parquet,False
+NSE,AURUM,INE898S01029,Aurum PropTech Limited,2022-04-12,2022-04-14,rights,3.0,2.0,,,,Rights 3:2 @ Premium Rs 75/-,actions/nse_2022.parquet,False
+NSE,BEML,INE258A01016,BEML Limited,2022-09-08,2022-09-09,demerger,,,,,,Demerger,actions/nse_2022.parquet,True
+NSE,BHAGCHEM,INE414D01019,Bhagiradha Chemicals & Industries Limited,2022-04-07,2022-04-09,rights,,,,,,Rights Issue 4:17@ Premium Rs 390/-,actions/nse_2022.parquet,False
+NSE,BSOFT,INE836A01035,BIRLASOFT LIMITED,2022-07-14,2022-07-15,buyback,,,,,,Buyback,actions/nse_2022.parquet,True
+NSE,CARERATING,INE752H01013,CARE Ratings Limited,2022-09-13,2022-09-14,buyback,,,,,,Buy Back,actions/nse_2022.parquet,True
+NSE,COASTCORP,INE377E01016,Coastal Corporation Limited,2022-08-25,2022-08-26,rights,1.0,6.0,,,,Rights 1:6 @ Premium Rs 215/-,actions/nse_2022.parquet,False
+NSE,COMPINFO,INE070C01029,Compuage Infocom Limited,2022-11-14,2022-11-14,rights,8.0,25.0,,,,Rights 8:25 @ Premium Rs 18/-,actions/nse_2022.parquet,False
+NSE,COSMOFIRST,INE757A01017,COSMO FIRST LIMITED,2022-12-13,2022-12-14,buyback,,,,,,Buy Back,actions/nse_2022.parquet,False
+NSE,DHAMPURSUG,INE041A01016,Dhampur Sugar Mills Limited,2022-05-13,2022-05-17,demerger,,,,,,Demerger,actions/nse_2022.parquet,False
+NSE,DHANUKA,INE435G01025,Dhanuka Agritech Limited,2022-11-17,2022-11-18,buyback,,,,,,Buy Back,actions/nse_2022.parquet,True
+NSE,DYNPRO,INE256H01015,Dynemic Products Limited,2022-05-12,2022-05-13,rights,1.0,20.0,,,,Rights 1:20 @ Premium Rs. 440/-,actions/nse_2022.parquet,False
+NSE,ECLERX,INE738I01010,eClerx Services Limited,2022-12-26,2022-12-27,buyback,,,,,,Buy Back,actions/nse_2022.parquet,True
+NSE,ESSENTIA,INE418N01035,Integra Essentia Limited,2022-05-04,2022-05-05,rights,33.0,13.0,,,,Rights 33:13@ Premium Rs 0.80/-,actions/nse_2022.parquet,False
+NSE,ESSENTIA,INE418N01035,Integra Essentia Limited,2022-11-17,2022-11-17,rights,37.0,200.0,,,,Rights 37:200 @ Premium Rs 6/-,actions/nse_2022.parquet,False
+NSE,FDC,INE258B01022,FDC Limited,2022-02-17,2022-02-19,buyback,,,,,,Buy Back,actions/nse_2022.parquet,True
+NSE,FILATEX,INE816B01019,Filatex India Limited,2022-04-07,2022-04-08,buyback,,,,,,Buyback,actions/nse_2022.parquet,False
+NSE,GAIL,INE129A01019,GAIL (India) Limited,2022-04-21,2022-04-22,buyback,,,,,,Buyback,actions/nse_2022.parquet,True
+NSE,GARFIBRES,INE276A01018,Garware Technical Fibres Limited,2022-11-03,2022-11-04,buyback,,,,,,Buy Back,actions/nse_2022.parquet,True
+NSE,GMRAIRPORT,INE776C01039,GMR AIRPORTS LIMITED,2022-01-11,2022-01-12,demerger,,,,,,Demerger,actions/nse_2022.parquet,True
+NSE,GRANULES,INE101D01012,Granules India Limited,2022-08-22,2022-08-23,buyback,,,,,,Buy Back,actions/nse_2022.parquet,True
+NSE,GULFOILLUB,INE635Q01029,Gulf Oil Lubricants India Limited,2022-02-18,2022-02-21,buyback,,,,,,Buy Back,actions/nse_2022.parquet,True
+NSE,HATSUN,INE473B01035,Hatsun Agro Product Limited,2022-12-07,2022-12-08,rights,1.0,30.0,,,,Rights 1:30 @ Premium Rs 418/-,actions/nse_2022.parquet,True
+NSE,HILTON,INE788H01017,Hilton Metal Forging Limited,2022-10-20,2022-10-20,rights,2.0,5.0,,,,Rights 2:5 @ Premium Rs 45/-,actions/nse_2022.parquet,False
+NSE,IBULLSLTD,INE126M01010,Indiabulls Limited,2022-09-01,2022-09-02,demerger,,,,,,Demerger,actions/nse_2022.parquet,False
+NSE,INDIAMART,INE933S01016,Indiamart Intermesh Limited,2022-05-10,2022-05-11,buyback,,,,,,Buy Back,actions/nse_2022.parquet,True
+NSE,INDIGRID,INE219X23014,IndiGrid Infrastructure Trust,2022-02-01,2022-02-02,other,,,,,,Interest Amount - Rs 2.66 Per Unit / Return On Capital - Rs 0.52 Per Unit,actions/nse_2022.parquet,False
+NSE,INDIGRID,INE219X23014,IndiGrid Infrastructure Trust,2022-07-29,2022-08-01,other,,,,,,Nterest Amount- Rs 3.0556/Return Of Capital- Rs 0.2444,actions/nse_2022.parquet,False
+NSE,IRBINVIT,INE183W23014,IRB InvIT Fund,2022-02-10,2022-02-12,other,,,,,,Interest Amount - Rs 1.20 Per Unit/ Return On Capital - Rs 1.20 Per Unit,actions/nse_2022.parquet,False
+NSE,IRBINVIT,INE183W23014,IRB InvIT Fund,2022-05-11,2022-05-12,other,,,,,,Interest Amount - Rs 1.20 Per Unit/ Return On Capital - Rs 1.40 Per Unit,actions/nse_2022.parquet,False
+NSE,IRBINVIT,INE183W23014,IRB InvIT Fund,2022-08-03,2022-08-04,other,,,,,,Interest Amount - Rs 1.20 Per Unit/ Return On Capital - Rs 0.80 Per Unit,actions/nse_2022.parquet,False
+NSE,IRBINVIT,INE183W23014,IRB InvIT Fund,2022-10-20,2022-10-21,other,,,,,,Interest Amount - Rs 1.25 Per Unit/ Return On Capital - Rs 0.80 Per Unit,actions/nse_2022.parquet,False
+NSE,KAMDHENU,INE390H01012,Kamdhenu Limited,2022-09-06,2022-09-07,demerger,,,,,,Demerger,actions/nse_2022.parquet,False
+NSE,KPRMILL,INE930H01015,K.P.R. Mill Limited,2022-02-17,2022-02-19,buyback,,,,,,Buyback,actions/nse_2022.parquet,True
+NSE,LIBAS,INE908V01012,Libas Consumer Products Limited,2022-09-15,2022-09-16,rights,1.0,2.0,,,,Rights 1:2 @ Premium Rs 11/-,actions/nse_2022.parquet,False
+NSE,MATRIMONY,INE866R01028,Matrimony.Com Limited,2022-07-01,2022-07-04,buyback,,,,,,Buy Back,actions/nse_2022.parquet,False
+NSE,MAXIND,INE0CG601016,Max India Limited,2022-07-26,2022-07-27,other,,,,,,Capital Reduction Pursuant To Nclt Order,actions/nse_2022.parquet,False
+NSE,MAYURUNIQ,INE040D01012,Mayur Uniquoters Ltd,2022-02-22,2022-02-23,buyback,,,,,,Buyback,actions/nse_2022.parquet,True
+NSE,MOIL,INE490G01020,MOIL Limited,2022-02-17,2022-02-19,other,,,,,,Interim Divdend,actions/nse_2022.parquet,True
+NSE,MOTHERSON,INE775A01035,Samvardhana Motherson International Limited,2022-01-14,2022-01-17,demerger,,,,,,Demerger,actions/nse_2022.parquet,True
+NSE,MOTILALOFS,INE338I01027,Motilal Oswal Financial Services Limited,2022-05-26,2022-05-27,buyback,,,,,,Buyback,actions/nse_2022.parquet,True
+NSE,NDLVENTURE,INE353A01023,NDL Ventures Limited,2022-11-22,2022-11-23,demerger,,,,,,Demerger,actions/nse_2022.parquet,False
+NSE,NGIL,INE236Y01012,Nakoda Group of Industries Limited,2022-03-30,2022-04-01,rights,1.0,4.0,,,,Rights 1:4@ Premium Rs 110/-,actions/nse_2022.parquet,False
+NSE,NMDC,INE584A01023,NMDC Limited,2022-10-27,2022-10-28,demerger,,,,,,Demerger,actions/nse_2022.parquet,True
+NSE,ORBTEXP,INE231G01010,Orbit Exports Limited,2022-11-18,2022-11-18,buyback,,,,,,Buy Back,actions/nse_2022.parquet,False
+NSE,PEL,INE140A01024,Piramal Enterprises Limited,2022-08-30,2022-09-01,demerger,,,,,,Demerger,actions/nse_2022.parquet,True
+NSE,QUICKHEAL,INE306L01010,Quick Heal Technologies Limited,2022-09-13,2022-09-14,buyback,,,,,,Buy Back,actions/nse_2022.parquet,False
+NSE,RSWM,INE611A01016,RSWM Limited,2022-12-16,2022-12-16,rights,1.0,1.0,,,,Rights 1:1 @ Premium Rs 90/-,actions/nse_2022.parquet,False
+NSE,SARDAEN,INE385C01013,Sarda Energy & Minerals Limited,2022-05-05,2022-05-06,buyback,,,,,,Buy Back,actions/nse_2022.parquet,True
+NSE,SHAH,INE482J01021,Shah Metacorp Limited,2022-12-23,2022-12-23,rights,110.0,100.0,,,,Rights 110:100 @ Premium Rs 1.75/-,actions/nse_2022.parquet,False
+NSE,SHREMINVIT,INE0GTI23014,Shrem Invit,2022-07-29,2022-08-01,other,,,,,,Interest Amount- Rs 0.967 Per Unit/Return Of Capital- Rs 2.583 Per Unit,actions/nse_2022.parquet,False
+NSE,SHYAMCENT,INE979R01011,Shyam Century Ferrous Limited,2022-09-26,2022-09-27,buyback,,,,,,Buy Back,actions/nse_2022.parquet,False
+NSE,SIS,INE285J01010,SIS LIMITED,2022-08-29,2022-08-30,buyback,,,,,,Buy Back,actions/nse_2022.parquet,True
+NSE,SPAL,INE212I01016,S. P. Apparels Limited,2022-10-06,2022-10-07,buyback,,,,,,Buy Back,actions/nse_2022.parquet,False
+NSE,SUVEN,INE495B01038,Suven Life Sciences Limited,2022-10-17,2022-10-18,rights,1.0,2.0,,,,Rights 1:2 @ Premium Rs 54/-,actions/nse_2022.parquet,True
+NSE,SUZLON,INE040H01021,Suzlon Energy Limited,2022-10-03,2022-10-04,rights,5.0,21.0,,,,Rights 5:21 @ Premium Rs 3/-,actions/nse_2022.parquet,True
+NSE,TANLA,INE483C01032,Tanla Platforms Limited,2022-10-21,2022-10-25,buyback,,,,,,Buy Back,actions/nse_2022.parquet,True
+NSE,TCS,INE467B01029,Tata Consultancy Services Limited,2022-02-22,2022-02-23,buyback,,,,,,Buyback,actions/nse_2022.parquet,True
+NSE,TEMBO,INE869Y01010,Tembo Global Industries Limited,2022-08-08,2022-08-10,rights,9.0,25.0,,,,Rights 9:25 @ Premium Rs 90/-,actions/nse_2022.parquet,False
+NSE,TFL,INE804H01012,Transwarranty Finance Limited,2022-11-04,2022-11-04,rights,1.0,1.0,,,,Rights 1:1,actions/nse_2022.parquet,False
+NSE,TIIL,INE545H01011,Technocraft Industries (India) Limited,2022-12-29,2022-12-30,buyback,,,,,,Buy Back,actions/nse_2022.parquet,False
+NSE,TIPSMUSIC,INE716B01029,Tips Music Limited,2022-05-19,2022-05-21,demerger,,,,,,Demerger,actions/nse_2022.parquet,False
+NSE,TIPSMUSIC,INE716B01029,Tips Music Limited,2022-12-30,2022-12-30,buyback,,,,,,Buy Back,actions/nse_2022.parquet,False
+NSE,TRITURBINE,INE152M01016,Triveni Turbine Limited,2022-12-22,2022-12-23,buyback,,,,,,Buy Back,actions/nse_2022.parquet,True
+NSE,TRIVENI,INE256C01024,Triveni Engineering & Industries Limited,2022-12-22,2022-12-23,buyback,,,,,,Buy Back,actions/nse_2022.parquet,True
+NSE,VIRESCENT,INE0GYU23027,Virescent Renewable Energy Trust,2022-02-18,2022-02-21,other,,,,,,Interest And Principal Debt Repayment - Rs 9.9905 Per Unit,actions/nse_2022.parquet,False
+NSE,VIRESCENT,INE0GYU23027,Virescent Renewable Energy Trust,2022-05-24,2022-05-25,other,,,,,,Interest Amount - Rs 2.36 Per Unit/ Return On Capital - Rs 3.76 Per Unit,actions/nse_2022.parquet,False
+NSE,VIRESCENT,INE0GYU23027,Virescent Renewable Energy Trust,2022-08-17,2022-08-18,other,,,,,,Interest And Principal Repayment - Rs 5.60 Per Unit,actions/nse_2022.parquet,False
+NSE,WOCKPHARMA,INE049B01025,Wockhardt Limited,2022-03-08,2022-03-09,rights,3.0,10.0,,,,Rights 3:10@ Premium Rs 220 Per Share,actions/nse_2022.parquet,True
+NSE,ZYDUSLIFE,INE010B01027,Zydus Lifesciences Limited,2022-06-01,2022-06-02,buyback,,,,,,Buyback,actions/nse_2022.parquet,True
+NSE,AARTIDRUGS,INE767A01016,Aarti Drugs Limited,2023-08-04,2023-08-04,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,AARTISURF,INE09EO01013,Aarti Surfactants Limited,2023-01-17,2023-01-17,rights,2.0,17.0,,,,Rights 2:17 @ Premium Rs 545/-,actions/nse_2023.parquet,False
+NSE,AJANTPHARM,INE031B01015,Ajanta Pharma Limited,2023-03-24,2023-03-24,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,ALLCARGO,INE418H01029,Allcargo Logistics Limited,2023-04-18,2023-04-18,demerger,,,,,,Demerger,actions/nse_2023.parquet,True
+NSE,AMRUTANJAN,INE098F01015,Amrutanjan Health Care Limited,2023-07-13,2023-07-13,buyback,,,,,,Buy Back,actions/nse_2023.parquet,False
+NSE,ASHIANA,INE365D01013,Ashiana Housing Limited,2023-07-28,2023-07-28,buyback,,,,,,Buy Back,actions/nse_2023.parquet,False
+NSE,ATUL,INE100A01010,Atul Limited,2023-11-20,2023-11-20,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,AURIGROW,INE925Y01036,Auri Grow India Limited,2023-05-12,2023-05-12,rights,2.0,1.0,,,,Rights 2:1 @ Premium Rs 0/-,actions/nse_2023.parquet,False
+NSE,AXITA,INE02EZ01014,Axita Cotton Limited,2023-06-02,2023-06-02,buyback,,,,,,Buy Back,actions/nse_2023.parquet,False
+NSE,BAJAJELEC,INE193E01025,Bajaj Electricals Limited,2023-09-14,2023-09-14,demerger,,,,,,Demerger,actions/nse_2023.parquet,True
+NSE,BHANDARI,INE474E01029,Bhandari Hosiery Exports Limited,2023-09-22,2023-09-23,rights,3.0,26.0,,,,Rights 3:26 @ Premium Rs 3.50/-,actions/nse_2023.parquet,False
+NSE,BOROLTD,INE02PY01013,Borosil Limited,2023-12-05,2023-12-05,demerger,,,,,,Demerger,actions/nse_2023.parquet,False
+NSE,BROOKS,INE650L01011,Brooks Laboratories Limited,2023-07-28,2023-07-28,rights,1.0,16.0,,,,Rights 1:16 @ Premium Rs 65/-,actions/nse_2023.parquet,False
+NSE,BSE,INE118H01025,BSE Limited,2023-09-14,2023-09-14,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,CGCL,INE180C01018,Capri Global Capital Limited,2023-02-17,2023-02-17,rights,11.0,64.0,,,,Rights 11:64 @ Premium Rs 473/-,actions/nse_2023.parquet,True
+NSE,CLEDUCATE,INE201M01011,CL Educate Limited,2023-08-14,2023-08-14,buyback,,,,,,Buy Back,actions/nse_2023.parquet,False
+NSE,CONTROLPR,INE663B01015,Control Print Limited,2023-08-18,2023-08-18,buyback,,,,,,Buy Back,actions/nse_2023.parquet,False
+NSE,DIL,INE411Y01011,Debock Industries Limited,2023-06-01,2023-06-01,rights,3.0,7.0,,,,Rights 3:7 @ Premium Rs 5/-,actions/nse_2023.parquet,False
+NSE,EDELWEISS,INE532F01047,Edelweiss Financial Services Limited,2023-06-02,2023-06-02,demerger,,,,,,Demerger,actions/nse_2023.parquet,True
+NSE,EMAMILTD,INE548C01024,Emami Limited,2023-04-12,2023-04-12,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,FDC,INE258B01022,FDC Limited,2023-08-25,2023-08-25,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,GHCL,INE539A01019,GHCL Limited,2023-04-06,2023-04-08,demerger,,,,,,Demerger,actions/nse_2023.parquet,True
+NSE,GNFC,INE113A01013,Gujarat Narmada Valley Fertilizers and Chemicals Limited,2023-11-24,2023-11-24,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,GOKULAGRO,INE314T01025,Gokul Agro Resources Limited,2023-03-08,2023-03-08,rights,1.0,32.0,,,,Rights 1:32 @ Premium Rs 90/-,actions/nse_2023.parquet,False
+NSE,GOLDIAM,INE025B01017,Goldiam International Limited,2023-07-21,2023-07-21,buyback,,,,,,Buy Back,actions/nse_2023.parquet,False
+NSE,GPIL,INE177H01013,Godawari Power And Ispat limited,2023-03-31,2023-03-31,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,GREENPOWER,INE999K01014,Orient Green Power Company Limited,2023-08-18,2023-08-18,rights,19.0,62.0,,,,Rights 19:62 @ Premium Rs 0/-,actions/nse_2023.parquet,False
+NSE,HERITGFOOD,INE978A01019,Heritage Foods Limited,2023-01-20,2023-01-20,rights,1.0,1.0,,,,Rights 1:1 @ Premium Rs 0/-,actions/nse_2023.parquet,True
+NSE,HGS,INE170I01016,Hinduja Global Solutions Limited,2023-03-06,2023-03-06,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,INDIAMART,INE933S01016,Indiamart Intermesh Limited,2023-08-25,2023-08-25,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,INDOWIND,INE227G01018,Indowind Energy Limited,2023-01-13,2023-01-13,rights,2.0,5.0,,,,Rights 2:5@ Premium Rs 2/-,actions/nse_2023.parquet,False
+NSE,INTERISE,INE790Z23019,Interise Trust,2023-09-22,2023-09-23,other,,,,,,Interest Amount - Rs 1.27 Per Unit/Return On Capital - Rs 1.36 Per Unit,actions/nse_2023.parquet,False
+NSE,IRBINVIT,INE183W23014,IRB InvIT Fund,2023-02-10,2023-02-11,other,,,,,,Interest Amount - Rs 1.75 Per Unit/ Return On Capital - Re 0.25 Per Unit,actions/nse_2023.parquet,False
+NSE,IRBINVIT,INE183W23014,IRB InvIT Fund,2023-05-12,2023-05-12,other,,,,,,Interest Amount - Rs 1.70 Per Unit/ Return On Capital - Re 0.30 Per Unit,actions/nse_2023.parquet,False
+NSE,IRBIT,INE0C8K23012,IRB INFRASTRUCTURE TRUST,2023-07-28,2023-07-28,rights,1.0,6.0,,,,Rights 1:6 @ Premium Rs 100.98/-,actions/nse_2023.parquet,False
+NSE,JAGRAN,INE199G01027,Jagran Prakashan Limited,2023-01-06,2023-01-06,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,JETFREIGHT,INE982V01017,Jet Freight Logistics Limited,2023-01-11,2023-01-11,rights,1.0,1.0,,,,Rights 1:1 @ Premium Rs 11.25/-,actions/nse_2023.parquet,False
+NSE,JHS,INE544H01014,JHS Svendgaard Laboratories Limited,2023-09-11,2023-09-11,demerger,,,,,,Demerger,actions/nse_2023.parquet,False
+NSE,KRBL,INE001B01026,KRBL Limited,2023-08-25,2023-08-25,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,LLOYDSENGG,INE093R01011,LLOYDS ENGINEERING WORKS LIMITED,2023-12-14,2023-12-14,rights,1.0,17.0,,,,Rights 1:17 @ Premium Rs 14.50/-,actions/nse_2023.parquet,False
+NSE,LT,INE018A01030,Larsen & Toubro Limited,2023-09-12,2023-09-12,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,MARSHALL,INE00SZ01018,Marshall Machines Limited,2023-09-28,2023-09-29,rights,7.0,10.0,,,,Rights 7:10 @ Premium Rs 34.80/-,actions/nse_2023.parquet,False
+NSE,MIRZAINT,INE771A01026,Mirza International Limited,2023-03-29,2023-03-29,demerger,,,,,,Demerger,actions/nse_2023.parquet,False
+NSE,NECCLTD,INE553C01016,North Eastern Carrying Corporation Limited,2023-06-02,2023-06-02,rights,9.0,10.0,,,,Rights 9:10 @ Premium Rs 8/-,actions/nse_2023.parquet,False
+NSE,NGIL,INE236Y01012,Nakoda Group of Industries Limited,2023-09-05,2023-09-05,rights,1.0,7.0,,,,Rights 1:7 @ Premium Rs 30/-,actions/nse_2023.parquet,False
+NSE,NIITLTD,INE161A01038,NIIT Limited,2023-06-08,2023-06-08,demerger,,,,,,Demerger,actions/nse_2023.parquet,True
+NSE,PATELENG,INE244B01030,Patel Engineering Limited,2023-02-06,2023-02-06,rights,1.0,2.0,,,,Rights 1:2@ Premium Rs 11.60/-,actions/nse_2023.parquet,False
+NSE,PEL,INE140A01024,Piramal Enterprises Limited,2023-08-25,2023-08-25,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,PNBHOUSING,INE572E01012,PNB Housing Finance Limited,2023-04-05,2023-04-05,rights,29.0,54.0,,,,Rights 29:54@ Premium Rs 265/-,actions/nse_2023.parquet,True
+NSE,PPLPHARMA,INE0DK501011,Piramal Pharma Limited,2023-08-02,2023-08-02,rights,5.0,46.0,,,,Rights 5:46 @ Premium Rs 71/-,actions/nse_2023.parquet,True
+NSE,PRAXIS,INE546Y01022,Praxis Home Retail Limited,2023-05-30,2023-05-30,rights,13.0,20.0,,,,Rights 13:20 @ Premium Rs 5/-,actions/nse_2023.parquet,False
+NSE,RELIANCE,INE002A01018,Reliance Industries Limited,2023-07-20,2023-07-20,demerger,,,,,,Demerger,actions/nse_2023.parquet,True
+NSE,ROML,INE294G01026,Raj Oil Mills Limited,2023-02-09,2023-02-09,rights,1.0,1.0,,,,Rights 1:1 @ Premium Rs 20/-,actions/nse_2023.parquet,False
+NSE,RUSHIL,INE573K01017,Rushil Decor Limited,2023-04-13,2023-04-13,rights,1.0,3.0,,,,Rights 1:3 @ Premium Rs 152/-,actions/nse_2023.parquet,False
+NSE,SAREGAMA,INE979A01017,Saregama India Limited,2023-07-27,2023-07-27,demerger,,,,,,Demerger,actions/nse_2023.parquet,True
+NSE,SCI,INE109A01011,Shipping Corporation Of India Limited,2023-03-31,2023-03-31,demerger,,,,,,Demerger,actions/nse_2023.parquet,True
+NSE,SDBL,INE480C01012,Som Distilleries & Breweries Limited,2023-04-13,2023-04-14,rights,10.0,211.0,,,,Rights 10:211@ Premium Rs 135/-,actions/nse_2023.parquet,False
+NSE,SEPC,INE964H01014,SEPC Limited,2023-03-29,2023-03-29,rights,2.0,53.0,,,,Rights 2:53 @ Premium Rs 0/-,actions/nse_2023.parquet,False
+NSE,SEPC,INE964H01014,SEPC Limited,2023-11-28,2023-11-28,rights,1.0,36.0,,,,Rights 1:36 @ Premium Rs 3/-,actions/nse_2023.parquet,False
+NSE,SHAREINDIA,INE932X01018,Share India Securities Limited,2023-02-28,2023-02-28,rights,1.0,50.0,,,,Rights 1:50 @ Premium Rs 690/- With 17 Warrants For 50 Equity Shares,actions/nse_2023.parquet,False
+NSE,SHREERAMA,INE879A01019,Shree Rama Multi-Tech Limited,2023-05-30,2023-05-30,rights,11.0,10.0,,,,Rights 11:10@ Premium Rs 4/-,actions/nse_2023.parquet,False
+NSE,SIS,INE285J01010,SIS LIMITED,2023-12-12,2023-12-12,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,SIYSIL,INE076B01010,Siyaram Silk Mills Limited,2023-09-18,2023-09-18,buyback,,,,,,Buy Back,actions/nse_2023.parquet,False
+NSE,SOMANYCERA,INE355A01010,Somany Ceramics Limited,2023-12-15,2023-12-15,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,SPORTKING,INE885H01011,Sportking India Limited,2023-02-10,2023-02-10,buyback,,,,,,Buyback,actions/nse_2023.parquet,False
+NSE,SRPL,INE008Z01012,Shree Ram Proteins Limited,2023-07-06,2023-07-06,rights,1.0,1.0,,,,Rights 1:1 @ Premium Rs 1.30/-,actions/nse_2023.parquet,False
+NSE,SYMPHONY,INE225D01019,Symphony Limited,2023-03-29,2023-03-29,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,TCS,INE467B01029,Tata Consultancy Services Limited,2023-11-24,2023-11-25,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,TEAMLEASE,INE985S01024,Teamlease Services Limited,2023-04-03,2023-04-03,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,TPHQ,INE065J01016,Teamo Productions HQ Limited,2023-04-18,2023-04-18,rights,11.0,8.0,,,,Rights 11:8 @ Premium Rs 0/-,actions/nse_2023.parquet,False
+NSE,TVSHLTD,INE105A01035,TVS Holdings Limited,2023-08-24,2023-08-24,demerger,,,,,,Demerger,actions/nse_2023.parquet,False
+NSE,UDAICEMENT,INE225C01029,Udaipur Cement Works Limited,2023-06-14,2023-06-14,rights,4.0,5.0,,,,Rights 4:5 @ Premium Rs 14/-,actions/nse_2023.parquet,False
+NSE,VAKRANGEE,INE051B01021,Vakrangee Limited,2023-06-15,2023-06-15,demerger,,,,,,Demerger,actions/nse_2023.parquet,True
+NSE,VCL,INE098201010,Vaxtex Cotfab Limited,2023-07-24,2023-07-24,rights,1.0,2.0,,,,Rights 1:2 @ Premium Re 1.50/-,actions/nse_2023.parquet,False
+NSE,VERTIS,INE0KXY23015,Vertis Infrastructure Trust,2023-09-28,2023-09-29,rights,10.0,63.0,,,,Rights 10:63,actions/nse_2023.parquet,False
+NSE,VRLLOG,INE366I01010,VRL Logistics Limited,2023-02-10,2023-02-10,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,WELENT,INE625G01013,Welspun Enterprises Limited,2023-02-13,2023-02-13,buyback,,,,,,Buy Back,actions/nse_2023.parquet,False
+NSE,WELSPUNLIV,INE192B01031,Welspun Living Limited,2023-05-10,2023-05-10,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,WIPRO,INE075A01022,Wipro Limited,2023-06-16,2023-06-16,buyback,,,,,,Buy Back,actions/nse_2023.parquet,True
+NSE,AARTIDRUGS,INE767A01016,Aarti Drugs Limited,2024-09-05,2024-09-05,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,ADROITINFO,INE737B01033,Adroit Infotech Limited,2024-01-19,2024-01-19,rights,3.0,2.0,,,,Rights 3:2 @ Premium Rs 5/-,actions/nse_2024.parquet,False
+NSE,AIAENG,INE212H01026,AIA Engineering Limited,2024-08-20,2024-08-20,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,AJANTPHARM,INE031B01015,Ajanta Pharma Limited,2024-05-30,2024-05-30,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,AJMERA,INE298G01027,Ajmera Realty & Infra India Limited,2024-08-02,2024-08-02,demerger,,,,,,Demerger,actions/nse_2024.parquet,False
+NSE,AJOONI,INE820Y01013,Ajooni Biotech Limited,2024-05-07,2024-05-07,rights,1.0,1.0,,,,Rights 1:1 @ Premium Rs 3/-,actions/nse_2024.parquet,False
+NSE,AKSHAR,INE256Z01017,Akshar Spintex Limited,2024-08-23,2024-08-23,rights,13.0,8.0,,,,Rights 13:8 @ Premium Rs 0/-,actions/nse_2024.parquet,False
+NSE,ANANDRATHI,INE463V01026,Anand Rathi Wealth Limited,2024-06-03,2024-06-03,buyback,,,,,,Buyback,actions/nse_2024.parquet,True
+NSE,ATALREAL,INE0ALR01011,Atal Realtech Limited,2024-08-22,2024-08-22,rights,1.0,2.0,,,,Rights 1:2 @ Premium Rs 5/-,actions/nse_2024.parquet,False
+NSE,AUROPHARMA,INE406A01029,Aurobindo Pharma Limited,2024-07-30,2024-07-30,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,AVONMORE,INE323B01016,Avonmore Capital & Management Services Limited,2024-12-12,2024-12-12,rights,5.0,24.0,,,,Rights 5:24 @ Premium Rs 9/-,actions/nse_2024.parquet,False
+NSE,BAJAJ-AUTO,INE917I01010,Bajaj Auto Limited,2024-02-29,2024-02-29,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,BAJAJCON,INE933K01021,Bajaj Consumer Care Limited,2024-07-02,2024-07-02,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,BALKRISHNA,INE875R01011,Balkrishna Paper Mills Limited,2024-03-15,2024-03-15,rights,2.0,1.0,,,,Rights 2:1 @ Premium Rs 11/-,actions/nse_2024.parquet,False
+NSE,BHANDARI,INE474E01029,Bhandari Hosiery Exports Limited,2024-06-19,2024-06-19,rights,15.0,32.0,,,,Rights 15:32 @ Premium Rs 5.26/-,actions/nse_2024.parquet,False
+NSE,CCAVENUE,INE483S01020,AvenuesAI Limited,2024-09-11,2024-09-11,demerger,,,,,,Demerger,actions/nse_2024.parquet,False
+NSE,CERA,INE739E01017,Cera Sanitaryware Limited,2024-08-16,2024-08-16,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,CHAMBLFERT,INE085A01013,Chambal Fertilizers & Chemicals Limited,2024-01-18,2024-01-18,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,CHEVIOT,INE974B01016,Cheviot Company Limited,2024-06-14,2024-06-14,buyback,,,,,,Buy Back,actions/nse_2024.parquet,False
+NSE,CLSEL,INE419D01026,Chaman Lal Setia Exports Limited,2024-08-19,2024-08-19,buyback,,,,,,Buy Back,actions/nse_2024.parquet,False
+NSE,DHAMPURSUG,INE041A01016,Dhampur Sugar Mills Limited,2024-01-17,2024-01-17,buyback,,,,,,Buy Back,actions/nse_2024.parquet,False
+NSE,DHANBANK,INE680A01011,Dhanlaxmi Bank Limited,2024-12-27,2024-12-27,rights,14.0,25.0,,,,Rights 14:25 @ Premium Rs 11/-,actions/nse_2024.parquet,False
+NSE,DHANUKA,INE435G01025,Dhanuka Agritech Limited,2024-08-16,2024-08-16,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,DUCON,INE741L01018,Ducon Infratechnologies Limited,2024-08-30,2024-08-30,rights,1.0,4.0,,,,Rights 1:4 @ Premium Rs 6/-,actions/nse_2024.parquet,False
+NSE,DWARKESH,INE366A01033,Dwarikesh Sugar Industries Limited,2024-03-20,2024-03-20,buyback,,,,,,Buy Back,actions/nse_2024.parquet,False
+NSE,EASTSILK,INE962C01027,Eastern Silk Industries Limited,2024-11-22,2024-11-23,other,,,,,,Capital Reduction,actions/nse_2024.parquet,False
+NSE,ECLERX,INE738I01010,eClerx Services Limited,2024-07-04,2024-07-04,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,ESSENTIA,INE418N01035,Integra Essentia Limited,2024-05-31,2024-06-01,rights,20.0,119.0,,,,Rights 20:119 @ Premium Rs 2.25/-,actions/nse_2024.parquet,False
+NSE,GARFIBRES,INE276A01018,Garware Technical Fibres Limited,2024-03-26,2024-03-26,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,GATECH,INE224E01028,GACM Technologies Limited,2024-07-16,2024-07-16,rights,1.0,1.0,,,,Rights 1:1 @ Premium Rs 0/-,actions/nse_2024.parquet,False
+NSE,GATECHDVR,INE224E01036,GACM Technologies Limited,2024-07-16,2024-07-16,rights,1.0,1.0,,,,Rights 1:1 @ Premium Rs 0/-,actions/nse_2024.parquet,False
+NSE,GEOJITFSL,INE007B01023,Geojit Financial Services Limited,2024-10-07,2024-10-07,rights,1.0,6.0,,,,Rights 1:6 @ Premium Rs 49/-,actions/nse_2024.parquet,False
+NSE,GLOBE,INE581X01013,GLOBE ENTERPRISES (INDIA) LIMITED,2024-02-23,2024-02-23,rights,1.0,1.0,,,,Rights 1:1 @ Premium Rs 1/-,actions/nse_2024.parquet,False
+NSE,GPIL,INE177H01013,Godawari Power And Ispat limited,2024-06-28,2024-06-28,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,GRASIM,INE047A01013,Grasim Industries Limited,2024-01-10,2024-01-10,rights,6.0,179.0,,,,Rights 6:179 @ Premium Rs 1810/-,actions/nse_2024.parquet,True
+NSE,GREENPOWER,INE999K01014,Orient Green Power Company Limited,2024-08-13,2024-08-13,rights,10.0,51.0,,,,Rights 10:51 @ Premium Rs 3/-,actions/nse_2024.parquet,False
+NSE,HCC,INE549A01026,Hindustan Construction Company Limited,2024-03-15,2024-03-16,rights,13.0,118.0,,,,Rights 13:118 @ Premium Rs 20/-,actions/nse_2024.parquet,True
+NSE,HERCULES,INE688E01024,HERCULES INVESTMENTS LIMITED,2024-10-11,2024-10-11,demerger,,,,,,Demerger,actions/nse_2024.parquet,False
+NSE,HINDWAREAP,INE05AN01011,Hindware Home Innovation Limited,2024-10-25,2024-10-25,rights,119.0,758.0,,,,Rights 119:758 @ Premium Rs 218/-,actions/nse_2024.parquet,False
+NSE,IIFL,INE530B01024,IIFL Finance Limited,2024-04-23,2024-04-23,rights,1.0,9.0,,,,Rights 1:9 @ Premium Rs 298/-,actions/nse_2024.parquet,True
+NSE,INDOWIND,INE227G01018,Indowind Energy Limited,2024-07-16,2024-07-16,rights,1.0,5.0,,,,Rights 1:5 @ Premium Rs 12.50/-,actions/nse_2024.parquet,False
+NSE,INDUSTOWER,INE121J01017,Indus Towers Limited,2024-08-09,2024-08-09,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,INSECTICID,INE070I01018,Insecticides (India) Limited,2024-09-11,2024-09-11,buyback,,,,,,Buy Back,actions/nse_2024.parquet,False
+NSE,INVENTURE,INE878H01016,Inventure Growth & Securities Limited,2024-07-05,2024-07-05,rights,1.0,4.0,,,,Rights 1:4 @ Premium Rs 1.33/-,actions/nse_2024.parquet,False
+NSE,IRBIT,INE0C8K23012,IRB INFRASTRUCTURE TRUST,2024-03-12,2024-03-12,rights,1.0,11.0,,,,Rights 1:11.10 @ Premium Rs 0/-,actions/nse_2024.parquet,False
+NSE,IRBIT,INE0C8K23012,IRB INFRASTRUCTURE TRUST,2024-12-13,2024-12-13,rights,1.0,19.0,,,,Rights 1:19.07 @ Premium Rs 0,actions/nse_2024.parquet,False
+NSE,JAICORPLTD,INE070D01027,Jai Corp Limited,2024-09-10,2024-09-10,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,JAIPURKURT,INE696V01013,Nandani Creation Limited,2024-07-04,2024-07-04,rights,100.0,224.0,,,,Rights 100:224 @ Premium Rs 20/-,actions/nse_2024.parquet,False
+NSE,JYOTISTRUC,INE197A01024,Jyoti Structures Limited,2024-03-21,2024-03-21,rights,6.0,37.0,,,,Rights 6:37 @ Premium Rs 13/-,actions/nse_2024.parquet,False
+NSE,KDDL,INE291D01011,KDDL Limited,2024-08-27,2024-08-27,buyback,,,,,,Buy Back,actions/nse_2024.parquet,False
+NSE,KEEPLEARN,INE055C01020,DSJ Keep Learning Limited,2024-05-14,2024-05-14,rights,7.0,9.0,,,,Rights 7:9 @ Premium Rs 0/-,actions/nse_2024.parquet,False
+NSE,KSCL,INE455I01011,Kaveri Seed Company Limited,2024-02-23,2024-02-23,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,KSHITIJPOL,IN0000000000,Kshitij Polyline Limited,2024-06-18,2024-06-18,rights,4.0,5.0,,,,Rights 4:5 @ Premium Rs 4.40/-,actions/nse_2024.parquet,False
+NSE,MAGNUM,INE387I01016,Magnum Ventures Limited,2024-01-25,2024-01-25,rights,2.0,11.0,,,,Rights 2:11 @ Premium Rs 44/-,actions/nse_2024.parquet,False
+NSE,MATRIMONY,INE866R01028,Matrimony.Com Limited,2024-10-25,2024-10-25,buyback,,,,,,Buy Back,actions/nse_2024.parquet,False
+NSE,MAYURUNIQ,INE040D01012,Mayur Uniquoters Ltd,2024-08-23,2024-08-23,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,MELSTAR,INE817A01019,Melstar Information Technologies Limited,2024-08-16,2024-08-16,other,,,,,,Capital Reduction,actions/nse_2024.parquet,False
+NSE,MGEL,INE0APB01016,Mangalam Global Enterprise Limited,2024-05-24,2024-05-24,rights,1.0,7.0,,,,Rights 1:7 @ Premium Rs 18/-,actions/nse_2024.parquet,False
+NSE,MHLXMIRU,INE112D01035,Mahalaxmi Rubtech Limited,2024-04-19,2024-04-19,demerger,,,,,,Demerger,actions/nse_2024.parquet,False
+NSE,MITCON,INE828O01033,MITCON Consultancy & Engineering Services Limited,2024-06-20,2024-06-20,rights,6.0,19.0,,,,Rights 6:19 @ Premium Rs 66/-,actions/nse_2024.parquet,False
+NSE,MITTAL,INE997Y01019,Mittal Life Style Limited,2024-10-03,2024-10-03,rights,1.0,2.0,,,,Rights 1:2 @ Premium Re 1/-,actions/nse_2024.parquet,False
+NSE,MOKSH,INE514Y01012,Moksh Ornaments Limited,2024-12-20,2024-12-20,rights,14.0,23.0,,,,Rights 14:23 @ Premium Rs 13/-,actions/nse_2024.parquet,False
+NSE,NAGREEKEXP,INE123B01028,Nagreeka Exports Limited,2024-01-30,2024-01-30,rights,3.0,2.0,,,,Rights 3:2 @ Premium Rs 15/-,actions/nse_2024.parquet,False
+NSE,NARMADA,INE117Z01011,Narmada Agrobase Limited,2024-09-13,2024-09-16,rights,9.0,5.0,,,,Rights 9:5 @ Premium Rs 5/-,actions/nse_2024.parquet,False
+NSE,NAVNETEDUL,INE060A01024,Navneet Education Limited,2024-08-13,2024-08-13,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,NGIL,INE236Y01012,Nakoda Group of Industries Limited,2024-05-30,2024-05-30,rights,4.0,10.0,,,,Rights 4:10 @ Premium Rs 15/-,actions/nse_2024.parquet,False
+NSE,NUCLEUS,INE096B01018,Nucleus Software Exports Limited,2024-09-03,2024-09-03,buyback,,,,,,Buy Back,actions/nse_2024.parquet,False
+NSE,OCCL,INE321D01016,Oriental Carbon & Chemicals Limited,2024-07-01,2024-07-01,demerger,,,,,,Demerger,actions/nse_2024.parquet,False
+NSE,ORBTEXP,INE231G01010,Orbit Exports Limited,2024-02-13,2024-02-13,buyback,,,,,,Buy Back,actions/nse_2024.parquet,False
+NSE,ORIENTALTL,INE998H01012,Oriental Trimex Limited,2024-09-05,2024-09-05,rights,3.0,2.0,,,,Rights 3:2 @ Premium Re 1/-,actions/nse_2024.parquet,False
+NSE,PATINTLOG,INE529D01014,Patel Integrated Logistics Limited,2024-09-06,2024-09-06,rights,8.0,103.0,,,,Rights 8:103 @ Premium Rs 8/-,actions/nse_2024.parquet,False
+NSE,RAYMOND,INE301A01014,Raymond Limited,2024-07-11,2024-07-11,demerger,,,,,,Demerger,actions/nse_2024.parquet,True
+NSE,ROSSELLIND,INE847C01020,Rossell India Limited,2024-09-20,2024-09-20,demerger,,,,,,Demerger,actions/nse_2024.parquet,False
+NSE,SADHNANIQ,INE888C01040,Sadhana Nitrochem Limited,2024-09-13,2024-09-13,rights,1.0,3.0,,,,Rights 1:3 @ Premium Rs 5.06/-,actions/nse_2024.parquet,False
+NSE,SAKUMA,INE190H01016,Sakuma Exports Limited,2024-04-15,2024-04-15,rights,33.0,98.0,,,,Rights 33:98 @ Premium Rs 24.30/-,actions/nse_2024.parquet,False
+NSE,SAMMAANCAP,INE148I01020,Sammaan Capital Limited,2024-02-01,2024-02-01,rights,1.0,2.0,,,,Rights 1:2 @ Premium Rs 148/-,actions/nse_2024.parquet,True
+NSE,SANGINITA,INE753W01010,Sanginita Chemicals Limited,2024-05-07,2024-05-07,rights,1.0,2.0,,,,Rights 1:2 @ Premium Rs 8/-,actions/nse_2024.parquet,False
+NSE,SANOFI,INE058A01010,Sanofi India Limited,2024-06-13,2024-06-13,demerger,,,,,,Demerger,actions/nse_2024.parquet,True
+NSE,SEMAC,INE617A01013,Semac Construction Limited,2024-05-03,2024-05-03,demerger,,,,,,Demerger,actions/nse_2024.parquet,False
+NSE,SEPC,INE964H01014,SEPC Limited,2024-06-25,2024-06-25,rights,6.0,55.0,,,,Rights 6:55 @ Premium Rs 3,actions/nse_2024.parquet,False
+NSE,SGIL,INE00QT01015,Synergy Green Industries Limited,2024-09-11,2024-09-11,rights,1.0,10.0,,,,Rights 1:10 @ Premium Rs 315/-,actions/nse_2024.parquet,False
+NSE,SHARDAMOTR,INE597I01010,Sharda Motor Industries Limited,2024-06-05,2024-06-05,buyback,,,,,,Buy Back,actions/nse_2024.parquet,False
+NSE,SIKKO,INE112X01017,Sikko Industries Limited,2024-12-06,2024-12-06,rights,3.0,10.0,,,,Rights 3:10 @ Premium Rs 88/-,actions/nse_2024.parquet,False
+NSE,SILGO,INE01II01013,Silgo Retail Limited,2024-02-22,2024-02-22,rights,1.0,1.0,,,,Rights 1:1 @ Premium Rs 15/-,actions/nse_2024.parquet,False
+NSE,SKIPPER,INE439E01022,Skipper Limited,2024-01-12,2024-01-12,rights,1.0,10.0,,,,Rights 1:10 @ Premium Rs 193/-,actions/nse_2024.parquet,False
+NSE,SOBHA,INE671H01015,Sobha Limited,2024-06-19,2024-06-19,rights,6.0,47.0,,,,Rights 6:47 @ Premium Rs 1641/-,actions/nse_2024.parquet,True
+NSE,SOLARA,INE624Z01016,Solara Active Pharma Sciences Limited,2024-05-15,2024-05-15,rights,1.0,3.0,,,,Rights 1:3 @ Premium Rs 365/-,actions/nse_2024.parquet,True
+NSE,SOTL,INE035D01012,Savita Oil Technologies Limited,2024-08-16,2024-08-16,buyback,,,,,,Buy Back,actions/nse_2024.parquet,False
+NSE,SOUTHBANK,INE683A01015,The South Indian Bank Limited,2024-02-27,2024-02-27,rights,1.0,4.0,,,,Rights 1:4 @ Premium Rs 21/-,actions/nse_2024.parquet,True
+NSE,STAR,INE939A01011,Strides Pharma Science Limited,2024-12-06,2024-12-06,demerger,,,,,,Demerger,actions/nse_2024.parquet,True
+NSE,SUPRAJIT,INE399C01030,Suprajit Engineering Limited,2024-08-27,2024-08-27,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,SYMPHONY,INE225D01019,Symphony Limited,2024-08-21,2024-08-21,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,TATACONSUM,INE192A01025,TATA CONSUMER PRODUCTS LIMITED,2024-07-26,2024-07-27,rights,1.0,26.0,,,,Rights 1:26 @ Premium Rs 817/-,actions/nse_2024.parquet,True
+NSE,TCI,INE688A01022,Transport Corporation of India Limited,2024-09-04,2024-09-04,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,TIIL,INE545H01011,Technocraft Industries (India) Limited,2024-08-27,2024-08-27,buyback,,,,,,Buy Back,actions/nse_2024.parquet,False
+NSE,TIL,INE806C01018,TIL Limited,2024-03-22,2024-03-22,rights,28.0,10.0,,,,Rights 28:10 @ Premium Rs 0/-,actions/nse_2024.parquet,False
+NSE,TIPSMUSIC,INE716B01029,Tips Music Limited,2024-04-22,2024-04-22,buyback,,,,,,Buy Back,actions/nse_2024.parquet,False
+NSE,TTKPRESTIG,INE690A01010,TTK Prestige Limited,2024-08-14,2024-08-14,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,UEL,INE899L01030,Ujaas Energy Limited,2024-05-22,2024-05-22,demerger,,,,,,Demerger,actions/nse_2024.parquet,False
+NSE,UPL,INE628A01036,UPL Limited,2024-11-26,2024-11-26,rights,1.0,8.0,,,,Rights 1:8 @ Premium Rs 358/-,actions/nse_2024.parquet,True
+NSE,VARDMNPOLY,INE835A01011,Vardhman Polytex Limited,2024-08-28,2024-08-28,rights,7.0,23.0,,,,Rights 7:23 @ Premium Rs 5/-,actions/nse_2024.parquet,False
+NSE,VHLTD,INE048C01025,Viceroy Hotels Limited,2024-11-29,2024-11-29,rights,7.0,10.0,,,,Rights 7:10 @ Prm Rs 102/-,actions/nse_2024.parquet,False
+NSE,VIJIFIN,INE159N01019,Viji Finance Limited,2024-05-15,2024-05-15,rights,8.0,11.0,,,,Rights 8:11 @ Premium Re 0.50/-,actions/nse_2024.parquet,False
+NSE,VINNY,INE01KI01019,Vinny Overseas Limited,2024-08-14,2024-08-14,rights,1.0,1.0,,,,Rights 1:1 @ Premium Rs 1/-,actions/nse_2024.parquet,False
+NSE,VLSFINANCE,INE709A01018,VLS Finance Limited,2024-08-26,2024-08-26,buyback,,,,,,Buy Back,actions/nse_2024.parquet,False
+NSE,WEIZMANIND,INE080A01014,Weizmann Limited,2024-08-30,2024-08-30,buyback,,,,,,Buy Back,actions/nse_2024.parquet,False
+NSE,WELSPUNLIV,INE192B01031,Welspun Living Limited,2024-08-05,2024-08-05,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,ZYDUSLIFE,INE010B01027,Zydus Lifesciences Limited,2024-02-23,2024-02-23,buyback,,,,,,Buy Back,actions/nse_2024.parquet,True
+NSE,ITC,INE154A01025,ITC Limited,2025-01-06,2025-01-06,demerger,,,,,,Demerger,actions/nse_2025.parquet,True
+NSE,CAMLINFINE,INE052I01032,Camlin Fine Sciences Limited,2025-01-08,2025-01-08,rights,5.0,41.0,,,,Rights 5:41 @ Premium Rs 109/-,actions/nse_2025.parquet,True
+NSE,CALSOFT,INE526B01014,California Software Company Limited,2025-01-15,2025-01-15,rights,3.0,1.0,,,,Rights 3:1 @ Premium Rs 0/-,actions/nse_2025.parquet,False
+NSE,GLOBE,INE581X01013,GLOBE ENTERPRISES (INDIA) LIMITED,2025-01-17,2025-01-17,rights,1.0,2.0,,,,Rights 1:2 @ Premium Rs 1/-,actions/nse_2025.parquet,False
+NSE,JYOTISTRUC,INE197A01024,Jyoti Structures Limited,2025-02-10,2025-02-10,rights,9.0,26.0,,,,Rights 9:26 @ Premium Rs 14/-,actions/nse_2025.parquet,False
+NSE,THANGAMAYL,INE085J01014,Thangamayil Jewellery Limited,2025-02-11,2025-02-11,rights,2.0,15.0,,,,Rights 2:15 @ Premium Rs 1390/-,actions/nse_2025.parquet,True
+NSE,NAVA,INE725A01022,NAVA LIMITED,2025-02-28,2025-02-28,buyback,,,,,,Buy Back,actions/nse_2025.parquet,True
+NSE,KESORAMIND,INE087A01019,Kesoram Industries Limited,2025-03-10,2025-03-10,demerger,,,,,,Demerger,actions/nse_2025.parquet,True
+NSE,ABINFRA,INE00YB01017,A B Infrabuild Limited,2025-03-10,2025-03-10,rights,1.0,5.0,,,,Rights 1:5 @ Premium Rs 27.50/-,actions/nse_2025.parquet,False
+NSE,IRISDOREME,INE01GN01017,Iris Clothings Limited,2025-03-13,2025-03-13,rights,1.0,6.0,,,,Rights 1:6 @ Premium Rs 33/-,actions/nse_2025.parquet,False
+NSE,PRAXIS,INE546Y01022,Praxis Home Retail Limited,2025-03-20,2025-03-20,rights,11.0,30.0,,,,Rights 11:30 @ Premium Rs 5/-,actions/nse_2025.parquet,False
+NSE,BTML,INE0EEJ01015,Bodhi Tree Multimedia Limited,2025-03-24,2025-03-24,rights,4.0,9.0,,,,Rights 4:9 @ Premium Rs 7/-,actions/nse_2025.parquet,False
+NSE,FUSION,INE139R01012,Fusion Finance Limited,2025-04-04,2025-04-04,rights,55.0,91.0,,,,Rights 55:91 @ Premium Rs 121/-,actions/nse_2025.parquet,False
+NSE,SIEMENS,INE003A01024,Siemens Limited,2025-04-07,2025-04-07,demerger,,,,,,Demerger,actions/nse_2025.parquet,True
+NSE,QUESS,INE615P01015,Quess Corp Limited,2025-04-15,2025-04-15,demerger,,,,,,Demerger,actions/nse_2025.parquet,True
+NSE,STLTECH,INE089C01029,Sterlite Technologies Limited,2025-04-24,2025-04-24,demerger,,,,,,Demerger,actions/nse_2025.parquet,True
+NSE,LLOYDSENGG,INE093R01011,LLOYDS ENGINEERING WORKS LIMITED,2025-04-28,2025-04-28,rights,9.0,34.0,,,,Rights 9:34 @ Premium Rs 31/-,actions/nse_2025.parquet,False
+NSE,GATECHDVR,INE224E01036,GACM Technologies Limited,2025-04-28,2025-04-28,rights,51.0,82.0,,,,Rights 51:82 @ Premium Rs 0/-,actions/nse_2025.parquet,False
+NSE,GATECH,INE224E01028,GACM Technologies Limited,2025-04-28,2025-04-28,rights,51.0,82.0,,,,Rights 51:82 @ Premium Rs 0/-,actions/nse_2025.parquet,False
+NSE,MAXIND,INE0CG601016,Max India Limited,2025-04-29,2025-04-29,rights,19.0,100.0,,,,Rights 19:100 @ Premium Rs 140/-,actions/nse_2025.parquet,False
+NSE,BASML,INE186H01014,Bannari Amman Spinning Mills Limited,2025-04-30,2025-04-30,rights,10.0,43.0,,,,Rights 10:43 @ Premium Rs 22/-,actions/nse_2025.parquet,False
+NSE,AVANTEL,INE005B01027,Avantel Limited,2025-05-07,2025-05-07,rights,10.0,121.0,,,,Rights 10:121@ Premium Rs 38/-,actions/nse_2025.parquet,False
+NSE,CHEMBOND,INE995D01025,Chembond Material Technologies Limited,2025-05-09,2025-05-09,demerger,,,,,,Demerger,actions/nse_2025.parquet,False
+NSE,CPCAP,INE521J01018,CP Capital Limited,2025-05-09,2025-05-09,demerger,,,,,,Demerger,actions/nse_2025.parquet,False
+NSE,RAYMOND,INE301A01014,Raymond Limited,2025-05-14,2025-05-14,demerger,,,,,,Demerger,actions/nse_2025.parquet,True
+NSE,M&MFIN,INE774D01016,Mahindra & Mahindra Financial Services Limited,2025-05-14,2025-05-14,rights,1.0,8.0,,,,Rights 1:8 @ Premium Rs 192/-,actions/nse_2025.parquet,True
+NSE,ABFRL,INE647O01011,Aditya Birla Fashion and Retail Limited,2025-05-22,2025-05-22,demerger,,,,,,Demerger,actions/nse_2025.parquet,True
+NSE,SEPC,INE964H01014,SEPC Limited,2025-05-23,2025-05-23,rights,11.0,50.0,,,,Rights 11: 50 @ Premium Rs 0/-,actions/nse_2025.parquet,False
+NSE,MAHLIFE,INE813A01018,Mahindra Lifespace Developers Limited,2025-05-23,2025-05-23,rights,3.0,8.0,,,,Rights 3:8 @ Premium Rs 247/-,actions/nse_2025.parquet,True
+NSE,DHAMPURSUG,INE041A01016,Dhampur Sugar Mills Limited,2025-05-23,2025-05-23,buyback,,,,,,Buy Back,actions/nse_2025.parquet,False
+NSE,INFOBEAN,INE344S01016,InfoBeans Technologies Limited,2025-05-27,2025-05-27,buyback,,,,,,Buy Back,actions/nse_2025.parquet,False
+NSE,UGROCAP,INE583D01011,Ugro Capital Limited,2025-06-05,2025-06-05,rights,50.0,189.0,,,,Rights 50:189 @ Premium Rs 152/-,actions/nse_2025.parquet,False
+NSE,SIS,INE285J01010,SIS LIMITED,2025-06-06,2025-06-06,buyback,,,,,,Buy Back,actions/nse_2025.parquet,True
+NSE,KHADIM,INE834I01025,Khadim India Limited,2025-06-06,2025-06-07,demerger,,,,,,Demerger,actions/nse_2025.parquet,False
+NSE,ETHOSLTD,INE04TZ01018,Ethos Limited,2025-06-12,2025-06-12,rights,4.0,43.0,,,,Rights 4:43@ Premium Rs 1790/-,actions/nse_2025.parquet,False
+NSE,CAPTRUST,INE707C01018,Capital Trust Limited,2025-06-18,2025-06-18,rights,5.0,14.0,,,,Rights 5:14 @ Premium Rs 72/-,actions/nse_2025.parquet,False
+NSE,CCAVENUE,INE483S01020,AvenuesAI Limited,2025-06-26,2025-06-26,rights,67.0,267.0,,,,Rights 67:267 @ Premium Rs 9/-,actions/nse_2025.parquet,False
+NSE,GVPTECH,INE382T01030,GVP Infotech Limited,2025-06-30,2025-06-30,rights,13.0,100.0,,,,Rights 13:100 @ Premium Rs 8/-,actions/nse_2025.parquet,False
+NSE,MIRCELECTR,INE831A01010,MIRC Electronics Limited,2025-06-30,2025-06-30,rights,3.0,14.0,,,,Rights 3:14 @ Premium Rs 9/-,actions/nse_2025.parquet,False
+NSE,TTL,INE592B01016,T T Limited,2025-07-04,2025-07-04,rights,4.0,27.0,,,,Rights 4:27 @ Premium Rs 11/-,actions/nse_2025.parquet,False
+NSE,ASTEC,INE563J01010,Astec LifeSciences Limited,2025-07-04,2025-07-04,rights,1.0,7.0,,,,Rights 1:7 @ Premium Rs 880/-,actions/nse_2025.parquet,False
+NSE,EXICOM,INE777F01014,Exicom Tele-Systems Limited,2025-07-07,2025-07-07,rights,3.0,20.0,,,,Rights 3:20 @ Premium Rs 133/-,actions/nse_2025.parquet,False
+NSE,KILITCH,INE729D01010,Kilitch Drugs (India) Limited,2025-07-15,2025-07-15,rights,2.0,23.0,,,,Rights 2:23 @ Premium Rs 347/-,actions/nse_2025.parquet,False
+NSE,TRACXN,INE0HMF01019,Tracxn Technologies Limited,2025-07-18,2025-07-18,buyback,,,,,,Buy Back,actions/nse_2025.parquet,False
+NSE,VALIANTLAB,INE0JWS01017,Valiant Laboratories Limited,2025-07-18,2025-07-19,rights,1.0,4.0,,,,Rights 1:4 @ Premium Rs 65/-,actions/nse_2025.parquet,False
+NSE,DBREALTY,INE879I01012,Valor Estate Limited,2025-07-18,2025-07-18,demerger,,,,,,Demerger,actions/nse_2025.parquet,True
+NSE,TANLA,INE483C01032,Tanla Platforms Limited,2025-07-23,2025-07-23,buyback,,,,,,Buy Back,actions/nse_2025.parquet,True
+NSE,MAHLOG,INE766P01016,Mahindra Logistics Limited,2025-07-23,2025-07-23,rights,3.0,8.0,,,,Rights 3:8 @ Premium Rs 267/-,actions/nse_2025.parquet,True
+NSE,SPANDANA,INE572J01011,Spandana Sphoorty Financial Limited,2025-07-24,2025-07-24,rights,10.0,41.0,,,,Rights 10:41 @ Premium Rs 220/-,actions/nse_2025.parquet,True
+NSE,JTEKTINDIA,INE643A01035,Jtekt India Limited,2025-07-25,2025-07-25,rights,1.0,11.0,,,,Rights 1:11 @ Premium Rs 107.10/-,actions/nse_2025.parquet,True
+NSE,INOXWIND,INE066P01011,Inox Wind Limited,2025-07-29,2025-07-29,rights,5.0,78.0,,,,Rights 5:78 @ Premium Rs 110/-,actions/nse_2025.parquet,True
+NSE,CYBERMEDIA,INE278G01037,Cyber Media (India) Limited,2025-08-01,2025-08-01,rights,2.0,5.0,,,,Rights 2:5 @ Premium Rs 5.80/-,actions/nse_2025.parquet,False
+NSE,DAVANGERE,INE179G01011,Davangere Sugar Company Limited,2025-08-06,2025-08-06,rights,13.0,25.0,,,,Rights 13:25 @ Premium Rs 2.05/-,actions/nse_2025.parquet,False
+NSE,LLOYDSENT,INE080I01025,Lloyds Enterprises Limited,2025-08-14,2025-08-14,rights,1.0,5.0,,,,Rights 1:5 @ Premium Rs 38/-,actions/nse_2025.parquet,False
+NSE,SARVESHWAR,INE324X01018,Sarveshwar Foods Limited,2025-08-22,2025-08-22,rights,12.0,47.0,,,,Rights 12:47 @ Premium Rs 5/-,actions/nse_2025.parquet,False
+NSE,BAJAJCON,INE933K01021,Bajaj Consumer Care Limited,2025-09-04,2025-09-05,buyback,,,,,,Buy Back,actions/nse_2025.parquet,True
+NSE,NDTV,INE155G01029,New Delhi Television Limited,2025-09-12,2025-09-12,rights,3.0,4.0,,,,Rights 3:4 @ Premium Rs 78/-,actions/nse_2025.parquet,True
+NSE,SHRADHA,INE715Y01015,Shradha Realty Limited,2025-09-16,2025-09-16,rights,3.0,5.0,,,,Rights 3:5 @ Premium Rs 38/-,actions/nse_2025.parquet,False
+NSE,SHANKARA,INE274V01019,Shankara Building Products Limited,2025-09-24,2025-09-24,demerger,,,,,,Demerger,actions/nse_2025.parquet,True
+NSE,3IINFOLTD,INE748C01038,3i Infotech Limited,2025-09-26,2025-09-26,rights,2.0,9.0,,,,Rights 2:9 @ Premium Rs 7/-,actions/nse_2025.parquet,False
+NSE,CAPTRUST,INE707C01018,Capital Trust Limited,2025-10-10,2025-10-10,rights,1.0,1.0,,,,Rights 1:1 @ Premium Rs 4/-,actions/nse_2025.parquet,False
+NSE,UTKARSHBNK,INE735W01017,Utkarsh Small Finance Bank Limited,2025-10-14,2025-10-14,rights,8.0,13.0,,,,Rights 8:13 @ Premium Rs 4/-,actions/nse_2025.parquet,False
+NSE,TMPV,INE155A01022,Tata Motors Passenger Vehicles Limited,2025-10-14,2025-10-14,demerger,,,,,,Demerger,actions/nse_2025.parquet,True
+NSE,DELPHIFX,INE726L01019,DELPHI WORLD MONEY LIMITED,2025-10-14,2025-10-14,rights,23.0,49.0,,,,Rights 23:49 @ Premium Rs 181/-,actions/nse_2025.parquet,False
+NSE,SKFINDIA,INE640A01023,SKF India Limited,2025-10-15,2025-10-15,demerger,,,,,,Demerger,actions/nse_2025.parquet,True
+NSE,DALMIASUG,INE495A01022,Dalmia Bharat Sugar and Industries Limited,2025-10-31,2025-10-31,demerger,,,,,,Demerger,actions/nse_2025.parquet,False
+NSE,ALLCARGO,INE418H01029,Allcargo Logistics Limited,2025-11-12,2025-11-12,demerger,,,,,,Demerger,actions/nse_2025.parquet,True
+NSE,ATL,INE0NN701020,Allcargo Terminals Limited,2025-11-14,2025-11-14,rights,3.0,19.0,,,,Rights 3:19 @ Premium Rs 18/-,actions/nse_2025.parquet,False
+NSE,INFY,INE009A01021,Infosys Limited,2025-11-14,2025-11-14,buyback,,,,,,Buy Back,actions/nse_2025.parquet,True
+NSE,GHCL,INE539A01019,GHCL Limited,2025-11-14,2025-11-14,buyback,,,,,,Buy Back,actions/nse_2025.parquet,True
+NSE,ADANIENT,INE423A01024,Adani Enterprises Limited,2025-11-17,2025-11-17,rights,3.0,25.0,,,,Rights 3:25 @ Premium Rs 1799/-,actions/nse_2025.parquet,True
+NSE,BAIDFIN,INE020D01022,Baid Finserv Limited,2025-11-17,2025-11-17,rights,1.0,4.0,,,,Rights 1:4 @ Premium Rs 8/-,actions/nse_2025.parquet,False
+NSE,INDOWIND,INE227G01018,Indowind Energy Limited,2025-11-19,2025-11-19,rights,1.0,4.0,,,,Rights 1:4 @ Premium Rs 5.35/-,actions/nse_2025.parquet,False
+NSE,PATELENG,INE244B01030,Patel Engineering Limited,2025-12-04,2025-12-04,rights,7.0,40.0,,,,Rights 7:40 @ Premium Rs 26/-,actions/nse_2025.parquet,False
+NSE,HINDUNILVR,INE030A01027,Hindustan Unilever Limited,2025-12-05,2025-12-05,demerger,,,,,,Demerger,actions/nse_2025.parquet,True
+NSE,HCC,INE549A01026,Hindustan Construction Company Limited,2025-12-05,2025-12-05,rights,277.0,630.0,,,,Rights 277:630 @ Premium Rs 11.50/-,actions/nse_2025.parquet,True
+NSE,NURECA,INE0DSF01015,Nureca Limited,2025-12-12,2025-12-12,buyback,,,,,,Buy Back,actions/nse_2025.parquet,False
+NSE,VLSFINANCE,INE709A01018,VLS Finance Limited,2025-12-12,2025-12-12,buyback,,,,,,Buy Back,actions/nse_2025.parquet,False
+NSE,NACLIND,INE295D01020,NACL Industries Limited,2025-12-12,2025-12-12,rights,5.0,31.0,,,,Rights 5:31 @ Premium Rs 75.70/-,actions/nse_2025.parquet,False
+NSE,ECLERX,INE738I01010,eClerx Services Limited,2025-12-17,2025-12-17,buyback,,,,,,Buy Back,actions/nse_2025.parquet,True
+NSE,KRISHIVAL,INE0GGO01015,Krishival Foods Limited,2025-12-17,2025-12-17,rights,45.0,301.0,,,,Rights 45:301 @ Premium Rs 290/-,actions/nse_2025.parquet,False
+NSE,VINEETLAB,INE505Y01010,Vineet Laboratories Limited,2025-12-23,2025-12-23,rights,13.0,12.0,,,,Rights 13:12 @ Premium Rs 20/-,actions/nse_2025.parquet,False
+NSE,NECLIFE,INE023H01027,Nectar Lifesciences Limited,2025-12-24,2025-12-24,buyback,,,,,,Buy Back,actions/nse_2025.parquet,False
+NSE,DCMSRIND,INE843D01027,DCM Shriram Industries Limited,2025-12-26,2025-12-26,demerger,,,,,,Demerger,actions/nse_2025.parquet,False
+NSE,HILTON,INE788H01017,Hilton Metal Forging Limited,2025-12-26,2025-12-26,rights,14.0,29.0,,,,Rights 14:29 @ Premium Rs 18.32/-,actions/nse_2025.parquet,False
+NSE,5PAISA,INE618L01018,5Paisa Capital Limited,2026-03-17,2026-03-17,rights,1.0,2.0,,,,Rights 1:2 @ Premium Rs 290/-,actions/nse_2026.parquet,False
+NSE,AUROPHARMA,INE406A01029,Aurobindo Pharma Limited,2026-04-17,2026-04-17,buyback,,,,,,Buy Back,actions/nse_2026.parquet,True
+NSE,AVG,INE680Z01018,AVG Logistics Limited,2026-05-21,2026-05-21,rights,8.0,33.0,,,,Rights 8:33 @ Premium Rs 135/-,actions/nse_2026.parquet,False
+NSE,BAJAJ-AUTO,INE917I01010,Bajaj Auto Limited,2026-06-24,2026-06-24,buyback,,,,,,Buy Back,actions/nse_2026.parquet,True
+NSE,BHAGYANGR,INE458B01036,Bhagyanagar India Limited,2026-10-08,2026-10-08,demerger,,,,,,Demerger,actions/nse_2026.parquet,False
+NSE,BHANDARI,INE474E01029,Bhandari Hosiery Exports Limited,2026-02-25,2026-02-25,rights,4.0,5.0,,,,Rights 4:5 @ Premium Rs 1.56/-,actions/nse_2026.parquet,False
+NSE,CENTEXT,INE281A01026,Century Extrusions Limited,2026-09-15,2026-09-15,rights,3.0,8.0,,,,Rights 3:8 @ Premium Rs 14/-,actions/nse_2026.parquet,False
+NSE,CMSINFO,INE925R01014,CMS Info Systems Limited,2026-05-22,2026-05-22,buyback,,,,,,Buy Back,actions/nse_2026.parquet,False
+NSE,CYBERTECH,INE214A01019,Cybertech Systems And Software Limited,2026-05-29,2026-05-29,buyback,,,,,,Buy Back,actions/nse_2026.parquet,False
+NSE,CYIENT,INE136B01020,Cyient Limited,2026-06-17,2026-06-17,buyback,,,,,,Buy Back,actions/nse_2026.parquet,True
+NSE,DHANUKA,INE435G01025,Dhanuka Agritech Limited,2026-05-29,2026-05-29,buyback,,,,,,Buy Back,actions/nse_2026.parquet,True
+NSE,DUCON,INE741L01018,Ducon Infratechnologies Limited,2026-08-25,2026-08-25,rights,10.0,13.0,,,,Rights 10:13 @ Premium Rs 0/-,actions/nse_2026.parquet,False
+NSE,EFCIL,INE886D01026,EFC (I) Limited,2026-05-07,2026-05-07,rights,8.0,103.0,,,,Rights 8:103 @ Premium Rs 148/-,actions/nse_2026.parquet,False
+NSE,ESSENTIA,INE418N01035,Integra Essentia Limited,2026-05-20,2026-05-20,rights,161.0,250.0,,,,Rights 161:250 @ Premium Re 0.45 /-,actions/nse_2026.parquet,False
+NSE,FAIRCHEMOR,INE0DNW01011,Fairchem Organics Limited,2026-01-05,2026-01-05,buyback,,,,,,Buy Back,actions/nse_2026.parquet,False
+NSE,GANDHITUBE,INE524B01027,Gandhi Special Tubes Limited,2026-08-21,2026-08-21,buyback,,,,,,Buy Back,actions/nse_2026.parquet,False
+NSE,GANGAFORGE,INE691Z01015,Ganga Forging Limited,2026-07-02,2026-07-02,rights,3.0,2.0,,,,Rights 3:2 @ Premium Re. 0.63/-,actions/nse_2026.parquet,False
+NSE,GARFIBRES,INE276A01018,Garware Technical Fibres Limited,2026-05-20,2026-05-20,buyback,,,,,,Buy Back,actions/nse_2026.parquet,True
+NSE,GENESYS,INE727B01018,Genesys International Corporation Limited,2026-08-06,2026-08-06,rights,3.0,5.0,,,,Rights 3:5 @ Premium Rs 45/-,actions/nse_2026.parquet,False
+NSE,GENUSPOWER,INE955D01011,Genus Power Infrastructures Limited,2026-02-06,2026-02-06,demerger,,,,,,Demerger,actions/nse_2026.parquet,False
+NSE,GOCOLORS,INE0BJS01011,Go Fashion (India) Limited,2026-02-09,2026-02-09,buyback,,,,,,Buy Back,actions/nse_2026.parquet,True
+NSE,GUJENERGY,INE844O01030,GUJARAT ENERGY LIMITED,2026-07-02,2026-07-02,demerger,,,,,,Demerger,actions/nse_2026.parquet,False
+NSE,HCG,INE075I01017,Healthcare Global Enterprises Limited,2026-03-02,2026-03-02,rights,1.0,17.0,,,,Rights 1:17 @ Premium Rs 502/-,actions/nse_2026.parquet,False
+NSE,HEGAM,INE545A01024,HEG Advanced Materials Limited,2026-09-07,2026-09-07,demerger,,,,,,Demerger,actions/nse_2026.parquet,True
+NSE,HILTON,INE788H01017,Hilton Metal Forging Limited,2026-02-24,2026-02-24,rights,29.0,60.0,,,,Rights 29:60 @ Premium Rs 6.68/-,actions/nse_2026.parquet,False
+NSE,IITL,INE886A01014,Industrial Investment Trust Limited,2026-08-18,2026-08-18,buyback,,,,,,Buy Back,actions/nse_2026.parquet,False
+NSE,INDIAGLYCO,INE560A01015,India Glycols Limited,2026-09-02,2026-09-02,demerger,,,,,,Demerger,actions/nse_2026.parquet,True
+NSE,INOXGREEN,INE510W01014,Inox Green Energy Services Limited,2026-07-31,2026-08-01,demerger,,,,,,Demerger,actions/nse_2026.parquet,False
+NSE,JAGSNPHARM,INE048B01027,Jagsonpal Pharmaceuticals Limited,2026-05-04,2026-05-04,buyback,,,,,,Buy Back,actions/nse_2026.parquet,False
+NSE,JAYKAY,INE903A01025,Jaykay Enterprises Limited,2026-08-28,2026-08-28,rights,3.0,19.0,,,,Rights 3:19 @ Premium Rs 74/-,actions/nse_2026.parquet,False
+NSE,KAJARIACER,INE217B01028,Kajaria Ceramics Limited,2026-06-29,2026-06-29,buyback,,,,,,Buy Back,actions/nse_2026.parquet,True
+NSE,KMSUGAR,INE157H01023,K.M.Sugar Mills Limited,2026-10-01,2026-10-02,demerger,,,,,,Demerger,actions/nse_2026.parquet,False
+NSE,KSHITIJPOL,IN0000000000,Kshitij Polyline Limited,2026-08-19,2026-08-19,rights,2.0,5.0,,,,Rights 2:5 @ Premium Rs 1.17/-,actions/nse_2026.parquet,False
+NSE,MAHAPEXLTD,INE843B01013,Maha Rashtra Apex Corporation Limited,2026-03-20,2026-03-20,rights,1.0,1.0,,,,Rights 1:1 @ Premium Rs 0/-,actions/nse_2026.parquet,False
+NSE,MATRIMONY,INE866R01028,Matrimony.Com Limited,2026-01-30,2026-01-30,buyback,,,,,,Buy Back,actions/nse_2026.parquet,False
+NSE,NATCOPHARM,INE987B01018,Natco Pharma Limited,2026-10-01,2026-10-01,rights,2.0,21.0,,,,Rights 2:21 @ Premium Rs 748/-,actions/nse_2026.parquet,True
+NSE,OLAELEC,INE0LXG01040,Ola Electric Mobility Limited,2026-10-13,2026-10-13,rights,2.0,25.0,,,,Rights 2:25 @ Premium Rs 17/-,actions/nse_2026.parquet,True
+NSE,ONELIFECAP,INE912L01015,Onelife Capital Advisors Limited,2026-02-16,2026-02-16,rights,300.0,167.0,,,,Rights 300:167 @ Premium Rs 5/-,actions/nse_2026.parquet,False
+NSE,ONWARDTEC,INE229A01017,Onward Technologies Limited,2026-05-18,2026-05-18,buyback,,,,,,Buy Back,actions/nse_2026.parquet,False
+NSE,ORBTEXP,INE231G01010,Orbit Exports Limited,2026-07-15,2026-07-15,buyback,,,,,,Buy Back,actions/nse_2026.parquet,False
+NSE,PATINTLOG,INE529D01014,Patel Integrated Logistics Limited,2026-06-30,2026-06-30,buyback,,,,,,Buy Back,actions/nse_2026.parquet,False
+NSE,PRABHA,INE0I0M01023,Prabha Energy Limited,2026-03-11,2026-03-11,rights,5.0,14.0,,,,Rights 5:14 @ Premium Rs 143/-,actions/nse_2026.parquet,False
+NSE,PVRINOX,INE191H01014,PVR INOX Limited,2026-09-04,2026-09-04,buyback,,,,,,Buy Back,actions/nse_2026.parquet,True
+NSE,QUINT,INE641R01017,Quint Digital Limited,2026-08-25,2026-08-25,rights,,,,,,Rights - 7 Ccps And 7 Warrants:40,actions/nse_2026.parquet,False
+NSE,RATNAVEER,INE05CZ01011,Ratnaveer Precision Engineering Limited,2026-08-25,2026-08-26,rights,7.0,40.0,,,,Rights 7:40 @ Premium Rs 254/-,actions/nse_2026.parquet,False
+NSE,RELTD,INE206N01018,Ravindra Energy Limited,2026-06-08,2026-06-08,rights,1.0,9.0,,,,Rights 1:9 @ Premium 91,actions/nse_2026.parquet,False
+NSE,ROLEXRINGS,INE645S01016,Rolex Rings Limited,2026-07-03,2026-07-03,buyback,,,,,,Buy Back,actions/nse_2026.parquet,False
+NSE,SADHNANIQ,INE888C01040,Sadhana Nitrochem Limited,2026-02-18,2026-02-19,rights,8.0,1.0,,,,Rights 8:1 @ Premium Rs 0/-,actions/nse_2026.parquet,False
+NSE,SARLAPOLY,INE453D01017,Sarla Performance Fibers Limited,2026-05-15,2026-05-15,buyback,,,,,,Buy Back,actions/nse_2026.parquet,False
+NSE,SHAH,INE482J01021,Shah Metacorp Limited,2026-05-27,2026-05-27,rights,36.0,311.0,,,,Rights 36:311 @ Premium Rs 3.86,actions/nse_2026.parquet,False
+NSE,SHANTIGOLD,INE06ZD01017,Shanti Gold International Limited,2026-08-06,2026-08-06,rights,19.0,295.0,,,,Rights 19:295 @ Premium Rs 205/-,actions/nse_2026.parquet,False
+NSE,SHARDUL,INE037B01020,Shardul Securities Limited,2026-10-08,2026-10-08,buyback,,,,,,Buy Back,actions/nse_2026.parquet,False
+NSE,SICALLOG,INE075B01020,Sical Logistics Limited,2026-02-18,2026-02-18,rights,11.0,5.0,,,,Rights 11:5 @ Premium Rs 54/-,actions/nse_2026.parquet,False
+NSE,SILGO,INE01II01013,Silgo Retail Limited,2026-01-05,2026-01-05,rights,3.0,10.0,,,,Rights 3:10 @ Premium Rs 50/-,actions/nse_2026.parquet,False
+NSE,STALLION,INE0RYC01010,Stallion India Fluorochemicals Limited,2026-02-11,2026-02-11,rights,19.0,41.0,,,,Rights 19:41 @ Premium Rs 89/-,actions/nse_2026.parquet,False
+NSE,SUMEETINDS,INE235C01010,Sumeet Industries Limited,2026-06-12,2026-06-12,rights,8.0,25.0,,,,Rights 8:25 @ Premium Rs 9.86/-,actions/nse_2026.parquet,False
+NSE,TCI,INE688A01022,Transport Corporation of India Limited,2026-10-09,2026-10-09,buyback,,,,,,Buy Back,actions/nse_2026.parquet,True
+NSE,TEAMLEASE,INE985S01024,Teamlease Services Limited,2026-07-03,2026-07-03,buyback,,,,,,Buy Back,actions/nse_2026.parquet,True
+NSE,TIL,INE806C01018,TIL Limited,2026-03-23,2026-03-23,rights,11.0,64.0,,,,Rights 11:64 @ Premium Rs 155/-,actions/nse_2026.parquet,False
+NSE,TRIVENI,INE256C01024,Triveni Engineering & Industries Limited,2026-07-22,2026-07-22,demerger,,,,,,Demerger,actions/nse_2026.parquet,True
+NSE,VEDL,INE205A01025,Vedanta Limited,2026-04-30,2026-05-01,demerger,,,,,,Demerger,actions/nse_2026.parquet,True
+NSE,VERANDA,INE0IQ001011,Veranda Learning Solutions Limited,2026-10-06,2026-10-06,demerger,,,,,,Demerger,actions/nse_2026.parquet,False
+NSE,VHLTD,INE048C01025,Viceroy Hotels Limited,2026-08-20,2026-08-20,rights,6.0,7.0,,,,Rights 6:7 @ Premium Rs 105/-,actions/nse_2026.parquet,False
+NSE,WELSPUNLIV,INE192B01031,Welspun Living Limited,2026-05-22,2026-05-22,buyback,,,,,,Buy Back,actions/nse_2026.parquet,True
+NSE,WINDLAS,INE0H5O01029,Windlas Biotech Limited,2026-04-24,2026-04-24,buyback,,,,,,Buy Back,actions/nse_2026.parquet,False
+NSE,WIPRO,INE075A01022,Wipro Limited,2026-06-05,2026-06-05,buyback,,,,,,Buy Back,actions/nse_2026.parquet,True
+NSE,ZYDUSLIFE,INE010B01027,Zydus Lifesciences Limited,2026-05-29,2026-05-29,buyback,,,,,,Buy Back,actions/nse_2026.parquet,True
