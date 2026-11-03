@@ -848,9 +848,9 @@ def main(argv=None):
     index = index.reindex(comparison_sessions)
     tri.index = normalise_session_index(tri.index)
     missing_tri = comparison_sessions.difference(tri.index)
-    extra_tri = tri.index.difference(comparison_sessions)
-    if len(missing_tri) or len(extra_tri):
-        raise RuntimeError(f"NIFTY 500 TRI session mismatch: missing={len(missing_tri)}, extra={len(extra_tri)}")
+    if len(missing_tri):
+        raise RuntimeError(f"NIFTY 500 TRI is missing {len(missing_tri)} comparison sessions: {missing_tri.strftime('%Y-%m-%d').tolist()[:8]}")
+    # Extra TRI observations on official sessions excluded for zero stock coverage are intentionally dropped.
     tri = tri.reindex(comparison_sessions)
     corr = cross_check_benchmark(bench, index)
     source_metadata.update({
