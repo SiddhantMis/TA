@@ -203,18 +203,18 @@ def simulate_sample(snapshot, calendar, frames, tri, sample_id, actions):
                     & actions["ex_date"].gt(signal_date)
                     & actions["ex_date"].le(exit_date)
                 ).any())
-            row[f"${label}_exit_date"] = exit_date.date().isoformat()
-            row[f"${label}_exit_close_adjusted"] = exit_close
-            row[f"${label}_unsupported_action_during_hold"] = has_unsupported_event
+            row[f"{label}_exit_date"] = exit_date.date().isoformat()
+            row[f"{label}_exit_close_adjusted"] = exit_close
+            row[f"{label}_unsupported_action_during_hold"] = has_unsupported_event
             if entry and exit_close and not has_unsupported_event:
-                row[f"${label}_gross_return_pct"] = (exit_close / entry - 1) * 100
+                row[f"{label}_gross_return_pct"] = (exit_close / entry - 1) * 100
                 net_factor = (exit_close / entry) * (1 - ROUND_TRIP_COST / 2) / (1 + ROUND_TRIP_COST / 2)
-                row[f"${label}_net_return_pct"] = (net_factor - 1) * 100
-                row[f"${label}_return_status"] = "ok"
+                row[f"{label}_net_return_pct"] = (net_factor - 1) * 100
+                row[f"{label}_return_status"] = "ok"
             else:
-                row[f"${label}_gross_return_pct"] = None
-                row[f"${label}_net_return_pct"] = None
-                row[f"${label}_return_status"] = (
+                row[f"{label}_gross_return_pct"] = None
+                row[f"{label}_net_return_pct"] = None
+                row[f"{label}_return_status"] = (
                     "unsupported_corporate_action_during_hold" if has_unsupported_event
                     else "missing_entry_or_exit_price"
                 )
@@ -228,7 +228,7 @@ def simulate_sample(snapshot, calendar, frames, tri, sample_id, actions):
             ) * 100
         except (KeyError, TypeError, ValueError):
             benchmark_return = None
-        vals = [row[f"${label}_net_return_pct"] for row in stock_rows]
+        vals = [row[f"{label}_net_return_pct"] for row in stock_rows]
         complete = len(vals) == PORTFOLIO_SIZE and all(value is not None for value in vals)
         raw_basket = float(np.mean(vals)) if complete else None
         investable = raw_basket if snapshot["market_regime"] == "BULL" else 0.0
@@ -248,8 +248,8 @@ def simulate_sample(snapshot, calendar, frames, tri, sample_id, actions):
                 investable > benchmark_return if complete and benchmark_return is not None else None
             ),
             "missing_tickers": ",".join(
-                row["ticker"] + ":" + row[f"${label}_return_status"]
-                for row in stock_rows if row[f"${label}_net_return_pct"] is None
+                row["ticker"] + ":" + row[f"{label}_return_status"]
+                for row in stock_rows if row[f"{label}_net_return_pct"] is None
             ),
         })
     return stock_rows, returns
