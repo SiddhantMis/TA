@@ -12,7 +12,8 @@ class TestActionQuarantine(unittest.TestCase):
         data=pd.DataFrame([{"symbol":"AAA","ex_date":idx[270],"type":"demerger"}])
         with tempfile.TemporaryDirectory() as tmp:
             with patch("huggingface_hub.hf_hub_download",return_value=str(Path(tmp)/"actions.parquet")):
-                with patch("pandas.read_parquet",return_value=data):
+                empty = pd.DataFrame(columns=["symbol","ex_date","type"])
+                with patch("pandas.read_parquet",side_effect=[data,empty]):
                     out,audit,quarantine=load_and_apply_action_quarantine({"AAA.NS":frame},idx[0],idx[-1],tmp,"fixture")
         self.assertEqual(len(out["AAA.NS"]),30)
         self.assertFalse(bool(quarantine.iloc[0]["eligible_after_253_sessions"]))
