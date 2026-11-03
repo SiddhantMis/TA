@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from point_in_time_simulation import score_snapshot, simulate_sample
+from point_in_time_simulation import choose_sample_positions, score_snapshot, simulate_sample
 
 
 class PointInTimeSimulationTests(unittest.TestCase):
@@ -85,6 +85,14 @@ class PointInTimeSimulationTests(unittest.TestCase):
         self.assertEqual(first["3M_return_status"], "unsupported_corporate_action_during_hold")
         self.assertTrue(returns[0]["complete_stock_prices"])
         self.assertFalse(returns[1]["complete_stock_prices"])
+
+    def test_random_samples_are_reproducible_and_six_month_windows_do_not_overlap(self):
+        eligible = np.arange(300, 1800)
+        first = choose_sample_positions(eligible, sample_count=5, seed=42)
+        second = choose_sample_positions(eligible, sample_count=5, seed=42)
+        self.assertEqual(first.tolist(), second.tolist())
+        self.assertEqual(len(first), 5)
+        self.assertTrue(all((right - left) >= 127 for left, right in zip(first, first[1:])))
 
 
 if __name__ == "__main__":
