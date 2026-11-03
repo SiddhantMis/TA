@@ -49,6 +49,8 @@ from nse_benchmark import (
     merge_niftybees_sources,
 )
 from tejhq_data import load_niftybees_raw_frame
+from niftyindices_tri import load_nifty500_tri_history
+from corporate_action_audit import load_and_apply_action_quarantine
 import pattern_lab as PL
 from nifty500_pit import (
     DEFAULT_MEMBERSHIP_FILE, EXPECTED_INDEX_SIZE, MEMBERSHIP_COVERAGE_THROUGH,
@@ -95,7 +97,9 @@ def prepare(frames: dict, bench_df: pd.DataFrame, liquid_top: int = LIQUID_TOP,
     # to the Nifty 500 members on that exact signal date.
     liquid = tv.where(pit_mask).rank(axis=1, ascending=False) <= liquid_top
     mom = C.shift(21) / C.shift(252) - 1
-    valid = C.notna() & sma200.notna() & mom.notna() & pit_mask
+    # Require 253 consecutive observed sessions; never pad new listings or post-event history.
+    observed_253 = C.notna().rolling(253, min_periods=253).sum().eq(253)
+    valid = C.notna() & observed_253 & sma200.notna() & mom.notna() & pit_mask
     elig = valid & liquid & (C > sma200)
     rank = mom.where(elig).rank(axis=1, ascending=False, method="first")
 
@@ -482,6 +486,7 @@ def build_comparison_sessions(nse_sessions, session_audit: pd.DataFrame):
 
 def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30,
               index_df: pd.DataFrame | None = None,
+              tri_df: pd.DataFrame | None = None,
               membership_df: pd.DataFrame | None = None,
               membership_path: str = DEFAULT_MEMBERSHIP_FILE,
               loader_diagnostics: dict | None = None,
@@ -499,6 +504,9 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
         validate_benchmark(index_df, "NIFTY 50 price index")
         if index_df is not None else None
     )
+    tri_quality = validate_benchmark(tri_df, "NIFTY 500 Total Return Index") if tri_df is not None else None
+    if tri_df is not None and not tri_df.index.equals(bench_df.index):
+        raise RuntimeError("NIFTY 500 TRI sessions do not match the strategy comparison calendar")
     P = prepare(frames, bench_df, index_df=index_df,
                 membership_df=membership_df, membership_path=membership_path)
     idx = P["idx"]
@@ -531,6 +539,10 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
         ic = P["index_close"]
         index_eq = np.full(n, np.nan); index_eq[START:] = ic[START:] / ic[START]
         series["NIFTY50_price_index"] = index_eq
+    if tri_df is not None:
+        tri_close = pd.to_numeric(tri_df["Close"], errors="coerce").to_numpy(float)
+        tri_eq = np.full(n, np.nan); tri_eq[START:] = tri_close[START:] / tri_close[START]
+        series["NIFTY500_TRI_buyhold"] = tri_eq
     spans = {"FULL": (START, n - 1), "IS": (START, split), "OOS": (split, n - 1)}
     M = {(k, p): metrics(e, a, b) for k, e in series.items() for p, (a, b) in spans.items()}
     d0, d1, ds = idx[START].date(), idx[-1].date(), idx[split].date()
@@ -740,6 +752,9 @@ def main(argv=None):
     )
     source_metadata = loader_diagnostics.pop("_source", {})
     symbol_audit = loader_diagnostics.pop("_symbol_audit", [])
+    frames, corporate_action_audit, action_quarantine = load_and_apply_action_quarantine(
+        frames, start_date, end_date, revision=source_metadata.get("dataset_revision")
+    )
     if not frames:
         sys.exit(f"no stock histories loaded from {a.data_source}")
 
@@ -748,6 +763,7 @@ def main(argv=None):
         cache_dir="data_cache/tejhq_parquet", refresh=a.refresh,
         revision=source_metadata.get("dataset_revision"),
     )
+    tri = load_nifty500_tri_history(start_date, end_date)
     index_sessions = normalise_session_index(index.index)
     official_sessions = build_nse_session_calendar(
         start_date, end_date, index_sessions=index_sessions,
@@ -830,10 +846,20 @@ def main(argv=None):
     bench = bench.reindex(comparison_sessions)
     index.index = normalise_session_index(index.index)
     index = index.reindex(comparison_sessions)
+    tri.index = normalise_session_index(tri.index)
+    missing_tri = comparison_sessions.difference(tri.index)
+    extra_tri = tri.index.difference(comparison_sessions)
+    if len(missing_tri) or len(extra_tri):
+        raise RuntimeError(f"NIFTY 500 TRI session mismatch: missing={len(missing_tri)}, extra={len(extra_tri)}")
+    tri = tri.reindex(comparison_sessions)
     corr = cross_check_benchmark(bench, index)
     source_metadata.update({
         "benchmark_source": "NSE NextApi raw NIFTYBEES OHLC, supplemented only by TejHQ raw NSE bhavcopy bars on validated NSE-calendar sessions absent from NextApi; common dates reconciled",
-        "benchmark_adjustment_scope": "10:1 face-value split only; no dividend adjustment applied to the ETF",
+        "benchmark_adjustment_scope": "NIFTYBEES split-adjusted for live regime filter; official NIFTY 500 TRI is performance benchmark",
+        "nifty500_tri_source": "NSE Indices historical Total Returns Index Values endpoint",
+        "nifty500_tri_bars": int(len(tri)),
+        "unsupported_action_events": int(len(corporate_action_audit)),
+        "symbols_quarantined_after_unsupported_actions": int(len(action_quarantine)),
         **{f"benchmark_{key}": value for key, value in benchmark_reconciliation.items()},
         "session_calendar_source": "pandas_market_calendars==5.6.0 NSE holiday calendar + observed NIFTY 50 index sessions + NSE Circular MSD/60677 (2024-03-02)",
         "session_calendar_start": calendar_start.date().isoformat(),
@@ -854,7 +880,7 @@ def main(argv=None):
     })
     audit_outputs = {}
     _, text = run_rules(
-        frames, bench, a.oos_frac, a.cost_pct, index_df=index,
+        frames, bench, a.oos_frac, a.cost_pct, index_df=index, tri_df=tri,
         membership_df=membership, loader_diagnostics=loader_diagnostics,
         audit_outputs=audit_outputs, source_metadata=source_metadata,
     )
@@ -880,6 +906,10 @@ def main(argv=None):
     audit_outputs["pit_session_calendar_audit"] = session_audit
     for audit_name, audit_frame in audit_outputs.items():
         audit_frame.to_csv(os.path.join(a.outdir, f"{audit_name}.csv"), index=False)
+    if not corporate_action_audit.empty:
+        corporate_action_audit.to_csv(os.path.join(a.outdir, "corporate_action_audit.csv"), index=False)
+    if not action_quarantine.empty:
+        action_quarantine.to_csv(os.path.join(a.outdir, "corporate_action_quarantine.csv"), index=False)
     if symbol_audit:
         pd.DataFrame(symbol_audit).to_csv(
             os.path.join(a.outdir, "tejhq_symbol_continuity_audit.csv"), index=False
