@@ -240,6 +240,20 @@ def simulate_sample(snapshot, calendar, frames, tri, sample_id):
     return stock_rows, returns
 
 
+def markdown_table(frame):
+    """Render a small dependency-free Markdown table."""
+    if frame.empty:
+        return "_No rows._"
+    columns = list(frame.columns)
+    rows = frame.fillna("").astype(str).values.tolist()
+    def clean(value):
+        return str(value).replace("|", "\\|").replace("\\n", " ")
+    header = "| " + " | ".join(clean(x) for x in columns) + " |"
+    divider = "| " + " | ".join("---" for _ in columns) + " |"
+    body = ["| " + " | ".join(clean(x) for x in row) + " |" for row in rows]
+    return "\\n".join([header, divider, *body])
+
+
 def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simulation"):
     from tejhq_data import get_dataset_revision
 
@@ -313,9 +327,9 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
         "- Benchmark comparison uses NIFTY 500 TRI close on signal date through each exit close; stock entries occur next-session open, so the benchmark window includes the signal-close-to-entry-open overnight interval",
         "",
         "## Sample dates", "",
-        pd.DataFrame(samples).to_markdown(index=False), "",
+        markdown_table(pd.DataFrame(samples)), "",
         "## Returns", "",
-        pd.DataFrame(return_results).to_markdown(index=False), "",
+        markdown_table(pd.DataFrame(return_results)), "",
         "## Interpretation notes", "",
         "Five observations are diagnostic case studies, not statistically sufficient evidence of strategy edge. Inspect the full stock-level file, including missing-price flags, before drawing conclusions.",
         "The price provider does not fully adjust mergers, demergers, rights issues or buybacks. The simulation applies a point-in-time 253-session reset after the latest such event known at each signal date.",
