@@ -921,14 +921,17 @@ def main(argv=None):
     source_note = (
         f"Stock universe: TejHQ adjusted NSE OHLC (dataset revision {source_metadata.get('dataset_revision', 'unknown')}), "
         "back-adjusted for splits, bonuses and dividends; raw exchange volume/turnover retained; "
-        "mergers/demergers/rights/buybacks are not scaled. "
+        "mergers/demergers/rights/buybacks are not scaled; these and unclassified actions are audited and the affected symbol lookback is reset. "
+        "Performance benchmark: official NSE Indices NIFTY 500 gross TRI with dividends reinvested. NIFTYBEES remains the live regime filter and secondary price comparison. "
+        "New listings and post-event histories are ineligible until 253 consecutive observed sessions exist. "
+        "Corporate-action event details and reset decisions are in corporate_action_audit.csv and corporate_action_quarantine.csv. "
         "Benchmark: NSE NextApi raw NIFTYBEES OHLC, supplemented only with TejHQ raw NSE bhavcopy bars on validated NSE-calendar sessions absent from NextApi, split-adjusted for the 10:1 face-value split "
         "effective 2019-12-19 and cross-checked against TejHQ raw bars on common dates; the ETF is not dividend-adjusted. "
         "Session calendar: pandas_market_calendars==5.6.0 NSE holiday schedule, observed official NIFTY 50 index sessions, and the documented NSE special session on 2024-03-02 (Circular MSD/60677). "
         f"The full calendar has {len(official_sessions)} sessions; all strategy and benchmark series use the same {len(comparison_sessions)} comparison sessions. "
         f"Excluded {len(excluded_zero_stock_sessions)} official sessions with zero stock bars across the loaded universe: {', '.join(excluded_zero_stock_sessions.strftime('%Y-%m-%d')) or 'none'}. "
         "The complete calendar and exclusion flags remain in pit_session_calendar_audit.csv. "
-        "The comparison fails closed on any missing NIFTYBEES or NIFTY 50 bar on an included session; no benchmark prices are synthesized. "
+        "The comparison fails closed on any missing NIFTYBEES, NIFTY 50 or NIFTY 500 TRI bar on an included session; no benchmark prices are synthesized. "
         "Missing stock opens, eligibility and returns are never forward-filled; close carry-forward is used only to mark existing holdings to market.\n"
     )
     text = source_note + f"Daily-return correlation split-adjusted NIFTYBEES vs official NSE NIFTY 50: {corr:.3f}\n" + text
