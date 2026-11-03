@@ -268,6 +268,23 @@ def markdown_table(frame):
     return "\n".join([header, divider, *body])
 
 
+def choose_sample_positions(eligible_positions, sample_count=5, seed=DEFAULT_SEED, min_gap=127):
+    """Randomly sample dates while keeping 6-month forward windows non-overlapping."""
+    candidates = np.asarray(eligible_positions, dtype=int).copy()
+    np.random.default_rng(seed).shuffle(candidates)
+    selected = []
+    for position in candidates:
+        if all(abs(int(position) - prior) >= min_gap for prior in selected):
+            selected.append(int(position))
+        if len(selected) == sample_count:
+            break
+    if len(selected) != sample_count:
+        raise ValueError(
+            f"Could not choose {sample_count} dates with a minimum {min_gap}-session gap"
+        )
+    return np.asarray(sorted(selected), dtype=int)
+
+
 def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simulation"):
     from tejhq_data import get_dataset_revision
 
@@ -302,8 +319,7 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
     eligible_positions = np.arange(post_covid_position, len(calendar) - 126)
     if len(eligible_positions) < sample_count:
         raise RuntimeError("Not enough post-COVID sessions with full 6-month forward coverage")
-    rng = np.random.default_rng(seed)
-    selected_positions = np.sort(rng.choice(eligible_positions, size=sample_count, replace=False))
+    selected_positions = choose_sample_positions(eligible_positions, sample_count, seed)
     samples, stock_results, return_results = [], [], []
     for number, position in enumerate(selected_positions, 1):
         as_of = calendar[position]
@@ -330,7 +346,7 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
     pd.DataFrame(return_results).to_csv(out / "portfolio_returns.csv", index=False)
     report = [
         "# Five-date point-in-time momentum simulation", "",
-        f"- Random seed: {seed}",
+        f"- Random seed: {seed}; minimum 127-session spacing between sampled dates to avoid overlapping 6-month holding windows",
         f"- Sampling window: {POST_COVID_START} through dates with a full 126-session follow-up",
         "- Universe: actual NIFTY 500 members on each signal date",
         "- Ranking: top 200 by 126-session average traded value, then top 20 by 12–1 relative strength among stocks above their 200-DMA",
