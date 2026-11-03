@@ -112,9 +112,9 @@ def score_snapshot(as_of, symbols, frames, benchmark, actions):
             frame = frame.loc[pd.DatetimeIndex(frame.index).tz_localize(None) >= event_date]
         close = _series(frame, "Close", sessions)
         volume = _series(frame, "Volume", sessions)
-        open_ = _series(frame, "Open", sessions)
+        raw_close = _series(frame, "RawClose", sessions)
         high = _series(frame, "High", sessions)
-        if close.isna().any() or volume.isna().any() or (close <= 0).any():
+        if close.isna().any() or volume.isna().any() or raw_close.isna().any() or (close <= 0).any() or (raw_close <= 0).any():
             excluded.append({"symbol": symbol, "reason": "not_253_consecutive_observed_sessions"})
             continue
         if signal_date not in frame.index:
