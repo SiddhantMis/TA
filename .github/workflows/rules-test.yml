@@ -34,6 +34,8 @@ jobs:
       - run: python test_patterns.py
       - run: python test_pit_membership.py
       - run: python test_tejhq_data.py
+      - run: python test_niftyindices_tri.py
+      - run: python test_corporate_action_audit.py
       - run: python test_portfolio_data_quality.py
       - run: python -m py_compile portfolio_rules.py nifty500_pit.py pattern_lab.py portfolio.py tejhq_data.py
       - name: Run NSE benchmark validation
@@ -62,13 +64,15 @@ jobs:
             results/tejhq_source_metadata.md
             results/tejhq_symbol_continuity_audit.csv
             results/pit_session_calendar_audit.csv
+            results/corporate_action_audit.csv
+            results/corporate_action_quarantine.csv
           if-no-files-found: warn
           retention-days: 30
       - name: Commit report back to the branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f results/bench_check.md results/portfolio_rules_report.md results/pit_price_history_audit.csv results/pit_daily_coverage_audit.csv results/pit_tejhq_coverage_audit.csv results/pit_tejhq_initial_coverage_probe.csv results/tejhq_source_metadata.md results/tejhq_symbol_continuity_audit.csv results/pit_session_calendar_audit.csv
+          git add -f results/corporate_action_audit.csv results/corporate_action_quarantine.csv results/bench_check.md results/portfolio_rules_report.md results/pit_price_history_audit.csv results/pit_daily_coverage_audit.csv results/pit_tejhq_coverage_audit.csv results/pit_tejhq_initial_coverage_probe.csv results/tejhq_source_metadata.md results/tejhq_symbol_continuity_audit.csv results/pit_session_calendar_audit.csv
           if git diff --cached --quiet; then
             echo "No generated report changes."
             exit 0
