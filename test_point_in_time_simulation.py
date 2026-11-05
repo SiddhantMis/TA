@@ -140,6 +140,7 @@ class PointInTimeSimulationTests(unittest.TestCase):
         one = returns[0]
         cost = (1 - 0.003 / 2) / (1 + 0.003 / 2)
         self.assertAlmostEqual(one["nifty500_tri_return_pct"], 10.0)                              # includes the overnight gap
+        self.assertAlmostEqual(one["niftybees_overnight_pct"], 2.0)                                # the gap used for the alignment is reported
         self.assertAlmostEqual(one["nifty500_tri_entry_aligned_return_pct"], (110 / (100 * 51 / 50) - 1) * 100)
         self.assertAlmostEqual(one["niftybees_entry_to_exit_net_return_pct"], ((53.55 / 51) * cost - 1) * 100)
         stock_net = (1.10 * cost - 1) * 100                                                      # 9.67%: beats 7.84% (aligned) but not 10.0% (unaligned)

@@ -256,8 +256,10 @@ def simulate_sample(snapshot, calendar, frames, tri, sample_id, actions, bees=No
         benchmark_return = (tri_exit / tri_signal - 1) * 100 if tri_signal and tri_exit else None
         # (2) entry-aligned TRI: the TRI level at the entry OPEN is the signal close moved by NIFTYBEES' overnight change.
         aligned_return = bees_net_return = None
-        if bees is not None and tri_signal and tri_exit:
+        b_close_signal = b_open_entry = None
+        if bees is not None:
             b_close_signal, b_open_entry = _level(bees, signal_date, "Close"), _level(bees, entry_date, "Open")
+        if bees is not None and tri_signal and tri_exit:
             b_close_exit = _level(bees, exit_date, "Close")
             if b_close_signal and b_open_entry:
                 aligned_return = (tri_exit / (tri_signal * b_open_entry / b_close_signal) - 1) * 100
@@ -288,6 +290,9 @@ def simulate_sample(snapshot, calendar, frames, tri, sample_id, actions, bees=No
             "raw_top20_equal_weight_net_return_pct": raw_basket,
             "market_filter_portfolio_net_return_pct": filtered,
             "nifty500_tri_return_pct": benchmark_return,
+            "niftybees_signal_close": b_close_signal,
+            "niftybees_entry_open": b_open_entry,
+            "niftybees_overnight_pct": (b_open_entry / b_close_signal - 1) * 100 if b_close_signal and b_open_entry else None,
             "nifty500_tri_entry_aligned_return_pct": aligned_return,
             "niftybees_entry_to_exit_net_return_pct": bees_net_return,
             "market_filter_outperformed_tri": (
