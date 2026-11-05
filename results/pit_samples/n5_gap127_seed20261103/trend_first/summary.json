@@ -1,0 +1,210 @@
+{
+  "benchmark_column": "nifty500_tri_entry_aligned_return_pct",
+  "min_gap_sessions": 127,
+  "horizons": {
+    "1M": {
+      "samples": 5,
+      "complete_samples": 5,
+      "incomplete_samples": 0,
+      "effective_independent_samples": 5.0,
+      "bootstrap_block": 1,
+      "stock_return_status_counts": {
+        "ok": 100
+      },
+      "raw": {
+        "mean": 6.255756305159055,
+        "median": 6.888490089245487,
+        "std": 15.005671086134994,
+        "min": -12.269868828186548,
+        "max": 27.972658415897655,
+        "win_rate_pct": 60.0
+      },
+      "market_filter": {
+        "mean": 3.115198387616833,
+        "median": 0.0,
+        "std": 5.35750615595332,
+        "min": -1.907095175067609,
+        "max": 10.59459702390629,
+        "win_rate_pct": 40.0
+      },
+      "benchmark": {
+        "mean": 3.795251513406126,
+        "median": 0.46848328695006103,
+        "std": 10.038409636341546,
+        "min": -5.537146056409547,
+        "max": 20.5533786468725,
+        "win_rate_pct": 60.0
+      },
+      "raw_beats_benchmark_pct": 60.0,
+      "filter_beats_benchmark_pct": 60.0,
+      "mean_excess_raw": 2.4605047917529292,
+      "mean_excess_filter": -0.6800531257892922,
+      "median_excess_raw": 6.0486410217382405,
+      "median_excess_filter": 5.537146056409547,
+      "ci95_mean_excess_raw": [
+        null,
+        null
+      ],
+      "ci95_mean_excess_filter": [
+        null,
+        null
+      ],
+      "by_regime": {
+        "BULL": {
+          "n": 3,
+          "raw_mean": 5.191997312694722,
+          "raw_median": 6.888490089245487,
+          "filter_mean": 5.191997312694722,
+          "benchmark_mean": 1.3200083255225592,
+          "raw_beats_pct": 66.66666666666666,
+          "filter_beats_pct": 66.66666666666666
+        },
+        "BEAR": {
+          "n": 2,
+          "raw_mean": 7.851394793855554,
+          "raw_median": 7.851394793855554,
+          "filter_mean": 0.0,
+          "benchmark_mean": 7.508116295231476,
+          "raw_beats_pct": 50.0,
+          "filter_beats_pct": 50.0
+        }
+      }
+    },
+    "3M": {
+      "samples": 5,
+      "complete_samples": 5,
+      "incomplete_samples": 0,
+      "effective_independent_samples": 5.0,
+      "bootstrap_block": 1,
+      "stock_return_status_counts": {
+        "ok": 100
+      },
+      "raw": {
+        "mean": 12.063994720988084,
+        "median": 4.767696940324558,
+        "std": 17.86597163741465,
+        "min": 0.09531964816901901,
+        "max": 43.23256357425348,
+        "win_rate_pct": 100.0
+      },
+      "market_filter": {
+        "mean": 3.398418076503586,
+        "median": 1.755641736420485,
+        "std": 4.406295132677585,
+        "min": 0.0,
+        "max": 10.468751705772885,
+        "win_rate_pct": 60.0
+      },
+      "benchmark": {
+        "mean": 10.462532779753902,
+        "median": 7.705991856908323,
+        "std": 13.449030409063495,
+        "min": -1.3354627119904983,
+        "max": 33.53427875023076,
+        "win_rate_pct": 80.0
+      },
+      "raw_beats_benchmark_pct": 40.0,
+      "filter_beats_benchmark_pct": 20.0,
+      "mean_excess_raw": 1.6014619412341866,
+      "mean_excess_filter": -7.064114703250314,
+      "median_excess_raw": -2.4311634558597666,
+      "median_excess_filter": -3.453353871016099,
+      "ci95_mean_excess_raw": [
+        null,
+        null
+      ],
+      "ci95_mean_excess_filter": [
+        null,
+        null
+      ],
+      "by_regime": {
+        "BULL": {
+          "n": 3,
+          "raw_mean": 5.664030127505977,
+          "raw_median": 4.767696940324558,
+          "filter_mean": 5.664030127505977,
+          "benchmark_mean": 3.6907977638768035,
+          "raw_beats_pct": 33.33333333333333,
+          "filter_beats_pct": 33.33333333333333
+        },
+        "BEAR": {
+          "n": 2,
+          "raw_mean": 21.66394161121125,
+          "raw_median": 21.66394161121125,
+          "filter_mean": 0.0,
+          "benchmark_mean": 20.62013530356954,
+          "raw_beats_pct": 50.0,
+          "filter_beats_pct": 0.0
+        }
+      }
+    },
+    "6M": {
+      "samples": 5,
+      "complete_samples": 5,
+      "incomplete_samples": 0,
+      "effective_independent_samples": 5.0,
+      "bootstrap_block": 1,
+      "stock_return_status_counts": {
+        "ok": 100
+      },
+      "raw": {
+        "mean": 15.944595216150313,
+        "median": 3.689846098482154,
+        "std": 32.16023026798256,
+        "min": -7.905564641689324,
+        "max": 72.13977209097521,
+        "win_rate_pct": 80.0
+      },
+      "market_filter": {
+        "mean": 0.7786715782588406,
+        "median": 0.0,
+        "std": 6.846146687933176,
+        "min": -7.905564641689324,
+        "max": 11.303409186815038,
+        "win_rate_pct": 40.0
+      },
+      "benchmark": {
+        "mean": 10.60080745251851,
+        "median": 3.6924865745639135,
+        "std": 18.413332701717835,
+        "min": -5.609149601159958,
+        "max": 41.206465158046335,
+        "win_rate_pct": 80.0
+      },
+      "raw_beats_benchmark_pct": 40.0,
+      "filter_beats_benchmark_pct": 20.0,
+      "mean_excess_raw": 5.343787763631805,
+      "mean_excess_filter": -9.822135874259668,
+      "median_excess_raw": -3.1969732283954255,
+      "median_excess_filter": -8.399547438354361,
+      "ci95_mean_excess_raw": [
+        null,
+        null
+      ],
+      "ci95_mean_excess_filter": [
+        null,
+        null
+      ],
+      "by_regime": {
+        "BULL": {
+          "n": 3,
+          "raw_mean": 1.2977859637647342,
+          "raw_median": 0.4955133461684881,
+          "filter_mean": 1.2977859637647342,
+          "benchmark_mean": -0.4742267433103355,
+          "raw_beats_pct": 33.33333333333333,
+          "filter_beats_pct": 33.33333333333333
+        },
+        "BEAR": {
+          "n": 2,
+          "raw_mean": 37.91480909472868,
+          "raw_median": 37.91480909472868,
+          "filter_mean": 0.0,
+          "benchmark_mean": 27.213358746261775,
+          "raw_beats_pct": 50.0,
+          "filter_beats_pct": 0.0
+        }
+      }
+    }
+  }
+}
