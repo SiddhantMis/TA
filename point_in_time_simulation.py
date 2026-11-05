@@ -80,8 +80,17 @@ def _series(frame, column, sessions):
     return values.reindex(sessions)
 
 
-def score_snapshot(as_of, symbols, frames, benchmark, actions):
-    """Return the ranked top-20 and diagnostics using data known on as_of only."""
+def score_snapshot(as_of, symbols, frames, benchmark, actions, selection_order="liquidity_first", liquid_top=LIQUID_TOP):
+    """Return the ranked top-20 and diagnostics using data known on as_of only.
+
+    selection_order="liquidity_first" mirrors portfolio_rules.prepare and the live rules: the liquid top-200 is
+    chosen from ALL point-in-time members by 126-session traded value, THEN the data-validity, 200-DMA and
+    momentum filters apply. "trend_first" is what the original five-date run did (filter by trend, then take the
+    200 most liquid survivors, which admits less-liquid stocks in a broad bull market); it is kept only so the
+    effect of the difference can be measured.
+    """
+    if selection_order not in ("liquidity_first", "trend_first"):
+        raise ValueError(f"unknown selection_order {selection_order!r}")
     sessions = benchmark.index[benchmark.index <= pd.Timestamp(as_of)]
     if len(sessions) < 253:
         raise RuntimeError(f"{as_of}: fewer than 253 benchmark sessions in lookback")
@@ -100,13 +109,19 @@ def score_snapshot(as_of, symbols, frames, benchmark, actions):
     if not known_actions.empty:
         action_dates = known_actions.groupby("symbol")["ex_date"].max().to_dict()
 
-    rows, excluded = [], []
+    rows, excluded, pool = [], [], {}
     for symbol in symbols:
         ticker = f"{symbol}.NS"
         frame = frames.get(ticker)
         if frame is None or frame.empty:
             excluded.append({"symbol": symbol, "reason": "no_price_history"})
             continue
+        # Liquidity pool, as in portfolio_rules.prepare: mean raw traded value over the last 126 sessions with >= 100
+        # observations, measured on the ORIGINAL history. A corporate-action reset changes eligibility, not liquidity.
+        tv_window = _series(frame, "RawClose", sessions[-126:]) * _series(frame, "Volume", sessions[-126:])
+        pool_tv = float(tv_window.mean()) if int(tv_window.notna().sum()) >= 100 else float("nan")
+        if np.isfinite(pool_tv) and pool_tv > 0:
+            pool[symbol] = pool_tv
         event_date = action_dates.get(symbol)
         if event_date is not None:
             frame = frame.loc[pd.DatetimeIndex(frame.index).tz_localize(None) >= event_date]
@@ -129,8 +144,7 @@ def score_snapshot(as_of, symbols, frames, benchmark, actions):
             continue
         # Raw exchange close x raw volume is the actual traded-value basis;
         # adjusted prices are reserved for momentum and trend calculations.
-        traded_value = raw_close * volume
-        avg_traded_value = float(traded_value.iloc[-126:].mean())
+        avg_traded_value = pool_tv
         if not np.isfinite(avg_traded_value) or avg_traded_value <= 0:
             excluded.append({"symbol": symbol, "reason": "invalid_126d_traded_value"})
             continue
@@ -146,18 +160,21 @@ def score_snapshot(as_of, symbols, frames, benchmark, actions):
             "unsupported_action_reset_date": event_date.date().isoformat() if event_date is not None else None,
         })
 
-    # Existing model: rank by 126-session average traded value, retain the liquid
-    # top 200, then rank those above their 200-DMA by 12-1 relative strength.
-    rows.sort(key=lambda row: (-row["avg_traded_value_126d"], row["ticker"]))
-    liquid = rows[:LIQUID_TOP]
+    pool_order = sorted(pool.items(), key=lambda kv: (-kv[1], kv[0]))
+    liquidity_rank = {sym: i + 1 for i, (sym, _) in enumerate(pool_order)}
+    if selection_order == "liquidity_first":
+        liquid_set = {sym for sym, _ in pool_order[:liquid_top]}
+        liquid = [row for row in rows if row["symbol"] in liquid_set]
+    else:
+        rows.sort(key=lambda row: (-row["avg_traded_value_126d"], row["ticker"]))
+        liquid = rows[:liquid_top]
     liquid.sort(key=lambda row: (-row["momentum_12_1_pct"], row["ticker"]))
     for rank, row in enumerate(liquid, 1):
         row["leader_rank"] = rank
-        row["liquidity_rank"] = 1 + next(
-            i for i, candidate in enumerate(rows) if candidate["ticker"] == row["ticker"]
-        )
+        row["liquidity_rank"] = liquidity_rank.get(row["symbol"])
     selected = liquid[:PORTFOLIO_SIZE]
     return {
+        "selection_order": selection_order, "pool_size": len(pool), "liquid_pool_count": min(liquid_top, len(pool)),
         "signal_date": signal_date,
         "market_regime": market_regime,
         "benchmark_close": market_close,
@@ -177,7 +194,16 @@ def _price_at(frames, ticker, column, session):
     return float(value) if pd.notna(value) and np.isfinite(value) and value > 0 else None
 
 
-def simulate_sample(snapshot, calendar, frames, tri, sample_id, actions):
+def _level(frame, session, column):
+    """A strictly positive observed price/index level, or None (never filled)."""
+    try:
+        value = float(frame.at[session, column])
+    except (KeyError, TypeError, ValueError):
+        return None
+    return value if np.isfinite(value) and value > 0 else None
+
+
+def simulate_sample(snapshot, calendar, frames, tri, sample_id, actions, bees=None):
     signal_date = snapshot["signal_date"]
     pos = calendar.get_loc(signal_date)
     entry_pos = pos + 1
@@ -220,18 +246,35 @@ def simulate_sample(snapshot, calendar, frames, tri, sample_id, actions):
                 )
         stock_rows.append(row)
 
+    cost_factor = (1 - ROUND_TRIP_COST / 2) / (1 + ROUND_TRIP_COST / 2)
     for label, offset in HORIZONS.items():
         exit_date = calendar[entry_pos + offset - 1]
-        try:
-            benchmark_return = (
-                float(tri.at[exit_date, "Close"]) / float(tri.at[signal_date, "Close"]) - 1
-            ) * 100
-        except (KeyError, TypeError, ValueError):
-            benchmark_return = None
+        tri_signal = _level(tri, signal_date, "Close")
+        tri_exit = _level(tri, exit_date, "Close")
+        # (1) the original comparison: TRI signal-date close -> exit close. It includes the overnight gap between the
+        #     signal close and the next open that the stocks (bought at the open) never earn.
+        benchmark_return = (tri_exit / tri_signal - 1) * 100 if tri_signal and tri_exit else None
+        # (2) entry-aligned TRI: the TRI level at the entry OPEN is the signal close moved by NIFTYBEES' overnight change.
+        aligned_return = bees_net_return = None
+        if bees is not None and tri_signal and tri_exit:
+            b_close_signal, b_open_entry = _level(bees, signal_date, "Close"), _level(bees, entry_date, "Open")
+            b_close_exit = _level(bees, exit_date, "Close")
+            if b_close_signal and b_open_entry:
+                aligned_return = (tri_exit / (tri_signal * b_open_entry / b_close_signal) - 1) * 100
+            # (3) like-for-like investable proxy: NIFTYBEES entry open -> exit close, same cost as the stocks.
+            if b_open_entry and b_close_exit:
+                bees_net_return = ((b_close_exit / b_open_entry) * cost_factor - 1) * 100
         vals = [row[f"{label}_net_return_pct"] for row in stock_rows]
-        complete = len(vals) == PORTFOLIO_SIZE and all(value is not None for value in vals)
-        raw_basket = float(np.mean(vals)) if complete else None
-        investable = raw_basket if snapshot["market_regime"] == "BULL" else 0.0
+        got = [v for v in vals if v is not None]
+        complete = len(vals) > 0 and len(got) == len(vals)
+        # Empty slots (fewer than 20 names qualified) stay in cash at 0%, exactly as portfolio_rules does; no reweighting.
+        raw_basket = float(np.sum(got) / PORTFOLIO_SIZE) if complete else None
+        available_mean = float(np.mean(got)) if got else None      # diagnostic ONLY: silently reweights over survivors
+        if snapshot["market_regime"] == "BULL":
+            filtered = raw_basket
+        else:
+            filtered = 0.0                                          # cash is certain, whether or not the stock basket is complete
+        comparator = aligned_return if aligned_return is not None else benchmark_return
         returns.append({
             "sample_id": sample_id,
             "signal_date": signal_date.date().isoformat(),
@@ -240,13 +283,25 @@ def simulate_sample(snapshot, calendar, frames, tri, sample_id, actions):
             "horizon": label,
             "exit_date": exit_date.date().isoformat(),
             "selected_stocks": len(stock_rows),
+            "slots_filled": len(stock_rows),
             "complete_stock_prices": complete,
             "raw_top20_equal_weight_net_return_pct": raw_basket,
-            "market_filter_portfolio_net_return_pct": investable if complete else None,
+            "market_filter_portfolio_net_return_pct": filtered,
             "nifty500_tri_return_pct": benchmark_return,
+            "nifty500_tri_entry_aligned_return_pct": aligned_return,
+            "niftybees_entry_to_exit_net_return_pct": bees_net_return,
             "market_filter_outperformed_tri": (
-                investable > benchmark_return if complete and benchmark_return is not None else None
+                filtered > comparator if filtered is not None and comparator is not None else None
             ),
+            "raw_outperformed_tri": (
+                raw_basket > comparator if raw_basket is not None and comparator is not None else None
+            ),
+            "available_stocks": len(got),
+            "excluded_unsupported_action": sum(
+                row[f"{label}_return_status"] == "unsupported_corporate_action_during_hold" for row in stock_rows),
+            "excluded_missing_price": sum(
+                row[f"{label}_return_status"] == "missing_entry_or_exit_price" for row in stock_rows),
+            "raw_top20_available_mean_net_return_pct": available_mean,
             "missing_tickers": ",".join(
                 row["ticker"] + ":" + row[f"{label}_return_status"]
                 for row in stock_rows if row[f"{label}_net_return_pct"] is None
@@ -268,6 +323,11 @@ def markdown_table(frame):
     return "\n".join([header, divider, *body])
 
 
+def max_feasible_samples(n_sessions, min_gap):
+    """Most dates that can be spaced at least min_gap sessions apart inside n_sessions consecutive sessions."""
+    return 0 if n_sessions <= 0 else int((n_sessions - 1) // min_gap + 1)
+
+
 def choose_sample_positions(eligible_positions, sample_count=5, seed=DEFAULT_SEED, min_gap=127):
     """Randomly sample dates while keeping 6-month forward windows non-overlapping."""
     candidates = np.asarray(eligible_positions, dtype=int).copy()
@@ -280,12 +340,14 @@ def choose_sample_positions(eligible_positions, sample_count=5, seed=DEFAULT_SEE
             break
     if len(selected) != sample_count:
         raise ValueError(
-            f"Could not choose {sample_count} dates with a minimum {min_gap}-session gap"
+            f"Could not choose {sample_count} dates with a minimum {min_gap}-session gap: "
+            f"{len(candidates)} candidate sessions fit at most {max_feasible_samples(len(candidates), min_gap)} such dates. "
+            "Use a smaller --min-gap (overlapping holding windows; summarise with the block bootstrap) or fewer samples."
         )
     return np.asarray(sorted(selected), dtype=int)
 
 
-def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simulation"):
+def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simulation", min_gap=127, selection_order="liquidity_first"):
     from tejhq_data import get_dataset_revision
 
     out = Path(outdir)
@@ -319,12 +381,12 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
     eligible_positions = np.arange(post_covid_position, len(calendar) - 126)
     if len(eligible_positions) < sample_count:
         raise RuntimeError("Not enough post-COVID sessions with full 6-month forward coverage")
-    selected_positions = choose_sample_positions(eligible_positions, sample_count, seed)
+    selected_positions = choose_sample_positions(eligible_positions, sample_count, seed, min_gap)
     samples, stock_results, return_results = [], [], []
     for number, position in enumerate(selected_positions, 1):
         as_of = calendar[position]
         members = active_symbols(membership, as_of)
-        snapshot = score_snapshot(as_of, members, frames, bees, actions)
+        snapshot = score_snapshot(as_of, members, frames, bees, actions, selection_order)
         snapshot["signal_date"] = as_of
         sample_id = f"S{number}"
         samples.append({
@@ -332,10 +394,11 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
             "market_regime": snapshot["market_regime"],
             "active_pit_members": len(members), "eligible_after_data_and_trend": snapshot["eligible_count"],
             "liquid_top200_count": snapshot["ranked_count"],
+            "selection_order": selection_order, "pit_liquidity_pool": snapshot["pool_size"], "liquid_and_eligible": snapshot["ranked_count"],
             "selected_top20_count": len(snapshot["ranked"]),
             "unsupported_action_events_known": int((actions["ex_date"].le(as_of) & actions["symbol"].isin(members)).sum()) if not actions.empty else 0,
         })
-        stock_rows, return_rows = simulate_sample(snapshot, calendar, frames, tri, sample_id, actions)
+        stock_rows, return_rows = simulate_sample(snapshot, calendar, frames, tri, sample_id, actions, bees)
         stock_results.extend(stock_rows)
         return_results.extend(return_rows)
         print(f"{sample_id}: {as_of.date()} regime={snapshot['market_regime']} "
@@ -344,19 +407,25 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
     pd.DataFrame(samples).to_csv(out / "sample_dates.csv", index=False)
     pd.DataFrame(stock_results).to_csv(out / "selected_stocks_and_outcomes.csv", index=False)
     pd.DataFrame(return_results).to_csv(out / "portfolio_returns.csv", index=False)
+    from pit_summary import json_safe, summarize_returns
+    summary_md, summary = summarize_returns(pd.DataFrame(return_results), pd.DataFrame(stock_results), min_gap, HORIZONS)
+    (out / "summary.md").write_text(summary_md + "\n", encoding="utf-8")
+    (out / "summary.json").write_text(json.dumps(json_safe(summary), indent=2, allow_nan=False), encoding="utf-8")
     report = [
         "# Five-date point-in-time momentum simulation", "",
         f"- Random seed: {seed}; minimum 127-session spacing between sampled dates to avoid overlapping 6-month holding windows",
         f"- Sampling window: {POST_COVID_START} through dates with a full 126-session follow-up",
         "- Universe: actual NIFTY 500 members on each signal date",
-        "- Ranking: top 200 by 126-session average traded value, then top 20 by 12–1 relative strength among stocks above their 200-DMA",
+        f"- Selection order: {selection_order} ('liquidity_first' = engine/live order: top 200 by 126-session traded value among ALL point-in-time members, then 253-session validity, 200-DMA and 12-1 ranking; 'trend_first' = the original five-date run's order)",
+        f"- Sampling: minimum {min_gap}-session spacing; holding windows {'do not overlap at the 6M horizon' if min_gap >= 127 else 'OVERLAP at the longer horizons, so samples are not independent (see summary.md)'}",
         "- Momentum benchmark / market regime: TejHQ adjusted NIFTYBEES history; performance benchmark: official NIFTY 500 TRI",
         "- Entry: next exchange session adjusted open; exits: adjusted close after 21, 63 and 126 exchange sessions",
         f"- Costs: {ROUND_TRIP_COST * 100:.2f}% round-trip, applied symmetrically to entry and exit",
         "- Unsupported corporate actions: only events with ex-dates on or before each signal date reset that symbol's lookback; future events do not affect ranking, but an unsupported event during a holding window invalidates that stock's return for the affected horizon",
         "- Missing selected-stock entry/exit prices or unsupported corporate actions during a holding window: basket return marked incomplete; no survivor reweighting",
         "- Market filter: raw top-20 basket shown for diagnosis; investable portfolio is 100% cash when NIFTYBEES is at/below its 200-DMA",
-        "- Benchmark comparison uses NIFTY 500 TRI close on signal date through each exit close; stock entries occur next-session open, so the benchmark window includes the signal-close-to-entry-open overnight interval",
+        "- Benchmarks: nifty500_tri_return_pct = TRI signal-date close to exit close (includes the signal-close-to-entry-open overnight gap the stocks never earn); nifty500_tri_entry_aligned_return_pct = TRI with its entry level moved by NIFTYBEES' overnight change (the like-for-like comparator used for every outperformance flag); niftybees_entry_to_exit_net_return_pct = NIFTYBEES entry open to exit close after the same 0.30% round-trip cost",
+        "- Baskets: empty slots (fewer than 20 qualifiers) are cash at 0%; a basket with any missing/invalid selected-stock return is marked incomplete and excluded from summaries (raw_top20_available_mean_* silently reweights and is diagnostic only)",
         "",
         "## Sample dates", "",
         markdown_table(pd.DataFrame(samples)), "",
@@ -368,6 +437,7 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
         ]]), "",
         "## Returns", "",
         markdown_table(pd.DataFrame(return_results)), "",
+        summary_md, "",
         "## Interpretation notes", "",
         "Five observations are diagnostic case studies, not statistically sufficient evidence of strategy edge. Inspect the full stock-level file, including missing-price flags, before drawing conclusions.",
         "The price provider does not fully adjust mergers, demergers, rights issues or buybacks. The simulation applies a point-in-time 253-session reset after the latest such event known at each signal date.",
@@ -377,7 +447,8 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
         "seed": seed, "sample_count": sample_count, "dataset_revision": revision,
         "data_start": DATA_START, "data_end": DATA_END,
         "sample_window_start": POST_COVID_START,
-        "benchmark": "official NIFTY 500 TRI",
+        "min_gap": min_gap, "selection_order": selection_order,
+        "benchmark": "official NIFTY 500 TRI (entry-aligned via NIFTYBEES overnight change)",
         "selection_benchmark": "TejHQ adjusted NIFTYBEES",
     }, indent=2) + "\n", encoding="utf-8")
     print(f"Reports written to {out.resolve()}")
@@ -388,8 +459,10 @@ def main():
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--samples", type=int, default=5)
     parser.add_argument("--outdir", default="point-in-time-simulation")
+    parser.add_argument("--min-gap", type=int, default=127, help="minimum sessions between sampled dates (127 = non-overlapping 6M windows)")
+    parser.add_argument("--selection-order", choices=["liquidity_first", "trend_first"], default="liquidity_first")
     args = parser.parse_args()
-    run_simulation(args.seed, args.samples, args.outdir)
+    run_simulation(args.seed, args.samples, args.outdir, args.min_gap, args.selection_order)
 
 
 if __name__ == "__main__":

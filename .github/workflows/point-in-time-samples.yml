@@ -1,4 +1,4 @@
-name: Five Random Post-COVID Momentum Simulations
+name: Random Post-COVID Momentum Simulations
 
 on:
   workflow_dispatch:
@@ -13,12 +13,24 @@ on:
         required: true
         default: "5"
         type: string
+      min_gap:
+        description: Minimum sessions between dates (127 = non-overlapping 6M windows; smaller values overlap)
+        required: true
+        default: "127"
+        type: string
+      compare_legacy:
+        description: Also run the original trend-first selection order for comparison (true/false)
+        required: true
+        default: "true"
+        type: string
   push:
     branches:
       - research/pit-data-quality
     paths:
       - point_in_time_simulation.py
       - test_point_in_time_simulation.py
+      - pit_summary.py
+      - test_pit_summary.py
       - nifty500_pit.py
       - tejhq_data.py
       - niftyindices_tri.py
@@ -26,7 +38,7 @@ on:
       - .github/workflows/point-in-time-samples.yml
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: point-in-time-momentum-samples
@@ -38,6 +50,10 @@ jobs:
     timeout-minutes: 240
     env:
       PYTHONUNBUFFERED: "1"
+      SEED: ${{ inputs.seed || '20261103' }}
+      SAMPLES: ${{ inputs.samples || '5' }}
+      MIN_GAP: ${{ inputs.min_gap || '127' }}
+      COMPARE_LEGACY: ${{ inputs.compare_legacy || 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -48,18 +64,37 @@ jobs:
         run: pip install -r requirements.txt
       - name: Run point-in-time regression tests
         run: |
-          python -m unittest -v test_point_in_time_simulation.py
-          python -m py_compile point_in_time_simulation.py test_point_in_time_simulation.py
-      - name: Run five random historical simulations
-        env:
-          SEED: ${{ inputs.seed || '20261103' }}
-          SAMPLES: ${{ inputs.samples || '5' }}
+          python -m unittest -v test_point_in_time_simulation.py test_pit_summary.py
+          python -m py_compile point_in_time_simulation.py test_point_in_time_simulation.py pit_summary.py test_pit_summary.py
+      - name: Run historical simulations (liquidity-first = the engine/live order)
         run: |
-          python point_in_time_simulation.py --seed "$SEED" --samples "$SAMPLES" --outdir point-in-time-simulation
+          python point_in_time_simulation.py --seed "$SEED" --samples "$SAMPLES" --min-gap "$MIN_GAP" \
+            --selection-order liquidity_first --outdir point-in-time-simulation
+      - name: Run the original trend-first order for comparison
+        if: ${{ env.COMPARE_LEGACY != 'false' }}
+        run: |
+          python point_in_time_simulation.py --seed "$SEED" --samples "$SAMPLES" --min-gap "$MIN_GAP" \
+            --selection-order trend_first --outdir point-in-time-simulation-trend-first
       - name: Upload simulation reports
         uses: actions/upload-artifact@v4
         with:
           name: point-in-time-momentum-simulation-${{ github.run_id }}
-          path: point-in-time-simulation/**
+          path: |
+            point-in-time-simulation/**
+            point-in-time-simulation-trend-first/**
           if-no-files-found: error
           retention-days: 30
+      - name: Commit the results to the research branch (readable without downloading artifacts)
+        run: |
+          label="n${SAMPLES}_gap${MIN_GAP}_seed${SEED}"
+          dest="results/pit_samples/${label}"
+          mkdir -p "$dest/liquidity_first"
+          cp point-in-time-simulation/* "$dest/liquidity_first/"
+          if [ -d point-in-time-simulation-trend-first ]; then
+            mkdir -p "$dest/trend_first"; cp point-in-time-simulation-trend-first/* "$dest/trend_first/"
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f "$dest"
+          git commit -m "Point-in-time simulation results ${label} [skip ci]" || echo "nothing to commit"
+          for i in 1 2 3 4; do git pull -q --rebase origin "${{ github.ref_name }}" && git push && break; sleep 8; done
