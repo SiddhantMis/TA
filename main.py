@@ -52,29 +52,43 @@ def check_total_failure(watchlist: list, results: list) -> str | None:
     return None
 
 
-def check_stale_after_cutoff(run_ts: datetime, results: list, cutoff: dt_time) -> str | None:
-    """After the EOD cutoff, today's candle should be present -- the
-    drop-unsettled-today guard was disabled specifically to allow it
-    through. This verifies that assumption held: if it's past cutoff
-    and the latest scored date still isn't today, Yahoo genuinely
-    hasn't published yet, and that needs to fail loudly rather than
-    silently ship yesterday's close as if it were current. Pulled out
-    for the same reason as check_total_failure -- this shipped with
-    zero test coverage inside the __main__ block, untestable without
-    a subprocess or a full yfinance mock."""
-    if run_ts.time() < cutoff or not results:
+def check_stale_after_cutoff(run_ts: datetime, results: list, cutoff: dt_time,
+                             expected_session: str | date | None = None) -> str | None:
+    """Require each scored row to match the expected completed exchange session.
+
+    The executable supplies the NSE calendar date, including before cutoff and
+    on holidays. Omitted expected_session retains the old helper's time contract
+    for callers that explicitly use it as an after-cutoff check.
+    """
+    if not results or (expected_session is None and run_ts.time() < cutoff):
         return None
-    latest_score_date = max(date.fromisoformat(r["date"]) for r in results)
-    if latest_score_date != run_ts.date():
+    expected = date.fromisoformat(expected_session) if isinstance(expected_session, str) else expected_session
+    expected = expected or run_ts.date()
+    mismatched = []
+    for row in results:
+        value = row.get("date")
+        try:
+            scored_date = date.fromisoformat(value)
+        except (TypeError, ValueError):
+            scored_date = None
+        if scored_date != expected:
+            mismatched.append(f"{row.get('ticker', '<unknown>')}={value or 'missing date'}")
+    if mismatched:
+        details = ", ".join(mismatched[:8])
+        if len(mismatched) > 8:
+            details += f", +{len(mismatched) - 8} more"
         return (
-            f"Latest screener data is {latest_score_date.isoformat()}, not today's close "
-            f"({run_ts.date().isoformat()}). Yahoo has not published the completed EOD candle yet."
+            f"{len(mismatched)} scored row(s) do not match completed NSE session "
+            f"{expected.isoformat()}: {details}. Treat stale or misaligned data as unavailable."
         )
     return None
 
 
 if __name__ == "__main__":
+    from scanner_tracker.market import latest_completed_session
+
     run_ts = datetime.now(IST)
+    expected_session = latest_completed_session(run_ts)
     if run_ts.time() >= EOD_CUTOFF:
         enable_settled_daily_candle()
 
@@ -85,7 +99,7 @@ if __name__ == "__main__":
         send_discord_failure(failure_message, run_timestamp=run_ts)
         raise RuntimeError(failure_message)
 
-    stale_message = check_stale_after_cutoff(run_ts, results, EOD_CUTOFF)
+    stale_message = check_stale_after_cutoff(run_ts, results, EOD_CUTOFF, expected_session)
     if stale_message:
         send_discord_failure(stale_message, run_timestamp=run_ts)
         raise RuntimeError(stale_message)
@@ -120,6 +134,7 @@ if __name__ == "__main__":
     with open(OUTPUT_PATH, "w") as f:
         json.dump(wide.sanitize_json({
             "run_timestamp": run_ts.isoformat(),
+            "expected_session": expected_session,
             "note": "Every 'date'/'close' below is the last COMPLETE session as of run_timestamp, "
                      "never a same-day live price. The momentum leaderboard ranks 12-1 adjusted "
                      "returns relative to NIFTYBEES within this fixed watchlist; it is descriptive "
