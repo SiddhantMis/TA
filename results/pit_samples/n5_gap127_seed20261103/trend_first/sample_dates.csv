@@ -1,6 +1,6 @@
 sample_id,signal_date,market_regime,active_pit_members,eligible_after_data_and_trend,liquid_top200_count,selection_order,pit_liquidity_pool,liquid_and_eligible,selected_top20_count,unsupported_action_events_known
-S1,2020-03-24,BEAR,503,21,21,trend_first,498,21,20,42
-S2,2021-09-08,BULL,501,389,200,trend_first,498,200,20,79
-S3,2022-06-01,BEAR,500,141,141,trend_first,500,141,20,92
-S4,2024-06-14,BULL,500,395,200,trend_first,500,200,20,123
-S5,2025-07-25,BULL,499,284,200,trend_first,499,200,20,138
+S1,2020-06-19,BEAR,504,147,147,trend_first,499,147,20,43
+S2,2021-03-08,BULL,502,432,200,trend_first,499,200,20,71
+S3,2024-01-01,BULL,501,431,200,trend_first,500,200,20,121
+S4,2024-09-19,BULL,500,368,200,trend_first,500,200,20,133
+S5,2025-11-03,BULL,499,313,200,trend_first,497,200,20,131

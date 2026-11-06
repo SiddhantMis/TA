@@ -1,55 +1,60 @@
 ## Summary statistics
 
-Benchmark: `nifty500_tri_entry_aligned_return_pct`. Samples whose basket has any missing or corporate-action-invalidated stock return are EXCLUDED (never reweighted). Overlapping holding windows make neighbouring samples dependent: the effective number of independent samples is about n x min(1, min_gap / horizon), and the intervals use a circular block bootstrap.
+Benchmark: `nifty500_tri_return_pct` (signal-date close to exit close). Primary stock series: `raw_top20_close_to_close_net_return_pct` - measured over the SAME window as the benchmark (signal close to exit close), so the comparison is like for like. The as-traded next-open basket is shown separately with its overnight effect. Samples whose basket has any missing or corporate-action-invalidated stock return are EXCLUDED (never reweighted). Overlapping holding windows make neighbouring samples dependent: the effective number of independent samples is about n x min(1, min_gap / horizon), and the intervals use a circular block bootstrap.
 
-### 1M (21 sessions): 5 samples, 5 complete, 0 incomplete; ~5.0 effectively independent
+### 1M (21 sessions): 5 samples, 4 complete, 1 incomplete; ~4.0 effectively independent
 | series | mean % | median % | std % | worst % | best % | win rate % (>0) | beats benchmark % |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| raw top-20 | 6.26 | 6.89 | 15.01 | -12.27 | 27.97 | 60.0 | 60.0 |
-| market-filtered | 3.12 | 0.0 | 5.36 | -1.91 | 10.59 | 40.0 | 60.0 |
-| benchmark (TRI) | 3.8 | 0.47 | 10.04 | -5.54 | 20.55 | 60.0 |  |
+| raw top-20 (close-to-close) | 3.89 | 0.12 | 10.43 | -3.52 | 18.83 | 50.0 | 25.0 |
+| market-filtered (close-to-close) | 3.06 | -1.52 | 10.62 | -3.52 | 18.83 | 25.0 | 25.0 |
+| benchmark (TRI) | 1.51 | 0.7 | 4.1 | -2.47 | 7.1 | 50.0 |  |
 
-Mean excess vs benchmark, raw: +2.46 pts (median +6.05), 95% block-bootstrap interval [+nan, +nan]
-Mean excess vs benchmark, market-filtered: -0.68 pts (median +5.54), 95% interval [+nan, +nan]
+As traded (buy at the next open): mean +3.29%, median -0.47%; the overnight execution effect vs the close-to-close basket averages -0.60 pts (the TRI includes the signal-close-to-open interval, as does the close-to-close basket).
+
+Mean excess vs benchmark, raw: +2.38 pts (median -1.88), 95% block-bootstrap interval [+nan, +nan]
+Mean excess vs benchmark, market-filtered: +1.56 pts (median -1.88), 95% interval [+nan, +nan]
 
 | regime | n | raw mean % | raw median % | filtered mean % | benchmark mean % | raw beats % | filtered beats % |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| BULL | 3 | 5.19 | 6.89 | 5.19 | 1.32 | 66.67 | 66.67 |
-| BEAR | 2 | 7.85 | 7.85 | 0.0 | 7.51 | 50.0 | 50.0 |
+| BULL | 3 | 4.09 | -3.05 | 4.09 | -0.36 | 33.33 | 33.33 |
+| BEAR | 1 | 3.28 | 3.28 | 0.0 | 7.1 | 0.0 | 0.0 |
 
-Stock-level return status counts at 1M: {'ok': 100}
+Stock-level return status counts at 1M: {'ok': 99, 'unsupported_corporate_action_during_hold': 1}
 
-### 3M (63 sessions): 5 samples, 5 complete, 0 incomplete; ~5.0 effectively independent
+### 3M (63 sessions): 5 samples, 4 complete, 1 incomplete; ~4.0 effectively independent
 | series | mean % | median % | std % | worst % | best % | win rate % (>0) | beats benchmark % |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| raw top-20 | 12.06 | 4.77 | 17.87 | 0.1 | 43.23 | 100.0 | 40.0 |
-| market-filtered | 3.4 | 1.76 | 4.41 | 0.0 | 10.47 | 60.0 | 20.0 |
-| benchmark (TRI) | 10.46 | 7.71 | 13.45 | -1.34 | 33.53 | 80.0 |  |
+| raw top-20 (close-to-close) | 7.52 | 5.55 | 13.21 | -3.94 | 22.92 | 50.0 | 75.0 |
+| market-filtered (close-to-close) | 1.79 | -1.52 | 8.4 | -3.94 | 14.13 | 25.0 | 50.0 |
+| benchmark (TRI) | 3.28 | 2.2 | 9.28 | -6.31 | 15.02 | 50.0 |  |
 
-Mean excess vs benchmark, raw: +1.60 pts (median -2.43), 95% block-bootstrap interval [+nan, +nan]
-Mean excess vs benchmark, market-filtered: -7.06 pts (median -3.45), 95% interval [+nan, +nan]
+As traded (buy at the next open): mean +6.83%, median +4.95%; the overnight execution effect vs the close-to-close basket averages -0.69 pts (the TRI includes the signal-close-to-open interval, as does the close-to-close basket).
+
+Mean excess vs benchmark, raw: +4.24 pts (median +5.59), 95% block-bootstrap interval [+nan, +nan]
+Mean excess vs benchmark, market-filtered: -1.49 pts (median +0.38), 95% interval [+nan, +nan]
 
 | regime | n | raw mean % | raw median % | filtered mean % | benchmark mean % | raw beats % | filtered beats % |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| BULL | 3 | 5.66 | 4.77 | 5.66 | 3.69 | 33.33 | 33.33 |
-| BEAR | 2 | 21.66 | 21.66 | 0.0 | 20.62 | 50.0 | 0.0 |
+| BULL | 3 | 2.39 | -3.03 | 2.39 | -0.64 | 66.67 | 66.67 |
+| BEAR | 1 | 22.92 | 22.92 | 0.0 | 15.02 | 100.0 | 0.0 |
 
-Stock-level return status counts at 3M: {'ok': 100}
+Stock-level return status counts at 3M: {'ok': 99, 'unsupported_corporate_action_during_hold': 1}
 
-### 6M (126 sessions): 5 samples, 5 complete, 0 incomplete; ~5.0 effectively independent
+### 6M (126 sessions): 5 samples, 3 complete, 2 incomplete; ~3.0 effectively independent
 | series | mean % | median % | std % | worst % | best % | win rate % (>0) | beats benchmark % |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| raw top-20 | 15.94 | 3.69 | 32.16 | -7.91 | 72.14 | 80.0 | 40.0 |
-| market-filtered | 0.78 | 0.0 | 6.85 | -7.91 | 11.3 | 40.0 | 20.0 |
-| benchmark (TRI) | 10.6 | 3.69 | 18.41 | -5.61 | 41.21 | 80.0 |  |
+| raw top-20 (close-to-close) | 14.9 | 8.75 | 36.94 | -18.57 | 54.53 | 66.67 | 66.67 |
+| market-filtered (close-to-close) | 14.9 | 8.75 | 36.94 | -18.57 | 54.53 | 66.67 | 66.67 |
+| benchmark (TRI) | 1.25 | -4.05 | 15.13 | -10.52 | 18.32 | 33.33 |  |
 
-Mean excess vs benchmark, raw: +5.34 pts (median -3.20), 95% block-bootstrap interval [+nan, +nan]
-Mean excess vs benchmark, market-filtered: -9.82 pts (median -8.40), 95% interval [+nan, +nan]
+As traded (buy at the next open): mean +14.40%, median +8.54%; the overnight execution effect vs the close-to-close basket averages -0.51 pts (the TRI includes the signal-close-to-open interval, as does the close-to-close basket).
+
+Mean excess vs benchmark, raw: +13.65 pts (median +12.80), 95% block-bootstrap interval [+nan, +nan]
+Mean excess vs benchmark, market-filtered: +13.65 pts (median +12.80), 95% interval [+nan, +nan]
 
 | regime | n | raw mean % | raw median % | filtered mean % | benchmark mean % | raw beats % | filtered beats % |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| BULL | 3 | 1.3 | 0.5 | 1.3 | -0.47 | 33.33 | 33.33 |
-| BEAR | 2 | 37.91 | 37.91 | 0.0 | 27.21 | 50.0 | 0.0 |
+| BULL | 3 | 14.9 | 8.75 | 14.9 | 1.25 | 66.67 | 66.67 |
 
-Stock-level return status counts at 6M: {'ok': 100}
+Stock-level return status counts at 6M: {'ok': 98, 'unsupported_corporate_action_during_hold': 2}
 
