@@ -1,0 +1,44 @@
+name: Validate research action quarantine
+
+on:
+  pull_request:
+    branches: [research/pit-data-quality]
+  push:
+    branches: [codex/research-action-quarantine]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: action-quarantine-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-quarantine-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HF_HUB_OFFLINE: "1"
+      HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install offline test dependencies
+        run: >-
+          python -m pip install numpy==2.3.2 pandas==2.3.3
+          requests==2.32.5 huggingface_hub==0.34.4
+      - name: Run synthetic quarantine and PIT regressions
+        run: >-
+          python -m unittest -v test_corporate_action_audit
+          test_portfolio_data_quality test_point_in_time_simulation
+      - name: Compile the reviewed modules and regression tests
+        run: >-
+          python -m py_compile corporate_action_audit.py portfolio_rules.py
+          point_in_time_simulation.py test_corporate_action_audit.py
+          test_portfolio_data_quality.py test_point_in_time_simulation.py
