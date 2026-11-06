@@ -36,16 +36,66 @@ WINDOW = 520            # bars given to score_ticker per session (it needs > ~48
 WARMUP = WINDOW - 1     # first session with enough history
 
 
-def load_history(ticker: str, years: int):
+def repair_scale_glitches(df, factors=(2, 5, 10, 20, 50, 100), tol=0.12, max_run=5):
+    """Fix a short run of bars priced an integer factor too low (or too high), e.g. a split applied twice for a couple of days.
+
+    NIFTYBEES had a 10:1 face-value split on 2019-12-19 (NSE circular); Yahoo's history keeps two bars on the wrong scale
+    (129.25 -> 13.02 -> 13.03 -> 129.93), which looks like -90% then +897%. A fall to ~1/f followed within max_run bars by a
+    rise of ~f means the bars in between are on the wrong scale: multiply their O/H/L/C by f. Anything that does not fit that
+    pattern (a real crash, a permanent level shift) is left alone so the quality gate can reject it.
+    Returns a copy with the fixes listed in .attrs['scale_repairs']."""
+    out = df.copy()
+    px = [c for c in ("Open", "High", "Low", "Close") if c in out.columns]
+    out[px] = out[px].astype(float)
+    close = out["Close"].to_numpy(float).copy()
+    fixes, n, t = [], len(out), 1
+    while t < n:
+        r = close[t] / close[t - 1] if close[t - 1] > 0 else np.nan
+        if np.isfinite(r) and (r < 0.5 or r > 2.0):
+            hit = False
+            for f in factors:
+                down, up = abs(r * f - 1) < tol, abs(r / f - 1) < tol
+                if not (down or up):
+                    continue
+                for u in range(t + 1, min(t + max_run, n - 1) + 1):
+                    r2 = close[u] / close[u - 1]
+                    if (down and abs(r2 / f - 1) < tol) or (up and abs(r2 * f - 1) < tol):
+                        mult = float(f) if down else 1.0 / f
+                        out.iloc[t:u, [out.columns.get_loc(c) for c in px]] *= mult
+                        close[t:u] *= mult
+                        fixes.append({"from": out.index[t].date().isoformat(), "to": out.index[u - 1].date().isoformat(), "factor": mult})
+                        t, hit = u, True
+                        break
+                if hit:
+                    break
+        t += 1
+    out.attrs["scale_repairs"] = fixes
+    return out
+
+
+def load_history(ticker: str, years: int, repair: bool = False):
+    """Load adjusted daily OHLCV; opt into Yahoo's documented repair path for benchmark history.
+
+    repair=True asks yfinance to detect split/dividend/currency and missing-price anomalies.
+    It is deliberately opt-in so the existing constituent price cache and stock universe
+    are not silently rewritten when the benchmark is repaired.
+    """
     import yfinance as yf  # imported here so tests/imports work without it
-    data = yf.download(ticker, period=f"{years}y", interval="1d", auto_adjust=True, progress=False)
-    if data.empty:
+    kwargs = {
+        "period": f"{years}y", "interval": "1d", "auto_adjust": True,
+        "progress": False, "repair": repair,
+    }
+    if repair:
+        kwargs["actions"] = True
+    data = yf.download(ticker, **kwargs)
+    if data is None or data.empty:
         return None
     data = A._drop_unsettled_today(data)
     if data.empty:
         return None
     data = A._flatten_columns(data, ticker)
-    return data.rename(columns=str.title)
+    data = data.rename(columns=str.title)
+    return repair_scale_glitches(data) if repair else data
 
 
 def simulate(O, H, L, C, i, entry, stop, target, trigger_days=3, max_hold=15, cost_pct=0.25):

@@ -1,0 +1,95 @@
+name: Random Post-COVID Momentum Simulations
+
+on:
+  workflow_dispatch:
+    inputs:
+      dataset_revision:
+        description: 40-character TejHQ dataset commit (blank = the revision pinned in point_in_time_simulation.py)
+        required: false
+        default: ""
+        type: string
+  push:
+    branches:
+      - research/pit-data-quality
+    paths:
+      - point_in_time_simulation.py
+      - test_point_in_time_simulation.py
+      - pit_summary.py
+      - test_pit_summary.py
+      - nifty500_pit.py
+      - tejhq_data.py
+      - niftyindices_tri.py
+      - universe/nifty500_membership_history.csv
+      - .github/workflows/point-in-time-samples.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: point-in-time-momentum-samples
+  cancel-in-progress: false
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # (a) the original design: non-overlapping 6-month windows (the most that fits post-COVID is ~13 dates)
+          - { samples: "5", min_gap: "127", compare_legacy: "true" }
+          # (b) the larger design: 1-month windows do not overlap; 3M and 6M windows do (summarised with a block bootstrap)
+          - { samples: "40", min_gap: "21", compare_legacy: "false" }
+    env:
+      PYTHONUNBUFFERED: "1"
+      SEED: "20261103"
+      SAMPLES: ${{ matrix.samples }}
+      MIN_GAP: ${{ matrix.min_gap }}
+      COMPARE_LEGACY: ${{ matrix.compare_legacy }}
+      TEJHQ_DATASET_REVISION: ${{ inputs.dataset_revision }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run point-in-time regression tests
+        run: |
+          python -m unittest -v test_point_in_time_simulation.py test_pit_summary.py
+          python -m py_compile point_in_time_simulation.py test_point_in_time_simulation.py pit_summary.py test_pit_summary.py
+      - name: Run historical simulations (liquidity-first = the engine/live order)
+        run: |
+          python point_in_time_simulation.py --seed "$SEED" --samples "$SAMPLES" --min-gap "$MIN_GAP" \
+            --selection-order liquidity_first --outdir point-in-time-simulation
+      - name: Run the original trend-first order for comparison
+        if: ${{ env.COMPARE_LEGACY != 'false' }}
+        run: |
+          python point_in_time_simulation.py --seed "$SEED" --samples "$SAMPLES" --min-gap "$MIN_GAP" \
+            --selection-order trend_first --outdir point-in-time-simulation-trend-first
+      - name: Upload simulation reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: point-in-time-momentum-simulation-${{ github.run_id }}-n${{ matrix.samples }}
+          path: |
+            point-in-time-simulation/**
+            point-in-time-simulation-trend-first/**
+          if-no-files-found: error
+          retention-days: 30
+      - name: Commit the results to the research branch (readable without downloading artifacts)
+        run: |
+          rev=$(python -c "import json;print(json.load(open('point-in-time-simulation/run_metadata.json'))['dataset_revision'][:7])")
+          label="n${SAMPLES}_gap${MIN_GAP}_seed${SEED}_rev${rev}"
+          dest="results/pit_samples/${label}"
+          mkdir -p "$dest/liquidity_first"
+          cp point-in-time-simulation/* "$dest/liquidity_first/"
+          if [ -d point-in-time-simulation-trend-first ]; then
+            mkdir -p "$dest/trend_first"; cp point-in-time-simulation-trend-first/* "$dest/trend_first/"
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f "$dest"
+          git commit -m "Point-in-time simulation results ${label} [skip ci]" || echo "nothing to commit"
+          for i in 1 2 3 4; do git pull -q --rebase origin "${{ github.ref_name }}" && git push && break; sleep 8; done

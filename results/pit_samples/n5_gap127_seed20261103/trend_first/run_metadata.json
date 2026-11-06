@@ -1,0 +1,12 @@
+{
+  "seed": 20261103,
+  "sample_count": 5,
+  "dataset_revision": "e0ceb628f071f011b1653735037e3e996b807057",
+  "data_start": "2019-01-01",
+  "data_end": "2026-10-13",
+  "sample_window_start": "2020-03-23",
+  "min_gap": 127,
+  "selection_order": "trend_first",
+  "benchmark": "official NIFTY 500 TRI (entry-aligned via NIFTYBEES overnight change)",
+  "selection_benchmark": "TejHQ adjusted NIFTYBEES"
+}

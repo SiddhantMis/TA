@@ -1,0 +1,89 @@
+name: Portfolio rules test
+
+# Branch-only research run: the exact live rules, daily engine. Commits the report back to the branch.
+on:
+  push:
+    branches: [rules-test, pit-nifty500-membership, research/pit-data-quality]
+    paths: ['portfolio_rules.py', 'test_patterns.py', 'pattern_lab.py', 'portfolio.py', 'nifty500_pit.py', 'universe/nifty500_membership_history.csv', 'universe/NIFTY500_PIT_DATA.md', 'test_pit_membership.py', 'nse_benchmark.py', 'bench_check.py', 'test_nse_benchmark.py', 'test_tejhq_data.py', 'test_niftyindices_tri.py', 'test_corporate_action_audit.py', 'test_portfolio_data_quality.py', 'scripts/probe_tejhq_history.py', 'tejhq_data.py', 'niftyindices_tri.py', 'corporate_action_audit.py', 'requirements.txt', '.github/workflows/rules-test.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: pit-data-quality-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - uses: actions/cache/restore@v4
+        with:
+          path: data_cache
+          key: tejhq-frames-v2-${{ github.run_id }}
+          restore-keys: |
+            tejhq-frames-v2-
+      - run: python test_nse_benchmark.py
+      - run: python test_patterns.py
+      - run: python test_pit_membership.py
+      - run: python test_tejhq_data.py
+      - run: python test_niftyindices_tri.py
+      - run: python test_corporate_action_audit.py
+      - run: python test_portfolio_data_quality.py
+      - run: python -m py_compile portfolio_rules.py nifty500_pit.py pattern_lab.py portfolio.py tejhq_data.py niftyindices_tri.py corporate_action_audit.py
+      - name: Run NSE benchmark validation
+        run: python bench_check.py
+      - name: Run the rules test
+        run: python portfolio_rules.py --years 10 --oos-frac 0.35 --cost-pct 0.30
+      - name: Probe missing histories via TejHQ API
+        run: python scripts/probe_tejhq_history.py
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: data_cache
+          key: tejhq-frames-v2-${{ github.run_id }}
+      - name: Upload PIT data quality reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pit-data-quality-${{ github.run_id }}
+          path: |
+            results/bench_check.md
+            results/portfolio_rules_report.md
+            results/pit_price_history_audit.csv
+            results/pit_daily_coverage_audit.csv
+            results/pit_tejhq_coverage_audit.csv
+            results/pit_tejhq_initial_coverage_probe.csv
+            results/tejhq_source_metadata.md
+            results/tejhq_symbol_continuity_audit.csv
+            results/pit_session_calendar_audit.csv
+            results/corporate_action_audit.csv
+            results/corporate_action_quarantine.csv
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Commit report back to the branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f results/corporate_action_audit.csv results/corporate_action_quarantine.csv results/bench_check.md results/portfolio_rules_report.md results/pit_price_history_audit.csv results/pit_daily_coverage_audit.csv results/pit_tejhq_coverage_audit.csv results/pit_tejhq_initial_coverage_probe.csv results/tejhq_source_metadata.md results/tejhq_symbol_continuity_audit.csv results/pit_session_calendar_audit.csv
+          if git diff --cached --quiet; then
+            echo "No generated report changes."
+            exit 0
+          fi
+          git commit -m "Portfolio rules report [skip ci]"
+          for i in 1 2 3 4; do
+            if git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME"; then
+              exit 0
+            fi
+            git rebase --abort || true
+            if [ "$i" -lt 4 ]; then sleep 8; fi
+          done
+          echo "::error::Failed to publish generated reports to $GITHUB_REF_NAME"
+          exit 1

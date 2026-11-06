@@ -1,0 +1,53 @@
+- adjustment_scope: splits, bonuses and dividends; mergers, demergers, rights and buybacks are not scaled
+- adjustment_validation: passed: adj_close equals raw close multiplied by cumulative factor; adjusted OHLC checked
+- data_terms_as_of: 2026-10-30
+- data_terms_summary: personal research/backtesting permitted; TejHQ holds no NSE/BSE data licence; MIT covers code, not data; exchange terms still apply to commercial use and redistribution
+- data_terms_url: https://tejhq.dev/data-terms
+- dataset_id: tejhq/indian-markets
+- dataset_revision: 0303d8c95b4519765a9d5556fd9c2d430f8f81d8
+- end_date: 2026-10-13
+- instrument_chain_rule: same ISIN is continuous; a new ISIN joins only when the same symbol resumes within 30 calendar days
+- instrument_chains: 937
+- isins_loaded: 1146
+- liquidity_basis: raw bhavcopy turnover; volume remains raw
+- price_rows_loaded: 1911582
+- series_scope: EQ, BE, BZ (TejHQ published NSE coverage)
+- source: TejHQ prices_adjusted NSE parquet
+- start_date: 2016-10-13
+- symbol_history_valid_to: inclusive last trading day; PIT membership valid_to is exclusive
+- cached_start_date: 2016-10-13
+- cached_end_date: 2026-10-13
+- cache_reused: True
+- benchmark_source: NSE NextApi raw NIFTYBEES OHLC, supplemented only by TejHQ raw NSE bhavcopy bars on validated NSE-calendar sessions absent from NextApi; common dates reconciled
+- benchmark_adjustment_scope: NIFTYBEES split-adjusted for live regime filter; official NIFTY 500 TRI is performance benchmark
+- nifty500_tri_source: NSE Indices historical Total Returns Index Values endpoint
+- nifty500_tri_bars: 2466
+- unsupported_action_events: 780
+- symbols_quarantined_after_unsupported_actions: 223
+- benchmark_nse_api_bars: 2477
+- benchmark_tejhq_bars: 2466
+- benchmark_common_bars: 2463
+- benchmark_nse_api_only_bars: 14
+- benchmark_tejhq_only_bars: 3
+- benchmark_common_fraction_of_nse: 0.9943480016148567
+- benchmark_common_fraction_of_tejhq: 0.9987834549878345
+- benchmark_max_abs_ohlc_diff: 0.0
+- benchmark_max_rel_ohlc_diff: 0.0
+- benchmark_nse_api_only_dates: ['2016-10-30', '2017-10-19', '2018-11-07', '2019-10-27', '2020-02-01', '2020-11-14', '2021-11-04', '2022-10-24', '2023-11-12', '2024-03-02', '2024-05-18', '2024-11-01', '2025-10-21', '2026-02-01']
+- benchmark_tejhq_only_dates: ['2016-10-13', '2020-05-05', '2020-08-13']
+- session_calendar_source: pandas_market_calendars==5.6.0 NSE holiday calendar + observed NIFTY 50 index sessions + NSE Circular MSD/60677 (2024-03-02)
+- session_calendar_start: 2016-10-13
+- session_calendar_end: 2026-10-13
+- session_calendar_bars: 2480
+- comparison_session_bars: 2466
+- comparison_excluded_zero_stock_session_count: 14
+- comparison_excluded_zero_stock_session_dates: ['2016-10-30', '2017-10-19', '2018-11-07', '2019-10-27', '2020-02-01', '2020-11-14', '2021-11-04', '2022-10-24', '2023-11-12', '2024-03-02', '2024-05-18', '2024-11-01', '2025-10-21', '2026-02-01']
+- index_missing_official_sessions: 0
+- index_missing_official_dates: []
+- index_missing_excluded_sessions: 1
+- index_session_coverage_pct: 100.0
+- benchmark_missing_official_sessions: 0
+- benchmark_missing_excluded_sessions: 0
+- benchmark_max_consecutive_missing_sessions: 0
+- zero_stock_bar_sessions: 14
+- off_calendar_stock_dates: 0

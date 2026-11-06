@@ -30,6 +30,8 @@ Biases that flatter results: today's constituents (survivorship), daily bars, fl
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import os
 import pickle
 import sys
@@ -100,13 +102,18 @@ def build_panels(frames: dict, liquid_top):
     O = pd.concat({t: frames[t].Open for t in cols}, axis=1).reindex(idx)
     C = pd.concat({t: frames[t].Close for t in cols}, axis=1).reindex(idx)
     V = pd.concat({t: frames[t].Volume for t in cols}, axis=1).reindex(idx)
+    turnover_flags = ["Turnover" in frames[t].columns for t in cols]
+    if any(turnover_flags) and not all(turnover_flags):
+        raise ValueError("mixed price frames: either every symbol must have raw Turnover or none")
+    TV = (pd.concat({t: frames[t].Turnover for t in cols}, axis=1).reindex(idx)
+          if all(turnover_flags) else C * V)
     sma50, sma200 = C.rolling(50).mean(), C.rolling(200).mean()
     up = (C > sma200) & (sma50 > sma200)
     dn = (C < sma200) & (sma50 < sma200)
     state = pd.DataFrame(np.where(up, 1, np.where(dn, -1, 0)), index=idx, columns=cols)
     state = state.where(sma200.notna())
     if liquid_top:
-        tv = (C * V).rolling(126, min_periods=100).mean()
+        tv = TV.rolling(126, min_periods=100).mean()
         liquid = tv.rank(axis=1, ascending=False) <= liquid_top
     else:
         liquid = C.notna()
@@ -225,20 +232,154 @@ def run_lab(frames: dict, oos_frac=0.35, cost_pct=0.30, liquid_top=200):
 
 
 # ----------------------------------------------------------------------- main --
-def load_frames(tickers, years, cache, refresh):
+def load_frames(tickers, years, cache, refresh, min_bars=401, return_diagnostics=False,
+                source="yahoo", membership_df=None, start_date=None, end_date=None):
+    if source not in {"yahoo", "tejhq"}:
+        raise ValueError(f"unknown price source: {source}")
+    if source == "tejhq":
+        from tejhq_data import get_dataset_revision, load_adjusted_frames
+
+        end = (
+            pd.Timestamp(end_date).normalize()
+            if end_date is not None else pd.Timestamp.now().normalize()
+        )
+        start = (
+            pd.Timestamp(start_date).normalize()
+            if start_date is not None else end - pd.DateOffset(years=years)
+        )
+        if end < start:
+            raise ValueError("end_date must be on or after start_date")
+        requested = sorted(set(tickers))
+        membership_hash = (
+            hashlib.sha256(
+                pd.util.hash_pandas_object(membership_df, index=True).values.tobytes()
+            ).hexdigest()
+            if membership_df is not None else ""
+        )
+        revision = get_dataset_revision()
+        meta_path = f"{cache}.meta.json" if cache else None
+        frames = None
+        diagnostics = {}
+        if cache and os.path.exists(cache) and meta_path and os.path.exists(meta_path) and not refresh:
+            try:
+                with open(meta_path, "r", encoding="utf-8") as fh:
+                    meta = json.load(fh)
+                cache_matches = (
+                    meta.get("requested_tickers") == requested
+                    and meta.get("membership_hash", "") == membership_hash
+                    and meta.get("years") == int(years)
+                    and meta.get("source", {}).get("dataset_revision") == revision
+                    and pd.Timestamp(meta.get("start_date")) <= start
+                    and pd.Timestamp(meta.get("end_date")) >= end
+                )
+                if cache_matches:
+                    with open(cache, "rb") as fh:
+                        cached_frames = pickle.load(fh)
+                    frames = {}
+                    for ticker in requested:
+                        frame = cached_frames.get(ticker)
+                        if frame is None:
+                            continue
+                        frame_index = pd.DatetimeIndex(pd.to_datetime(frame.index))
+                        if frame_index.tz is not None:
+                            frame_index = frame_index.tz_localize(None)
+                        frame_index = frame_index.normalize()
+                        if frame_index.has_duplicates:
+                            raise ValueError(f"cached TejHQ frame has duplicate sessions: {ticker}")
+                        keep = (frame_index >= start) & (frame_index <= end)
+                        clipped = frame.loc[keep].copy()
+                        clipped.index = frame_index[keep]
+                        clipped.attrs.update(frame.attrs)
+                        if not clipped.empty:
+                            frames[ticker] = clipped.sort_index()
+
+                    diagnostics = meta.get("diagnostics", {})
+                    for ticker in requested:
+                        if ticker in frames:
+                            bars = int(len(frames[ticker]))
+                            diagnostics[ticker] = {
+                                "status": "loaded" if bars >= min_bars else "insufficient_history",
+                                "bars": bars,
+                                "detail": diagnostics.get(ticker, {}).get(
+                                    "detail", "TejHQ adjusted frame cache clipped to requested window"
+                                ),
+                            }
+                        else:
+                            diagnostics[ticker] = {
+                                "status": "no_history", "bars": 0,
+                                "detail": diagnostics.get(ticker, {}).get(
+                                    "detail", "No TejHQ adjusted rows in requested cached window"
+                                ),
+                            }
+
+                    source_meta = dict(meta.get("source", {}))
+                    source_meta["cached_start_date"] = source_meta.get("start_date", meta.get("start_date"))
+                    source_meta["cached_end_date"] = source_meta.get("end_date", meta.get("end_date"))
+                    source_meta["start_date"] = start.date().isoformat()
+                    source_meta["end_date"] = end.date().isoformat()
+                    source_meta["cache_reused"] = True
+                    source_meta["price_rows_loaded"] = int(sum(len(frame) for frame in frames.values()))
+                    diagnostics["_source"] = source_meta
+
+                    symbol_audit = meta.get("symbol_audit", [])
+                    for row in symbol_audit:
+                        ticker = f"{str(row.get('symbol', '')).strip().upper()}.NS"
+                        frame = frames.get(ticker)
+                        bars = int(len(frame)) if frame is not None else 0
+                        row["bars"] = bars
+                        row["status"] = (
+                            "loaded" if bars >= min_bars else
+                            "insufficient_history" if bars else "no_history"
+                        )
+                        row["first_date"] = frame.index.min().date().isoformat() if bars else ""
+                        row["last_date"] = frame.index.max().date().isoformat() if bars else ""
+                    diagnostics["_symbol_audit"] = symbol_audit
+                    print(f"[cache] {len(frames)} pinned TejHQ adjusted frames clipped to {start.date()}..{end.date()} from {cache}", file=sys.stderr)
+            except (OSError, ValueError, KeyError, TypeError):
+                frames = None
+                diagnostics = {}
+        if frames is None:
+            frames, diagnostics = load_adjusted_frames(
+                requested, start.date().isoformat(), end.date().isoformat(),
+                cache_dir=os.path.join(os.path.dirname(cache) if cache else "data_cache", "tejhq_parquet"),
+                refresh=refresh, membership_df=membership_df,
+                min_bars=min_bars, revision=revision,
+            )
+            source_meta = diagnostics.pop("_source", {})
+            symbol_audit = diagnostics.pop("_symbol_audit", [])
+            if cache:
+                os.makedirs(os.path.dirname(cache) or ".", exist_ok=True)
+                with open(cache, "wb") as fh:
+                    pickle.dump(frames, fh)
+                meta = {
+                    "requested_tickers": requested,
+                    "membership_hash": membership_hash,
+                    "years": int(years),
+                    "start_date": start.date().isoformat(),
+                    "end_date": end.date().isoformat(),
+                    "source": source_meta,
+                    "diagnostics": diagnostics,
+                    "symbol_audit": symbol_audit,
+                }
+                with open(meta_path, "w", encoding="utf-8") as fh:
+                    json.dump(meta, fh, indent=2, sort_keys=True)
+            diagnostics["_source"] = source_meta
+            diagnostics["_symbol_audit"] = symbol_audit
+        return (frames, diagnostics) if return_diagnostics else frames
+
     if cache and os.path.exists(cache) and not refresh:
         with open(cache, "rb") as fh:
             store = pickle.load(fh)
         print(f"[cache] {len(store)} frames from {cache}", file=sys.stderr)
     else:
         store = {}
-    P._load(tickers, years, store, "lab")
+    diagnostics = P._load(tickers, years, store, "lab", min_bars=min_bars)
     if cache:
         os.makedirs(os.path.dirname(cache) or ".", exist_ok=True)
         with open(cache, "wb") as fh:
             pickle.dump(store, fh)
-    return {t: store[t] for t in tickers if t in store}
-
+    frames = {t: store[t] for t in tickers if t in store}
+    return (frames, diagnostics) if return_diagnostics else frames
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)

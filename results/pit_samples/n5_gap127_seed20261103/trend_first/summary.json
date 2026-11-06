@@ -1,0 +1,235 @@
+{
+  "benchmark_column": "nifty500_tri_return_pct",
+  "primary_basket_column": "raw_top20_close_to_close_net_return_pct",
+  "min_gap_sessions": 127,
+  "horizons": {
+    "1M": {
+      "samples": 5,
+      "complete_samples": 4,
+      "incomplete_samples": 1,
+      "effective_independent_samples": 4.0,
+      "bootstrap_block": 1,
+      "stock_return_status_counts": {
+        "ok": 99,
+        "unsupported_corporate_action_during_hold": 1
+      },
+      "as_traded_next_open": {
+        "mean": 3.2887073922120105,
+        "median": -0.46780955946489367,
+        "std": 10.314045853936834,
+        "min": -4.088260534133665,
+        "max": 18.178709221911493,
+        "win_rate_pct": 50.0,
+        "overnight_execution_effect_mean": -0.5973635776049282,
+        "beats_benchmark_pct": 25.0
+      },
+      "raw": {
+        "mean": 3.886070969816938,
+        "median": 0.1182034914287069,
+        "std": 10.433768497154567,
+        "min": -3.520856228803192,
+        "max": 18.82873312521353,
+        "win_rate_pct": 50.0
+      },
+      "market_filter": {
+        "mean": 3.0649393668839835,
+        "median": -1.5240597144372034,
+        "std": 10.624393919127755,
+        "min": -3.520856228803192,
+        "max": 18.82873312521353,
+        "win_rate_pct": 25.0
+      },
+      "benchmark": {
+        "mean": 1.50621243736212,
+        "median": 0.697432814947202,
+        "std": 4.1030956901817355,
+        "min": -2.4661364826997656,
+        "max": 7.0961206022538414,
+        "win_rate_pct": 50.0
+      },
+      "raw_beats_benchmark_pct": 25.0,
+      "filter_beats_benchmark_pct": 25.0,
+      "mean_excess_raw": 2.379858532454818,
+      "mean_excess_filter": 1.558726929521863,
+      "median_excess_raw": -1.8791628024592215,
+      "median_excess_filter": -1.8791628024592215,
+      "ci95_mean_excess_raw": [
+        null,
+        null
+      ],
+      "ci95_mean_excess_filter": [
+        null,
+        null
+      ],
+      "by_regime": {
+        "BULL": {
+          "n": 3,
+          "raw_mean": 4.086585822511978,
+          "raw_median": -3.048119428874407,
+          "filter_mean": 4.086585822511978,
+          "benchmark_mean": -0.35709028426845385,
+          "raw_beats_pct": 33.33333333333333,
+          "filter_beats_pct": 33.33333333333333
+        },
+        "BEAR": {
+          "n": 1,
+          "raw_mean": 3.2845264117318207,
+          "raw_median": 3.2845264117318207,
+          "filter_mean": 0.0,
+          "benchmark_mean": 7.0961206022538414,
+          "raw_beats_pct": 0.0,
+          "filter_beats_pct": 0.0
+        }
+      }
+    },
+    "3M": {
+      "samples": 5,
+      "complete_samples": 4,
+      "incomplete_samples": 1,
+      "effective_independent_samples": 4.0,
+      "bootstrap_block": 1,
+      "stock_return_status_counts": {
+        "ok": 99,
+        "unsupported_corporate_action_during_hold": 1
+      },
+      "as_traded_next_open": {
+        "mean": 6.829903956792311,
+        "median": 4.947321407223102,
+        "std": 12.77677909896977,
+        "min": -4.114730289065244,
+        "max": 21.539703301788286,
+        "win_rate_pct": 50.0,
+        "overnight_execution_effect_mean": -0.6899567849246577,
+        "beats_benchmark_pct": 75.0
+      },
+      "raw": {
+        "mean": 7.519860741716968,
+        "median": 5.551471895218853,
+        "std": 13.212425556830322,
+        "min": -3.9446211944589464,
+        "max": 22.921120370889117,
+        "win_rate_pct": 50.0
+      },
+      "market_filter": {
+        "mean": 1.78958064899469,
+        "median": -1.5155679590173396,
+        "std": 8.400587974060715,
+        "min": -3.9446211944589464,
+        "max": 14.134079708472385,
+        "win_rate_pct": 25.0
+      },
+      "benchmark": {
+        "mean": 3.275436985887289,
+        "median": 2.1965007456644035,
+        "std": 9.282642713885444,
+        "min": -6.311147996348776,
+        "max": 15.019894448569126,
+        "win_rate_pct": 50.0
+      },
+      "raw_beats_benchmark_pct": 75.0,
+      "filter_beats_benchmark_pct": 50.0,
+      "mean_excess_raw": 4.24442375582968,
+      "mean_excess_filter": -1.4858563368925992,
+      "median_excess_raw": 5.590619000317044,
+      "median_excess_filter": 0.3839445774186012,
+      "ci95_mean_excess_raw": [
+        null,
+        null
+      ],
+      "ci95_mean_excess_filter": [
+        null,
+        null
+      ],
+      "by_regime": {
+        "BULL": {
+          "n": 3,
+          "raw_mean": 2.38610753199292,
+          "raw_median": -3.0311359180346793,
+          "filter_mean": 2.38610753199292,
+          "benchmark_mean": -0.6393821683399895,
+          "raw_beats_pct": 66.66666666666666,
+          "filter_beats_pct": 66.66666666666666
+        },
+        "BEAR": {
+          "n": 1,
+          "raw_mean": 22.921120370889117,
+          "raw_median": 22.921120370889117,
+          "filter_mean": 0.0,
+          "benchmark_mean": 15.019894448569126,
+          "raw_beats_pct": 100.0,
+          "filter_beats_pct": 0.0
+        }
+      }
+    },
+    "6M": {
+      "samples": 5,
+      "complete_samples": 3,
+      "incomplete_samples": 2,
+      "effective_independent_samples": 3.0,
+      "bootstrap_block": 1,
+      "stock_return_status_counts": {
+        "ok": 98,
+        "unsupported_corporate_action_during_hold": 2
+      },
+      "as_traded_next_open": {
+        "mean": 14.396801939013875,
+        "median": 8.538004729609328,
+        "std": 36.740830591359014,
+        "min": -19.06259586379433,
+        "max": 53.714996951226624,
+        "win_rate_pct": 66.66666666666666,
+        "overnight_execution_effect_mean": -0.5056568277360606,
+        "beats_benchmark_pct": 66.66666666666666
+      },
+      "raw": {
+        "mean": 14.902458766749936,
+        "median": 8.753057012377383,
+        "std": 36.937741680772795,
+        "min": -18.574658423336302,
+        "max": 54.528977711208725,
+        "win_rate_pct": 66.66666666666666
+      },
+      "market_filter": {
+        "mean": 14.902458766749936,
+        "median": 8.753057012377383,
+        "std": 36.937741680772795,
+        "min": -18.574658423336302,
+        "max": 54.528977711208725,
+        "win_rate_pct": 66.66666666666666
+      },
+      "benchmark": {
+        "mean": 1.251774686814673,
+        "median": -4.046546979398425,
+        "std": 15.134520749660657,
+        "min": -10.521254291716664,
+        "max": 18.32312533155911,
+        "win_rate_pct": 33.33333333333333
+      },
+      "raw_beats_benchmark_pct": 66.66666666666666,
+      "filter_beats_benchmark_pct": 66.66666666666666,
+      "mean_excess_raw": 13.65068407993526,
+      "mean_excess_filter": 13.65068407993526,
+      "median_excess_raw": 12.799603991775808,
+      "median_excess_filter": 12.799603991775808,
+      "ci95_mean_excess_raw": [
+        null,
+        null
+      ],
+      "ci95_mean_excess_filter": [
+        null,
+        null
+      ],
+      "by_regime": {
+        "BULL": {
+          "n": 3,
+          "raw_mean": 14.902458766749936,
+          "raw_median": 8.753057012377383,
+          "filter_mean": 14.902458766749936,
+          "benchmark_mean": 1.251774686814673,
+          "raw_beats_pct": 66.66666666666666,
+          "filter_beats_pct": 66.66666666666666
+        }
+      }
+    }
+  }
+}
