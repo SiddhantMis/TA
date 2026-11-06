@@ -21,6 +21,10 @@ from niftyindices_tri import load_nifty500_tri_history
 
 UNSUPPORTED_ACTIONS = {"merger", "demerger", "rights", "buyback", "other"}
 POST_COVID_START = "2020-03-23"
+# The vendor dataset is updated upstream (0303d8c -> 96afcc2 -> e0ceb628 within days), and the random sample dates depend on
+# the calendar it contains. Every run therefore uses THIS revision unless one is passed explicitly; the run metadata records
+# both the revision used and the upstream head at run time so drift is visible.
+PINNED_DATASET_REVISION = "0303d8c95b4519765a9d5556fd9c2d430f8f81d8"
 DATA_START = "2019-01-01"
 DATA_END = "2026-10-13"
 DEFAULT_SEED = 20261103
@@ -345,6 +349,23 @@ def markdown_table(frame):
     return "\n".join([header, divider, *body])
 
 
+def resolve_dataset_revision(explicit=None, environ=None):
+    """Explicit argument, then TEJHQ_DATASET_REVISION, then the pinned revision. Never silently 'latest'."""
+    import os
+    env = (environ if environ is not None else os.environ).get("TEJHQ_DATASET_REVISION", "").strip()
+    revision = (explicit or "").strip() or env or PINNED_DATASET_REVISION
+    if len(revision) != 40 or any(c not in "0123456789abcdef" for c in revision):
+        raise ValueError(f"dataset revision must be a 40-character commit hash, got {revision!r}")
+    return revision
+
+
+def calendar_fingerprint(calendar):
+    import hashlib
+    days = [d.date().isoformat() for d in calendar]
+    return {"sessions": len(days), "first": days[0], "last": days[-1],
+            "sha256": hashlib.sha256("\n".join(days).encode()).hexdigest()}
+
+
 def max_feasible_samples(n_sessions, min_gap):
     """Most dates that can be spaced at least min_gap sessions apart inside n_sessions consecutive sessions."""
     return 0 if n_sessions <= 0 else int((n_sessions - 1) // min_gap + 1)
@@ -369,14 +390,18 @@ def choose_sample_positions(eligible_positions, sample_count=5, seed=DEFAULT_SEE
     return np.asarray(sorted(selected), dtype=int)
 
 
-def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simulation", min_gap=127, selection_order="liquidity_first"):
+def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simulation", min_gap=127, selection_order="liquidity_first", dataset_revision=None):
     from tejhq_data import get_dataset_revision
 
     out = Path(outdir)
     out.mkdir(parents=True, exist_ok=True)
     membership = load_membership_calendar()
     symbols = sorted(set(membership["symbol"].astype(str).str.upper()))
-    revision = get_dataset_revision()
+    revision = resolve_dataset_revision(dataset_revision)
+    try:
+        upstream_head = get_dataset_revision()
+    except Exception:                                     # offline / rate-limited: recording drift is best-effort
+        upstream_head = None
     print(f"Loading {len(symbols)} PIT symbols from TejHQ revision {revision} ...")
     tickers = [f"{symbol}.NS" for symbol in symbols] + ["NIFTYBEES.NS"]
     frames, diagnostics = load_adjusted_frames(
@@ -470,6 +495,9 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
         "data_start": DATA_START, "data_end": DATA_END,
         "sample_window_start": POST_COVID_START,
         "min_gap": min_gap, "selection_order": selection_order,
+        "revision_differs_from_upstream_head": revision != upstream_head if upstream_head else None,
+        "upstream_dataset_head_at_run": upstream_head,
+        "calendar": calendar_fingerprint(calendar),
         "benchmark": "official NIFTY 500 TRI (entry-aligned via NIFTYBEES overnight change)",
         "selection_benchmark": "TejHQ adjusted NIFTYBEES",
     }, indent=2) + "\n", encoding="utf-8")
@@ -483,8 +511,9 @@ def main():
     parser.add_argument("--outdir", default="point-in-time-simulation")
     parser.add_argument("--min-gap", type=int, default=127, help="minimum sessions between sampled dates (127 = non-overlapping 6M windows)")
     parser.add_argument("--selection-order", choices=["liquidity_first", "trend_first"], default="liquidity_first")
+    parser.add_argument("--dataset-revision", default=None, help="40-char TejHQ dataset commit (default: the pinned revision)")
     args = parser.parse_args()
-    run_simulation(args.seed, args.samples, args.outdir, args.min_gap, args.selection_order)
+    run_simulation(args.seed, args.samples, args.outdir, args.min_gap, args.selection_order, args.dataset_revision)
 
 
 if __name__ == "__main__":

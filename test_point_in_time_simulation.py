@@ -3,7 +3,8 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from point_in_time_simulation import choose_sample_positions, max_feasible_samples, score_snapshot, simulate_sample
+from point_in_time_simulation import (PINNED_DATASET_REVISION, calendar_fingerprint, choose_sample_positions, max_feasible_samples,
+                                      resolve_dataset_revision, score_snapshot, simulate_sample)
 
 
 class PointInTimeSimulationTests(unittest.TestCase):
@@ -185,6 +186,22 @@ class PointInTimeSimulationTests(unittest.TestCase):
         self.assertTrue(all(b - a >= 21 for a, b in zip(dense, dense[1:])))
         self.assertEqual(dense.tolist(), choose_sample_positions(eligible, sample_count=40, seed=1, min_gap=21).tolist())
 
+
+    def test_dataset_revision_is_pinned_never_silently_latest(self):
+        self.assertEqual(resolve_dataset_revision(None, {}), PINNED_DATASET_REVISION)
+        other = "e0ceb628f071f011b1653735037e3e996b807057"
+        self.assertEqual(resolve_dataset_revision(None, {"TEJHQ_DATASET_REVISION": other}), other)
+        self.assertEqual(resolve_dataset_revision("96afcc2b22f9981a74c0ee75cbc3e17dbd6ad14c", {"TEJHQ_DATASET_REVISION": other}),
+                         "96afcc2b22f9981a74c0ee75cbc3e17dbd6ad14c")                            # explicit wins over the environment
+        with self.assertRaises(ValueError):
+            resolve_dataset_revision("main", {})                                                  # a branch name is not a revision
+        self.assertEqual(len(PINNED_DATASET_REVISION), 40)
+
+    def test_calendar_fingerprint_changes_when_one_session_changes(self):
+        a = calendar_fingerprint(pd.bdate_range("2020-01-01", periods=50))
+        b = calendar_fingerprint(pd.bdate_range("2020-01-01", periods=50).delete(10))
+        self.assertEqual((a["sessions"], b["sessions"]), (50, 49))
+        self.assertNotEqual(a["sha256"], b["sha256"])
 
 if __name__ == "__main__":
     unittest.main()

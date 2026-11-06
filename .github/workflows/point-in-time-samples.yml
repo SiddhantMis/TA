@@ -3,25 +3,10 @@ name: Random Post-COVID Momentum Simulations
 on:
   workflow_dispatch:
     inputs:
-      seed:
-        description: Reproducible random seed
-        required: true
-        default: "20261103"
-        type: string
-      samples:
-        description: Number of historical dates
-        required: true
-        default: "5"
-        type: string
-      min_gap:
-        description: Minimum sessions between dates (127 = non-overlapping 6M windows; smaller values overlap)
-        required: true
-        default: "127"
-        type: string
-      compare_legacy:
-        description: Also run the original trend-first selection order for comparison (true/false)
-        required: true
-        default: "true"
+      dataset_revision:
+        description: 40-character TejHQ dataset commit (blank = the revision pinned in point_in_time_simulation.py)
+        required: false
+        default: ""
         type: string
   push:
     branches:
@@ -48,12 +33,21 @@ jobs:
   simulate:
     runs-on: ubuntu-latest
     timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # (a) the original design: non-overlapping 6-month windows (the most that fits post-COVID is ~13 dates)
+          - { samples: "5", min_gap: "127", compare_legacy: "true" }
+          # (b) the larger design: 1-month windows do not overlap; 3M and 6M windows do (summarised with a block bootstrap)
+          - { samples: "40", min_gap: "21", compare_legacy: "false" }
     env:
       PYTHONUNBUFFERED: "1"
-      SEED: ${{ inputs.seed || '20261103' }}
-      SAMPLES: ${{ inputs.samples || '5' }}
-      MIN_GAP: ${{ inputs.min_gap || '127' }}
-      COMPARE_LEGACY: ${{ inputs.compare_legacy || 'true' }}
+      SEED: "20261103"
+      SAMPLES: ${{ matrix.samples }}
+      MIN_GAP: ${{ matrix.min_gap }}
+      COMPARE_LEGACY: ${{ matrix.compare_legacy }}
+      TEJHQ_DATASET_REVISION: ${{ inputs.dataset_revision }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -78,7 +72,7 @@ jobs:
       - name: Upload simulation reports
         uses: actions/upload-artifact@v4
         with:
-          name: point-in-time-momentum-simulation-${{ github.run_id }}
+          name: point-in-time-momentum-simulation-${{ github.run_id }}-n${{ matrix.samples }}
           path: |
             point-in-time-simulation/**
             point-in-time-simulation-trend-first/**
@@ -86,7 +80,8 @@ jobs:
           retention-days: 30
       - name: Commit the results to the research branch (readable without downloading artifacts)
         run: |
-          label="n${SAMPLES}_gap${MIN_GAP}_seed${SEED}"
+          rev=$(python -c "import json;print(json.load(open('point-in-time-simulation/run_metadata.json'))['dataset_revision'][:7])")
+          label="n${SAMPLES}_gap${MIN_GAP}_seed${SEED}_rev${rev}"
           dest="results/pit_samples/${label}"
           mkdir -p "$dest/liquidity_first"
           cp point-in-time-simulation/* "$dest/liquidity_first/"
