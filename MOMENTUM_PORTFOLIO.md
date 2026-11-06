@@ -34,7 +34,7 @@ Set initial capital to the account's actual starting cash with the --capital opt
 
 ## Rebalance timing
 
-The first scan builds an initial target. Subsequent automatic rebalances occur on the first scan on or after the 28th of a new calendar month. A manual force-rebalance option is available. This calendar rule is an operational approximation; verify the exchange calendar and next-session execution timing before relying on it.
+The first scan builds an initial target. Subsequent automatic rebalances occur on the first scan on or after the 28th of a new calendar month. If a month has no trading session on or after the 28th (for example, February 2026 when the 28th is a Saturday), the first scan in the following month catches up the prior month and records that prior month as processed; it will not double-rebalance that following month. The signal is still evaluated using the scan date's data and proposed for the next session. A manual force-rebalance option is available. The schedule is a calendar approximation, not an exchange-calendar integration.
 
 ## Hosted Friday-data preview
 
