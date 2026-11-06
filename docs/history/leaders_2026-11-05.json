@@ -1,0 +1,961 @@
+{
+ "as_of": "2026-11-05",
+ "benchmark": "NIFTYBEES.NS",
+ "counts": {
+  "universe": 481,
+  "rankable": 481,
+  "liquid": 200,
+  "above_200dma": 110,
+  "failed_to_load": 20,
+  "partial_scan_time_limit": false,
+  "load_coverage_pct": 96.0
+ },
+ "leaders": [
+  {
+   "ticker": "STLTECH.NS",
+   "rank": 1,
+   "rs12_1": 737.87,
+   "close": 757.75,
+   "fired": []
+  },
+  {
+   "ticker": "CUPID.NS",
+   "rank": 2,
+   "rs12_1": 587.59,
+   "close": 341.25,
+   "fired": []
+  },
+  {
+   "ticker": "HFCL.NS",
+   "rank": 3,
+   "rs12_1": 253.02,
+   "close": 221.74,
+   "fired": []
+  },
+  {
+   "ticker": "WELCORP.NS",
+   "rank": 4,
+   "rs12_1": 206.46,
+   "close": 2385.6,
+   "fired": []
+  },
+  {
+   "ticker": "TDPOWERSYS.NS",
+   "rank": 5,
+   "rs12_1": 156.52,
+   "close": 669.2,
+   "fired": []
+  },
+  {
+   "ticker": "LAURUSLABS.NS",
+   "rank": 6,
+   "rs12_1": 125.64,
+   "close": 2345.0,
+   "fired": []
+  },
+  {
+   "ticker": "SYRMA.NS",
+   "rank": 7,
+   "rs12_1": 118.57,
+   "close": 1515.0,
+   "fired": []
+  },
+  {
+   "ticker": "ATHERENERG.NS",
+   "rank": 8,
+   "rs12_1": 116.85,
+   "close": 1778.6,
+   "fired": []
+  },
+  {
+   "ticker": "APARINDS.NS",
+   "rank": 9,
+   "rs12_1": 103.16,
+   "close": 15613.0,
+   "fired": []
+  },
+  {
+   "ticker": "ACUTAAS.NS",
+   "rank": 10,
+   "rs12_1": 99.1,
+   "close": 3770.8,
+   "fired": []
+  },
+  {
+   "ticker": "BHEL.NS",
+   "rank": 11,
+   "rs12_1": 96.88,
+   "close": 418.1,
+   "fired": []
+  },
+  {
+   "ticker": "CHENNPETRO.NS",
+   "rank": 12,
+   "rs12_1": 94.71,
+   "close": 1418.5,
+   "fired": []
+  },
+  {
+   "ticker": "MCX.NS",
+   "rank": 13,
+   "rs12_1": 92.91,
+   "close": 3366.0,
+   "fired": []
+  },
+  {
+   "ticker": "AZAD.NS",
+   "rank": 14,
+   "rs12_1": 92.64,
+   "close": 2582.9,
+   "fired": []
+  },
+  {
+   "ticker": "AEGISLOG.NS",
+   "rank": 15,
+   "rs12_1": 90.78,
+   "close": 1185.8,
+   "fired": []
+  },
+  {
+   "ticker": "NAVINFLUOR.NS",
+   "rank": 16,
+   "rs12_1": 83.96,
+   "close": 8845.0,
+   "fired": []
+  },
+  {
+   "ticker": "SONACOMS.NS",
+   "rank": 17,
+   "rs12_1": 82.86,
+   "close": 915.25,
+   "fired": [
+    "breakout55"
+   ]
+  },
+  {
+   "ticker": "WOCKPHARMA.NS",
+   "rank": 18,
+   "rs12_1": 78.66,
+   "close": 1989.7,
+   "fired": [
+    "pullback20"
+   ]
+  },
+  {
+   "ticker": "GLAND.NS",
+   "rank": 19,
+   "rs12_1": 71.13,
+   "close": 3145.2,
+   "fired": []
+  },
+  {
+   "ticker": "REDINGTON.NS",
+   "rank": 20,
+   "rs12_1": 69.71,
+   "close": 356.4,
+   "fired": []
+  }
+ ],
+ "liquid": [
+  {
+   "ticker": "ABB.NS",
+   "close": 6628.0
+  },
+  {
+   "ticker": "AUBANK.NS",
+   "close": 941.0
+  },
+  {
+   "ticker": "ACUTAAS.NS",
+   "close": 3770.8
+  },
+  {
+   "ticker": "ADANIENSOL.NS",
+   "close": 1446.7
+  },
+  {
+   "ticker": "ADANIENT.NS",
+   "close": 2733.3
+  },
+  {
+   "ticker": "ADANIGREEN.NS",
+   "close": 1414.9
+  },
+  {
+   "ticker": "ADANIPORTS.NS",
+   "close": 1884.6
+  },
+  {
+   "ticker": "ADANIPOWER.NS",
+   "close": 204.0
+  },
+  {
+   "ticker": "ATGL.NS",
+   "close": 581.6
+  },
+  {
+   "ticker": "ABCAPITAL.NS",
+   "close": 396.1
+  },
+  {
+   "ticker": "AEGISLOG.NS",
+   "close": 1185.8
+  },
+  {
+   "ticker": "AMBER.NS",
+   "close": 6585.0
+  },
+  {
+   "ticker": "ANANTRAJ.NS",
+   "close": 466.0
+  },
+  {
+   "ticker": "ANGELONE.NS",
+   "close": 326.15
+  },
+  {
+   "ticker": "APARINDS.NS",
+   "close": 15613.0
+  },
+  {
+   "ticker": "APOLLOHOSP.NS",
+   "close": 8371.0
+  },
+  {
+   "ticker": "ASHOKLEY.NS",
+   "close": 170.21
+  },
+  {
+   "ticker": "ASIANPAINT.NS",
+   "close": 2523.8
+  },
+  {
+   "ticker": "ATHERENERG.NS",
+   "close": 1778.6
+  },
+  {
+   "ticker": "AUROPHARMA.NS",
+   "close": 1785.0
+  },
+  {
+   "ticker": "DMART.NS",
+   "close": 3420.0
+  },
+  {
+   "ticker": "AXISBANK.NS",
+   "close": 1280.0
+  },
+  {
+   "ticker": "AZAD.NS",
+   "close": 2582.9
+  },
+  {
+   "ticker": "BSE.NS",
+   "close": 3790.0
+  },
+  {
+   "ticker": "BAJAJ-AUTO.NS",
+   "close": 10758.0
+  },
+  {
+   "ticker": "BAJFINANCE.NS",
+   "close": 1070.0
+  },
+  {
+   "ticker": "BAJAJFINSV.NS",
+   "close": 1835.0
+  },
+  {
+   "ticker": "BALRAMCHIN.NS",
+   "close": 678.5
+  },
+  {
+   "ticker": "BANDHANBNK.NS",
+   "close": 161.75
+  },
+  {
+   "ticker": "BANKBARODA.NS",
+   "close": 249.67
+  },
+  {
+   "ticker": "BDL.NS",
+   "close": 1075.0
+  },
+  {
+   "ticker": "BEL.NS",
+   "close": 395.1
+  },
+  {
+   "ticker": "BHARATFORG.NS",
+   "close": 1753.0
+  },
+  {
+   "ticker": "BHEL.NS",
+   "close": 418.1
+  },
+  {
+   "ticker": "BPCL.NS",
+   "close": 317.1
+  },
+  {
+   "ticker": "BHARTIARTL.NS",
+   "close": 2056.9
+  },
+  {
+   "ticker": "BIOCON.NS",
+   "close": 362.0
+  },
+  {
+   "ticker": "BOSCHLTD.NS",
+   "close": 52475.0
+  },
+  {
+   "ticker": "BRITANNIA.NS",
+   "close": 4980.3
+  },
+  {
+   "ticker": "CGPOWER.NS",
+   "close": 808.8
+  },
+  {
+   "ticker": "CANBK.NS",
+   "close": 122.9
+  },
+  {
+   "ticker": "CARTRADE.NS",
+   "close": 2601.9
+  },
+  {
+   "ticker": "CDSL.NS",
+   "close": 1334.0
+  },
+  {
+   "ticker": "CHENNPETRO.NS",
+   "close": 1418.5
+  },
+  {
+   "ticker": "CHOLAFIN.NS",
+   "close": 1760.0
+  },
+  {
+   "ticker": "CIPLA.NS",
+   "close": 1404.1
+  },
+  {
+   "ticker": "COALINDIA.NS",
+   "close": 394.3
+  },
+  {
+   "ticker": "COCHINSHIP.NS",
+   "close": 1232.9
+  },
+  {
+   "ticker": "COFORGE.NS",
+   "close": 2079.0
+  },
+  {
+   "ticker": "CUMMINSIND.NS",
+   "close": 4058.9
+  },
+  {
+   "ticker": "CUPID.NS",
+   "close": 341.25
+  },
+  {
+   "ticker": "DLF.NS",
+   "close": 745.2
+  },
+  {
+   "ticker": "DATAPATTNS.NS",
+   "close": 3959.9
+  },
+  {
+   "ticker": "DELHIVERY.NS",
+   "close": 430.05
+  },
+  {
+   "ticker": "DIVISLAB.NS",
+   "close": 10140.5
+  },
+  {
+   "ticker": "DIXON.NS",
+   "close": 12616.0
+  },
+  {
+   "ticker": "DRREDDY.NS",
+   "close": 1366.0
+  },
+  {
+   "ticker": "EICHERMOT.NS",
+   "close": 7713.0
+  },
+  {
+   "ticker": "ETERNAL.NS",
+   "close": 358.3
+  },
+  {
+   "ticker": "EXIDEIND.NS",
+   "close": 362.5
+  },
+  {
+   "ticker": "NYKAA.NS",
+   "close": 350.3
+  },
+  {
+   "ticker": "FEDERALBNK.NS",
+   "close": 338.5
+  },
+  {
+   "ticker": "FORCEMOT.NS",
+   "close": 18382.0
+  },
+  {
+   "ticker": "GAIL.NS",
+   "close": 185.99
+  },
+  {
+   "ticker": "GVT&D.NS",
+   "close": 4145.0
+  },
+  {
+   "ticker": "GMRAIRPORT.NS",
+   "close": 99.3
+  },
+  {
+   "ticker": "GRSE.NS",
+   "close": 2137.2
+  },
+  {
+   "ticker": "GLAND.NS",
+   "close": 3145.2
+  },
+  {
+   "ticker": "GLENMARK.NS",
+   "close": 2481.8
+  },
+  {
+   "ticker": "GODREJCP.NS",
+   "close": 862.75
+  },
+  {
+   "ticker": "GRASIM.NS",
+   "close": 3227.6
+  },
+  {
+   "ticker": "GESHIP.NS",
+   "close": 1460.0
+  },
+  {
+   "ticker": "HBLENGINE.NS",
+   "close": 855.2
+  },
+  {
+   "ticker": "HCLTECH.NS",
+   "close": 1430.5
+  },
+  {
+   "ticker": "HDFCAMC.NS",
+   "close": 2640.0
+  },
+  {
+   "ticker": "HDFCBANK.NS",
+   "close": 760.0
+  },
+  {
+   "ticker": "HDFCLIFE.NS",
+   "close": 543.8
+  },
+  {
+   "ticker": "HFCL.NS",
+   "close": 221.74
+  },
+  {
+   "ticker": "HEROMOTOCO.NS",
+   "close": 5514.0
+  },
+  {
+   "ticker": "HSCL.NS",
+   "close": 568.55
+  },
+  {
+   "ticker": "HINDALCO.NS",
+   "close": 937.85
+  },
+  {
+   "ticker": "HAL.NS",
+   "close": 5043.0
+  },
+  {
+   "ticker": "HINDCOPPER.NS",
+   "close": 427.35
+  },
+  {
+   "ticker": "HINDPETRO.NS",
+   "close": 380.05
+  },
+  {
+   "ticker": "HINDUNILVR.NS",
+   "close": 1982.0
+  },
+  {
+   "ticker": "HINDZINC.NS",
+   "close": 570.75
+  },
+  {
+   "ticker": "POWERINDIA.NS",
+   "close": 28200.0
+  },
+  {
+   "ticker": "HYUNDAI.NS",
+   "close": 2121.0
+  },
+  {
+   "ticker": "ICICIBANK.NS",
+   "close": 1500.0
+  },
+  {
+   "ticker": "ICICIGI.NS",
+   "close": 1620.0
+  },
+  {
+   "ticker": "IDFCFIRSTB.NS",
+   "close": 77.8
+  },
+  {
+   "ticker": "IFCI.NS",
+   "close": 61.35
+  },
+  {
+   "ticker": "IIFL.NS",
+   "close": 604.5
+  },
+  {
+   "ticker": "ITC.NS",
+   "close": 278.85
+  },
+  {
+   "ticker": "INDIANB.NS",
+   "close": 892.15
+  },
+  {
+   "ticker": "INDHOTEL.NS",
+   "close": 875.0
+  },
+  {
+   "ticker": "IOC.NS",
+   "close": 144.5
+  },
+  {
+   "ticker": "INDUSTOWER.NS",
+   "close": 383.2
+  },
+  {
+   "ticker": "INDUSINDBK.NS",
+   "close": 911.45
+  },
+  {
+   "ticker": "NAUKRI.NS",
+   "close": 1214.5
+  },
+  {
+   "ticker": "INFY.NS",
+   "close": 1167.4
+  },
+  {
+   "ticker": "INDIGO.NS",
+   "close": 5420.0
+  },
+  {
+   "ticker": "JSWENERGY.NS",
+   "close": 523.35
+  },
+  {
+   "ticker": "JSWSTEEL.NS",
+   "close": 1355.6
+  },
+  {
+   "ticker": "JPPOWER.NS",
+   "close": 13.9
+  },
+  {
+   "ticker": "JIOFIN.NS",
+   "close": 229.62
+  },
+  {
+   "ticker": "KEI.NS",
+   "close": 4061.1
+  },
+  {
+   "ticker": "KPITTECH.NS",
+   "close": 539.8
+  },
+  {
+   "ticker": "KALYANKJIL.NS",
+   "close": 560.0
+  },
+  {
+   "ticker": "KAYNES.NS",
+   "close": 3292.5
+  },
+  {
+   "ticker": "KIRLOSENG.NS",
+   "close": 1592.4
+  },
+  {
+   "ticker": "KOTAKBANK.NS",
+   "close": 467.0
+  },
+  {
+   "ticker": "LTF.NS",
+   "close": 278.59
+  },
+  {
+   "ticker": "LTM.NS",
+   "close": 4393.0
+  },
+  {
+   "ticker": "LT.NS",
+   "close": 4050.0
+  },
+  {
+   "ticker": "LAURUSLABS.NS",
+   "close": 2345.0
+  },
+  {
+   "ticker": "LICI.NS",
+   "close": 408.0
+  },
+  {
+   "ticker": "LODHA.NS",
+   "close": 1175.8
+  },
+  {
+   "ticker": "LUPIN.NS",
+   "close": 1988.0
+  },
+  {
+   "ticker": "MTARTECH.NS",
+   "close": 5735.0
+  },
+  {
+   "ticker": "M&M.NS",
+   "close": 3127.5
+  },
+  {
+   "ticker": "MANAPPURAM.NS",
+   "close": 326.0
+  },
+  {
+   "ticker": "MRPL.NS",
+   "close": 173.73
+  },
+  {
+   "ticker": "MANKIND.NS",
+   "close": 2518.0
+  },
+  {
+   "ticker": "MARICO.NS",
+   "close": 887.75
+  },
+  {
+   "ticker": "MARUTI.NS",
+   "close": 12652.0
+  },
+  {
+   "ticker": "MAXHEALTH.NS",
+   "close": 932.0
+  },
+  {
+   "ticker": "MAZDOCK.NS",
+   "close": 1839.0
+  },
+  {
+   "ticker": "MCX.NS",
+   "close": 3366.0
+  },
+  {
+   "ticker": "MUTHOOTFIN.NS",
+   "close": 2839.0
+  },
+  {
+   "ticker": "NHPC.NS",
+   "close": 80.6
+  },
+  {
+   "ticker": "NMDC.NS",
+   "close": 70.41
+  },
+  {
+   "ticker": "NTPC.NS",
+   "close": 313.7
+  },
+  {
+   "ticker": "NATIONALUM.NS",
+   "close": 326.5
+  },
+  {
+   "ticker": "NAVINFLUOR.NS",
+   "close": 8845.0
+  },
+  {
+   "ticker": "NESTLEIND.NS",
+   "close": 1258.3
+  },
+  {
+   "ticker": "NETWEB.NS",
+   "close": 4023.5
+  },
+  {
+   "ticker": "ONGC.NS",
+   "close": 230.0
+  },
+  {
+   "ticker": "OIL.NS",
+   "close": 439.75
+  },
+  {
+   "ticker": "OLAELEC.NS",
+   "close": 35.09
+  },
+  {
+   "ticker": "PAYTM.NS",
+   "close": 1781.6
+  },
+  {
+   "ticker": "OFSS.NS",
+   "close": 10150.0
+  },
+  {
+   "ticker": "POLICYBZR.NS",
+   "close": 972.0
+  },
+  {
+   "ticker": "PATANJALI.NS",
+   "close": 410.7
+  },
+  {
+   "ticker": "PERSISTENT.NS",
+   "close": 6109.5
+  },
+  {
+   "ticker": "PIDILITIND.NS",
+   "close": 1553.6
+  },
+  {
+   "ticker": "PPLPHARMA.NS",
+   "close": 238.63
+  },
+  {
+   "ticker": "POLYCAB.NS",
+   "close": 7849.0
+  },
+  {
+   "ticker": "PFC.NS",
+   "close": 329.4
+  },
+  {
+   "ticker": "POWERGRID.NS",
+   "close": 258.15
+  },
+  {
+   "ticker": "PNB.NS",
+   "close": 126.1
+  },
+  {
+   "ticker": "RRKABEL.NS",
+   "close": 2014.2
+  },
+  {
+   "ticker": "RBLBANK.NS",
+   "close": 372.4
+  },
+  {
+   "ticker": "RECLTD.NS",
+   "close": 295.75
+  },
+  {
+   "ticker": "RADICO.NS",
+   "close": 4525.0
+  },
+  {
+   "ticker": "RVNL.NS",
+   "close": 193.69
+  },
+  {
+   "ticker": "REDINGTON.NS",
+   "close": 356.4
+  },
+  {
+   "ticker": "RELIANCE.NS",
+   "close": 1313.4
+  },
+  {
+   "ticker": "SBILIFE.NS",
+   "close": 1735.0
+  },
+  {
+   "ticker": "SAMMAANCAP.NS",
+   "close": 133.77
+  },
+  {
+   "ticker": "MOTHERSON.NS",
+   "close": 168.0
+  },
+  {
+   "ticker": "SCI.NS",
+   "close": 263.45
+  },
+  {
+   "ticker": "SHRIRAMFIN.NS",
+   "close": 964.0
+  },
+  {
+   "ticker": "ENRIN.NS",
+   "close": 2859.0
+  },
+  {
+   "ticker": "SIEMENS.NS",
+   "close": 3432.0
+  },
+  {
+   "ticker": "SOLARINDS.NS",
+   "close": 18520.0
+  },
+  {
+   "ticker": "SONACOMS.NS",
+   "close": 915.25
+  },
+  {
+   "ticker": "SBIN.NS",
+   "close": 1006.4
+  },
+  {
+   "ticker": "SAIL.NS",
+   "close": 172.3
+  },
+  {
+   "ticker": "STLTECH.NS",
+   "close": 757.75
+  },
+  {
+   "ticker": "SUNPHARMA.NS",
+   "close": 1829.0
+  },
+  {
+   "ticker": "SUZLON.NS",
+   "close": 38.59
+  },
+  {
+   "ticker": "SWIGGY.NS",
+   "close": 189.51
+  },
+  {
+   "ticker": "SYRMA.NS",
+   "close": 1515.0
+  },
+  {
+   "ticker": "TDPOWERSYS.NS",
+   "close": 669.2
+  },
+  {
+   "ticker": "TVSMOTOR.NS",
+   "close": 4450.0
+  },
+  {
+   "ticker": "TCS.NS",
+   "close": 2495.7
+  },
+  {
+   "ticker": "TATACONSUM.NS",
+   "close": 1077.7
+  },
+  {
+   "ticker": "TMPV.NS",
+   "close": 293.7
+  },
+  {
+   "ticker": "TATAPOWER.NS",
+   "close": 364.55
+  },
+  {
+   "ticker": "TATASTEEL.NS",
+   "close": 182.0
+  },
+  {
+   "ticker": "TECHM.NS",
+   "close": 1822.7
+  },
+  {
+   "ticker": "TEJASNET.NS",
+   "close": 423.95
+  },
+  {
+   "ticker": "NIACL.NS",
+   "close": 158.54
+  },
+  {
+   "ticker": "TITAN.NS",
+   "close": 4834.6
+  },
+  {
+   "ticker": "TORNTPHARM.NS",
+   "close": 4710.0
+  },
+  {
+   "ticker": "TRENT.NS",
+   "close": 3055.0
+  },
+  {
+   "ticker": "ULTRACEMCO.NS",
+   "close": 12250.0
+  },
+  {
+   "ticker": "UNIONBANK.NS",
+   "close": 188.0
+  },
+  {
+   "ticker": "VBL.NS",
+   "close": 433.3
+  },
+  {
+   "ticker": "VEDL.NS",
+   "close": 263.8
+  },
+  {
+   "ticker": "IDEA.NS",
+   "close": 12.89
+  },
+  {
+   "ticker": "WAAREEENER.NS",
+   "close": 2449.3
+  },
+  {
+   "ticker": "WELCORP.NS",
+   "close": 2385.6
+  },
+  {
+   "ticker": "WIPRO.NS",
+   "close": 198.4
+  },
+  {
+   "ticker": "WOCKPHARMA.NS",
+   "close": 1989.7
+  },
+  {
+   "ticker": "YESBANK.NS",
+   "close": 16.24
+  },
+  {
+   "ticker": "ZEEL.NS",
+   "close": 67.42
+  },
+  {
+   "ticker": "ZENSARTECH.NS",
+   "close": 565.75
+  },
+  {
+   "ticker": "ZYDUSLIFE.NS",
+   "close": 1193.0
+  }
+ ]
+}
