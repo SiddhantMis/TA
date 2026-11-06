@@ -1,0 +1,20 @@
+{
+  "seed": 20261103,
+  "sample_count": 5,
+  "dataset_revision": "0303d8c95b4519765a9d5556fd9c2d430f8f81d8",
+  "data_start": "2019-01-01",
+  "data_end": "2026-10-13",
+  "sample_window_start": "2020-03-23",
+  "min_gap": 127,
+  "selection_order": "liquidity_first",
+  "revision_differs_from_upstream_head": true,
+  "upstream_dataset_head_at_run": "e0ceb628f071f011b1653735037e3e996b807057",
+  "calendar": {
+    "sessions": 1919,
+    "first": "2019-01-01",
+    "last": "2026-10-13",
+    "sha256": "7d0cb3f0bca2f0de919ec5d677f1a1b15dcb2ed8b1d5f1e58beb0337eba4c461"
+  },
+  "benchmark": "official NIFTY 500 TRI (entry-aligned via NIFTYBEES overnight change)",
+  "selection_benchmark": "TejHQ adjusted NIFTYBEES"
+}
