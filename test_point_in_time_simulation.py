@@ -130,6 +130,8 @@ class PointInTimeSimulationTests(unittest.TestCase):
 
     def test_benchmark_is_aligned_to_the_entry_open_not_the_signal_close(self):
         sessions, pos, frames, snapshot = self._flat_world()
+        for f in frames.values():
+            f.loc[sessions[pos], "Close"] = 105.0                                        # signal-day close; entry open 100; exit close 110
         tri_close = np.full(len(sessions), 100.0)
         tri_close[pos + 21] = 110.0
         tri = pd.DataFrame({"Close": tri_close}, index=sessions)
@@ -145,7 +147,11 @@ class PointInTimeSimulationTests(unittest.TestCase):
         self.assertAlmostEqual(one["niftybees_entry_to_exit_net_return_pct"], ((53.55 / 51) * cost - 1) * 100)
         stock_net = (1.10 * cost - 1) * 100                                                      # 9.67%: beats 7.84% (aligned) but not 10.0% (unaligned)
         self.assertAlmostEqual(one["raw_top20_equal_weight_net_return_pct"], stock_net)
-        self.assertTrue(one["raw_outperformed_tri"])
+        cc_net = ((110 / 105) * cost - 1) * 100                                                   # the like-for-like (signal close -> exit close) basket
+        self.assertAlmostEqual(one["raw_top20_close_to_close_net_return_pct"], cc_net)
+        self.assertAlmostEqual(one["overnight_execution_effect_pct"], stock_net - cc_net)         # buying the open that gapped DOWN from 105 to 100 helped
+        self.assertTrue(one["raw_cc_outperformed_tri"] is False)                                  # 4.5% like-for-like vs the TRI's 10.0%
+        self.assertTrue(one["raw_outperformed_tri"] is False)                                     # the original open-entry flag compares with the unaligned 10.0%
 
     def test_bear_regime_is_cash_even_when_the_stock_basket_is_incomplete(self):
         sessions, pos, frames, snapshot = self._flat_world(regime="BEAR", break_exit_for="S03.NS")

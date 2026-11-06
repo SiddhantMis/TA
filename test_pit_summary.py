@@ -26,10 +26,21 @@ class SummaryTests(unittest.TestCase):
         self.assertEqual((h["samples"], h["complete_samples"], h["incomplete_samples"]), (12, 12, 0))
         self.assertAlmostEqual(h["raw"]["mean"], 4.0)
         self.assertAlmostEqual(h["raw"]["median"], 4.0)
-        self.assertAlmostEqual(h["raw_beats_benchmark_pct"], 50.0)          # 6 samples at +10 beat the 2.0 aligned TRI; 6 at -2 do not
-        self.assertEqual(out["benchmark_column"], "nifty500_tri_entry_aligned_return_pct")
+        self.assertAlmostEqual(h["raw_beats_benchmark_pct"], 50.0)          # 6 samples at +10 beat the 3.0 TRI; 6 at -2 do not
+        self.assertEqual(out["benchmark_column"], "nifty500_tri_return_pct")
         self.assertEqual(h["by_regime"]["BULL"]["n"] + h["by_regime"]["BEAR"]["n"], 12)
         self.assertIn("### 1M", text)
+
+    def test_like_for_like_series_is_primary_when_present(self):
+        r = _returns()
+        r["raw_top20_close_to_close_net_return_pct"] = r["raw_top20_equal_weight_net_return_pct"] - 3.0     # the overnight effect is +3 pts
+        r["market_filter_close_to_close_net_return_pct"] = r["market_filter_portfolio_net_return_pct"] - 3.0
+        _, out = summarize_returns(r, pd.DataFrame(), min_gap=21, horizons={"1M": 21})
+        h = out["horizons"]["1M"]
+        self.assertEqual(out["primary_basket_column"], "raw_top20_close_to_close_net_return_pct")
+        self.assertAlmostEqual(h["raw"]["mean"], 1.0)                                  # like-for-like mean
+        self.assertAlmostEqual(h["as_traded_next_open"]["mean"], 4.0)
+        self.assertAlmostEqual(h["as_traded_next_open"]["overnight_execution_effect_mean"], 3.0)
 
     def test_incomplete_baskets_are_excluded_not_reweighted(self):
         r = _returns()

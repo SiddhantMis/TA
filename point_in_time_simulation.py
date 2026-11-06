@@ -213,10 +213,12 @@ def simulate_sample(snapshot, calendar, frames, tri, sample_id, actions, bees=No
     for pick in picks:
         ticker = pick["ticker"]
         entry = _price_at(frames, ticker, "Open", entry_date)
+        signal_close = _price_at(frames, ticker, "Close", signal_date)
         row = {
             "sample_id": sample_id, "signal_date": signal_date.date().isoformat(),
             "entry_date": entry_date.date().isoformat(), **pick,
             "entry_open_adjusted": entry,
+            "signal_close_adjusted": signal_close,
         }
         for label, offset in HORIZONS.items():
             exit_pos = entry_pos + offset - 1
@@ -232,6 +234,9 @@ def simulate_sample(snapshot, calendar, frames, tri, sample_id, actions, bees=No
             row[f"{label}_exit_date"] = exit_date.date().isoformat()
             row[f"{label}_exit_close_adjusted"] = exit_close
             row[f"{label}_unsupported_action_during_hold"] = has_unsupported_event
+            # Like-for-like with the TRI: adjusted close at the signal date -> exit close, same 0.30% round-trip cost.
+            cc_factor = (exit_close / signal_close) * (1 - ROUND_TRIP_COST / 2) / (1 + ROUND_TRIP_COST / 2) if signal_close and exit_close else None
+            row[f"{label}_close_to_close_net_return_pct"] = (cc_factor - 1) * 100 if cc_factor is not None and not has_unsupported_event else None
             if entry and exit_close and not has_unsupported_event:
                 row[f"{label}_gross_return_pct"] = (exit_close / entry - 1) * 100
                 net_factor = (exit_close / entry) * (1 - ROUND_TRIP_COST / 2) / (1 + ROUND_TRIP_COST / 2)
@@ -276,7 +281,13 @@ def simulate_sample(snapshot, calendar, frames, tri, sample_id, actions, bees=No
             filtered = raw_basket
         else:
             filtered = 0.0                                          # cash is certain, whether or not the stock basket is complete
-        comparator = aligned_return if aligned_return is not None else benchmark_return
+        cc_vals = [row[f"{label}_close_to_close_net_return_pct"] for row in stock_rows]
+        cc_complete = len(cc_vals) > 0 and all(v is not None for v in cc_vals)
+        raw_cc = float(np.sum(cc_vals) / PORTFOLIO_SIZE) if cc_complete else None
+        filtered_cc = raw_cc if snapshot["market_regime"] == "BULL" else 0.0
+        # Flags compare against the TRI exactly as the original report did (signal close -> exit close). The open-entry
+        # basket and that TRI differ by the overnight gap, so the like-for-like flags use the close-to-close basket.
+        comparator = benchmark_return
         returns.append({
             "sample_id": sample_id,
             "signal_date": signal_date.date().isoformat(),
@@ -301,6 +312,12 @@ def simulate_sample(snapshot, calendar, frames, tri, sample_id, actions, bees=No
             "raw_outperformed_tri": (
                 raw_basket > comparator if raw_basket is not None and comparator is not None else None
             ),
+            "raw_top20_close_to_close_net_return_pct": raw_cc,
+            "market_filter_close_to_close_net_return_pct": filtered_cc,
+            "raw_cc_outperformed_tri": raw_cc > benchmark_return if raw_cc is not None and benchmark_return is not None else None,
+            "market_filter_cc_outperformed_tri": (
+                filtered_cc > benchmark_return if filtered_cc is not None and benchmark_return is not None else None),
+            "overnight_execution_effect_pct": (raw_basket - raw_cc) if raw_basket is not None and raw_cc is not None else None,
             "available_stocks": len(got),
             "excluded_unsupported_action": sum(
                 row[f"{label}_return_status"] == "unsupported_corporate_action_during_hold" for row in stock_rows),
@@ -429,7 +446,7 @@ def run_simulation(seed=DEFAULT_SEED, sample_count=5, outdir="point-in-time-simu
         "- Unsupported corporate actions: only events with ex-dates on or before each signal date reset that symbol's lookback; future events do not affect ranking, but an unsupported event during a holding window invalidates that stock's return for the affected horizon",
         "- Missing selected-stock entry/exit prices or unsupported corporate actions during a holding window: basket return marked incomplete; no survivor reweighting",
         "- Market filter: raw top-20 basket shown for diagnosis; investable portfolio is 100% cash when NIFTYBEES is at/below its 200-DMA",
-        "- Benchmarks: nifty500_tri_return_pct = TRI signal-date close to exit close (includes the signal-close-to-entry-open overnight gap the stocks never earn); nifty500_tri_entry_aligned_return_pct = TRI with its entry level moved by NIFTYBEES' overnight change (the like-for-like comparator used for every outperformance flag); niftybees_entry_to_exit_net_return_pct = NIFTYBEES entry open to exit close after the same 0.30% round-trip cost",
+        "- Benchmarks and windows: the TRI is measured signal-date close to exit close. The LIKE-FOR-LIKE stock basket is therefore also measured signal close to exit close (raw_top20_close_to_close_*), after the same 0.30% cost. The as-traded basket (buy at the next open) differs from it by the overnight gap (overnight_execution_effect_pct). nifty500_tri_entry_aligned_* (TRI moved by NIFTYBEES' overnight change) is kept as a DIAGNOSTIC only: a single ETF opening print proved unreliable (e.g. +3.3% on 2021-09-09 while all 20 selected stocks gapped between -1.3% and +2.0%)",
         "- Baskets: empty slots (fewer than 20 qualifiers) are cash at 0%; a basket with any missing/invalid selected-stock return is marked incomplete and excluded from summaries (raw_top20_available_mean_* silently reweights and is diagnostic only)",
         "",
         "## Sample dates", "",

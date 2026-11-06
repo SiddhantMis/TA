@@ -60,17 +60,21 @@ def _md(frame):
 
 
 def summarize_returns(returns: pd.DataFrame, stocks: pd.DataFrame, min_gap: int, horizons: dict, seed: int = 11, reps: int = 2000):
-    comp = "nifty500_tri_entry_aligned_return_pct"
-    if comp not in returns or returns[comp].notna().sum() == 0:
-        comp = "nifty500_tri_return_pct"
-    out = {"benchmark_column": comp, "min_gap_sessions": min_gap, "horizons": {}}
+    comp = "nifty500_tri_return_pct"
+    cc = "raw_top20_close_to_close_net_return_pct" in returns and returns["raw_top20_close_to_close_net_return_pct"].notna().any()
+    raw_col = "raw_top20_close_to_close_net_return_pct" if cc else RAW
+    fil_col = "market_filter_close_to_close_net_return_pct" if cc else FILTERED
+    out = {"benchmark_column": comp, "primary_basket_column": raw_col, "min_gap_sessions": min_gap, "horizons": {}}
     lines = ["## Summary statistics", "",
-             f"Benchmark: `{comp}`. Samples whose basket has any missing or corporate-action-invalidated stock return are "
-             "EXCLUDED (never reweighted). Overlapping holding windows make neighbouring samples dependent: the effective number "
-             "of independent samples is about n x min(1, min_gap / horizon), and the intervals use a circular block bootstrap.", ""]
+             f"Benchmark: `{comp}` (signal-date close to exit close). Primary stock series: `{raw_col}` - "
+             + ("measured over the SAME window as the benchmark (signal close to exit close), so the comparison is like for like. "
+                "The as-traded next-open basket is shown separately with its overnight effect. " if cc else "next-open entry (no like-for-like series available). ")
+             + "Samples whose basket has any missing or corporate-action-invalidated stock return are EXCLUDED (never reweighted). "
+             "Overlapping holding windows make neighbouring samples dependent: the effective number of independent samples is about "
+             "n x min(1, min_gap / horizon), and the intervals use a circular block bootstrap.", ""]
     for label, h in horizons.items():
         d = returns[returns["horizon"] == label].sort_values("signal_date")
-        ok = d[d["complete_stock_prices"].astype(bool) & d[comp].notna() & d[RAW].notna()]
+        ok = d[d["complete_stock_prices"].astype(bool) & d[comp].notna() & d[raw_col].notna() & d[fil_col].notna()]
         block = max(1, int(math.ceil(h / max(1, min_gap))))
         info = {"samples": int(len(d)), "complete_samples": int(len(ok)), "incomplete_samples": int(len(d) - len(ok)),
                 "effective_independent_samples": float(len(ok) * min(1.0, min_gap / h)), "bootstrap_block": block}
@@ -85,7 +89,11 @@ def summarize_returns(returns: pd.DataFrame, stocks: pd.DataFrame, min_gap: int,
             out["horizons"][label] = info
             lines += ["_No complete samples._", ""]
             continue
-        raw, fil, tri = ok[RAW].astype(float), ok[FILTERED].astype(float), ok[comp].astype(float)
+        raw, fil, tri = ok[raw_col].astype(float), ok[fil_col].astype(float), ok[comp].astype(float)
+        if cc:
+            traded = ok[RAW].astype(float)
+            info["as_traded_next_open"] = {**_dist(traded), "overnight_execution_effect_mean": float((traded - raw).mean()),
+                                           "beats_benchmark_pct": float((traded > tri).mean() * 100)}
         info.update({"raw": _dist(raw), "market_filter": _dist(fil), "benchmark": _dist(tri),
                      "raw_beats_benchmark_pct": float((raw > tri).mean() * 100),
                      "filter_beats_benchmark_pct": float((fil > tri).mean() * 100),
@@ -94,7 +102,7 @@ def summarize_returns(returns: pd.DataFrame, stocks: pd.DataFrame, min_gap: int,
                      "ci95_mean_excess_raw": block_bootstrap_ci((raw - tri).to_numpy(), block, reps, seed),
                      "ci95_mean_excess_filter": block_bootstrap_ci((fil - tri).to_numpy(), block, reps, seed)})
         table = pd.DataFrame({
-            "series": ["raw top-20", "market-filtered", "benchmark (TRI)"],
+            "series": ["raw top-20" + (" (close-to-close)" if cc else ""), "market-filtered" + (" (close-to-close)" if cc else ""), "benchmark (TRI)"],
             "mean %": [info[k]["mean"] for k in ("raw", "market_filter", "benchmark")],
             "median %": [info[k]["median"] for k in ("raw", "market_filter", "benchmark")],
             "std %": [info[k]["std"] for k in ("raw", "market_filter", "benchmark")],
@@ -106,6 +114,10 @@ def summarize_returns(returns: pd.DataFrame, stocks: pd.DataFrame, min_gap: int,
         lines += [_md(table), ""]
         lo, hi = info["ci95_mean_excess_raw"]
         flo, fhi = info["ci95_mean_excess_filter"]
+        if cc:
+            a = info["as_traded_next_open"]
+            lines += [f"As traded (buy at the next open): mean {a['mean']:+.2f}%, median {a['median']:+.2f}%; the overnight execution effect vs the close-to-close basket "
+                      f"averages {a['overnight_execution_effect_mean']:+.2f} pts (the TRI includes the signal-close-to-open interval, as does the close-to-close basket).", ""]
         lines += [f"Mean excess vs benchmark, raw: {info['mean_excess_raw']:+.2f} pts (median {info['median_excess_raw']:+.2f}), "
                   f"95% block-bootstrap interval [{lo:+.2f}, {hi:+.2f}]",
                   f"Mean excess vs benchmark, market-filtered: {info['mean_excess_filter']:+.2f} pts (median {info['median_excess_filter']:+.2f}), "
@@ -114,7 +126,7 @@ def summarize_returns(returns: pd.DataFrame, stocks: pd.DataFrame, min_gap: int,
         for reg in ("BULL", "BEAR"):
             sub = ok[ok["market_regime"] == reg]
             if len(sub):
-                r, f, t = sub[RAW].astype(float), sub[FILTERED].astype(float), sub[comp].astype(float)
+                r, f, t = sub[raw_col].astype(float), sub[fil_col].astype(float), sub[comp].astype(float)
                 info["by_regime"][reg] = {"n": int(len(sub)), "raw_mean": float(r.mean()), "raw_median": float(r.median()),
                                           "filter_mean": float(f.mean()), "benchmark_mean": float(t.mean()),
                                           "raw_beats_pct": float((r > t).mean() * 100), "filter_beats_pct": float((f > t).mean() * 100)}
