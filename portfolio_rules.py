@@ -50,7 +50,7 @@ from nse_benchmark import (
 )
 from tejhq_data import load_niftybees_raw_frame
 from niftyindices_tri import load_nifty500_tri_history
-from corporate_action_audit import load_and_apply_action_quarantine
+from corporate_action_audit import action_quarantine_masks, load_and_apply_action_quarantine
 import pattern_lab as PL
 from nifty500_pit import (
     DEFAULT_MEMBERSHIP_FILE, EXPECTED_INDEX_SIZE, MEMBERSHIP_COVERAGE_THROUGH,
@@ -99,7 +99,8 @@ def prepare(frames: dict, bench_df: pd.DataFrame, liquid_top: int = LIQUID_TOP,
     mom = C.shift(21) / C.shift(252) - 1
     # Require 253 consecutive observed sessions; never pad new listings or post-event history.
     observed_253 = C.notna().rolling(253, min_periods=253).sum().eq(253)
-    valid = C.notna() & observed_253 & sma200.notna() & mom.notna() & pit_mask
+    action_eligible, action_events = action_quarantine_masks(idx, frames)
+    valid = C.notna() & observed_253 & sma200.notna() & mom.notna() & pit_mask & action_eligible
     elig = valid & liquid & (C > sma200)
     rank = mom.where(elig).rank(axis=1, ascending=False, method="first")
 
@@ -135,6 +136,8 @@ def prepare(frames: dict, bench_df: pd.DataFrame, liquid_top: int = LIQUID_TOP,
     return {"idx": idx, "cols": cols, "O": O.to_numpy(float), "C": C_mark.to_numpy(float),
             "C_raw": C.to_numpy(float),
             "rank": rank.to_numpy(float), "univ": (valid & liquid).to_numpy(bool),
+            "action_eligible": action_eligible.to_numpy(bool),
+            "unsupported_action_event": action_events.to_numpy(bool),
             "pit_mask": pit_mask.to_numpy(bool), "pit_expected_count": expected,
             "pit_available_count": available, "pit_coverage_pct": coverage_pct,
             "membership_calendar": calendar,
@@ -230,7 +233,16 @@ def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0
     eq = np.full(n, np.nan)
     turns, stops, cash_days = [], 0, 0
     stale_holding_days, max_stale_sessions = 0, 0
+    action_events = P.get("unsupported_action_event", np.zeros(O.shape, dtype=bool))
+    action_blocked_entries = []
     for t in range(start, n):
+        affected_holdings = [j for j in sh if action_events[t, j]]
+        if affected_holdings:
+            names = [P["cols"][j] for j in affected_holdings]
+            raise RuntimeError(
+                f"Unsupported corporate action affects held position(s) {names} on {idx[t].date()}; "
+                "valuation and execution quarantined until instrument/cash entitlements are resolved."
+            )
         o, c, actual_c = O[t], C[t], C_raw[t]
         prior_mark = C[t - 1] if t > 0 else c
         valid_open = np.isfinite(o) & (o > 0)
@@ -264,6 +276,13 @@ def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0
                     raise ValueError(f"Unknown regime_source: {regime_source}")
                 exposure = 1.0 if (regime == "off" or bull) else (0.5 if regime == "half" else 0.0)
                 target = select_target(P["rank"][s], list(sh), buffer, size, retain) if exposure > 0 else []
+                for j in target:
+                    if action_events[t, j]:
+                        action_blocked_entries.append({
+                            "symbol": P["cols"][j], "session": idx[t].date().isoformat(),
+                            "reason": "unsupported_corporate_action_on_execution_session",
+                        })
+                target = [j for j in target if not action_events[t, j]]
                 target = [j for j in target if j not in stopped_today]
                 for j in list(sh):
                     if j not in target and valid_open[j]:
@@ -322,6 +341,7 @@ def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0
         "equity": eq, "turnover": turns, "stops": stops, "cash_days": cash_days,
         "stale_holding_days": stale_holding_days,
         "max_stale_sessions": max_stale_sessions,
+        "action_blocked_entries": action_blocked_entries,
     }
 
 
@@ -527,6 +547,13 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     C = P["C"]; C_raw = P["C_raw"]; univ = P["univ"]
     dr = np.full(n, np.nan)
     for t in range(START + 1, n):
+        action_exposure = univ[t - 1] & P["unsupported_action_event"][t]
+        if action_exposure.any():
+            names = [P["cols"][j] for j in np.flatnonzero(action_exposure)]
+            raise RuntimeError(
+                f"Unsupported corporate action affects equal-weight control exposure {names} on {idx[t].date()}; "
+                "refusing to fabricate cross-action returns or reweight the remaining names."
+            )
         m = univ[t - 1] & np.isfinite(C_raw[t]) & np.isfinite(C_raw[t - 1]) & (C_raw[t - 1] > 0)
         if m.any():
             dr[t] = np.mean(C_raw[t][m] / C_raw[t - 1][m] - 1)
@@ -921,7 +948,8 @@ def main(argv=None):
     source_note = (
         f"Stock universe: TejHQ adjusted NSE OHLC (dataset revision {source_metadata.get('dataset_revision', 'unknown')}), "
         "back-adjusted for splits, bonuses and dividends; raw exchange volume/turnover retained; "
-        "mergers/demergers/rights/buybacks are not scaled; these and unclassified actions are audited and the affected symbol lookback is reset. "
+        "mergers/demergers/rights/buybacks are not scaled; these and unclassified actions reset eligibility only from the ex-date, preserving earlier history. "
+        "A held position or equal-weight control exposed across an unsupported action fails closed until entitlements are resolved. "
         "Performance benchmark: official NSE Indices NIFTY 500 gross TRI with dividends reinvested. NIFTYBEES remains the live regime filter and secondary price comparison. "
         "New listings and post-event histories are ineligible until 253 consecutive observed sessions exist. "
         "Corporate-action event details and reset decisions are in corporate_action_audit.csv and corporate_action_quarantine.csv. "
