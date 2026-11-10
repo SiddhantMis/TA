@@ -113,7 +113,8 @@ def build_alert_content(flagged: list[dict], session_note: str,
             f"{r['checks_passed']}/{r['checks_total']} checks, confidence {r['confidence']}% | "
             f"{r['recommendation']}"
         )
-    footer = watch_line + "\n_Pre-filter output — R:R is pre-checked against the auto plan; sizing and time stop (sections 7-9) are still by hand._"
+    safety_footer = "\n_Pre-filter output — R:R is pre-checked against the auto plan; sizing and time stop (sections 7-9) are still by hand._"
+    footer = watch_line + safety_footer
     content = "\n".join(lines) + footer
 
     # Discord's hard content limit is 2000 chars. At 48 tickers this
@@ -134,6 +135,13 @@ def build_alert_content(flagged: list[dict], session_note: str,
         content = "\n".join([lines[0]] + shown)
         content += f"\n_...+{omitted} more flagged, truncated for Discord's message limit — see the full list on the Pages site._"
         content += footer
+
+    # The header contains the wide board and warnings; removing candidate rows
+    # cannot bound a message when that header alone exceeds Discord's limit.
+    if len(content) > DISCORD_CONTENT_LIMIT:
+        notice = f"\n_Alert truncated; see all {len(flagged)} flagged setups on the Pages site._"
+        header_budget = DISCORD_CONTENT_LIMIT - len(notice) - len(safety_footer) - 1
+        content = lines[0][:header_budget] + "…" + notice + safety_footer
 
     return content
 
