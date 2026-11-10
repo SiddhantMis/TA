@@ -24,9 +24,9 @@
    "turnover_l1": 1.0000000000000002,
    "top20_gross": -0.017022025995869113,
    "top20_net": -0.018522025995869114,
-   "same_universe_equal_weight": 0.06037121784976808,
+   "same_universe_equal_weight": 0.0603712177529149,
    "nifty50": 0.07571238586288098,
-   "excess_vs_universe": -0.0788932438456372,
+   "excess_vs_universe": -0.07889324374878401,
    "excess_vs_nifty": -0.09423441185875009
   }
  ],

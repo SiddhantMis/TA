@@ -3,7 +3,7 @@
  "benchmark": "NIFTYBEES.NS",
  "counts": {
   "universe": 481,
-  "rankable": 479,
+  "rankable": 481,
   "liquid": 200,
   "above_200dma": 117,
   "failed_to_load": 20,
@@ -149,7 +149,7 @@
    "ticker": "BALRAMCHIN.NS",
    "rank": 19,
    "rs12_1": 64.18,
-   "close": 658.4,
+   "close": 654.4,
    "fired": []
   },
   {
@@ -241,7 +241,7 @@
   },
   {
    "ticker": "AUROPHARMA.NS",
-   "close": 1855.3
+   "close": 1848.3
   },
   {
    "ticker": "DMART.NS",
@@ -273,7 +273,7 @@
   },
   {
    "ticker": "BALRAMCHIN.NS",
-   "close": 658.4
+   "close": 654.4
   },
   {
    "ticker": "BANDHANBNK.NS",
