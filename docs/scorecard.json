@@ -10,24 +10,45 @@
   {
    "signal_date": "2026-10-30",
    "entry_date": "2026-11-02",
-   "exit_date": "2026-11-09",
-   "status": "open",
-   "data_status": "complete",
+   "exit_date": "2026-11-11",
+   "status": "open_incomplete",
+   "data_status": "missing_price_or_turnover_data",
    "holdings": 20,
-   "priced": 20,
+   "priced": 0,
    "expected_holdings": 20,
-   "missing_tickers": [],
+   "missing_tickers": [
+    "STLTECH.NS",
+    "CUPID.NS",
+    "MTARTECH.NS",
+    "WELCORP.NS",
+    "HFCL.NS",
+    "TDPOWERSYS.NS",
+    "LAURUSLABS.NS",
+    "SYRMA.NS",
+    "APARINDS.NS",
+    "RRKABEL.NS",
+    "CHENNPETRO.NS",
+    "ACUTAAS.NS",
+    "ATHERENERG.NS",
+    "SONACOMS.NS",
+    "BHEL.NS",
+    "MCX.NS",
+    "AZAD.NS",
+    "AEGISLOG.NS",
+    "WOCKPHARMA.NS",
+    "NAVINFLUOR.NS"
+   ],
    "liquid_universe_size": 200,
-   "liquid_priced": 200,
-   "liquid_missing_count": 0,
+   "liquid_priced": 0,
+   "liquid_missing_count": 200,
    "missing_turnover_tickers": [],
    "turnover_l1": 1.0000000000000002,
-   "top20_gross": -0.017022025995869113,
-   "top20_net": -0.018522025995869114,
-   "same_universe_equal_weight": 0.0603712177529149,
-   "nifty50": 0.07571238586288098,
-   "excess_vs_universe": -0.07889324374878401,
-   "excess_vs_nifty": -0.09423441185875009
+   "top20_gross": null,
+   "top20_net": null,
+   "same_universe_equal_weight": null,
+   "nifty50": 0.08148705545640911,
+   "excess_vs_universe": null,
+   "excess_vs_nifty": null
   }
  ],
  "cumulative": {
@@ -39,9 +60,9 @@
  },
  "daily_forward": {
   "5d": {
-   "expected_snapshots": 2,
+   "expected_snapshots": 3,
    "snapshots": 2,
-   "incomplete_snapshots": 0,
+   "incomplete_snapshots": 1,
    "mean_excess_vs_nifty": -0.09451235032571965,
    "share_positive": 0.0,
    "setup_fired_n": 7,
@@ -73,5 +94,5 @@
   }
  },
  "summary": "Paper log: 1 confirmed month-end snapshot(s) since 2026-10-30; the first completed interval is not available yet.",
- "snapshot_status": "saved leaders_2026-11-09.json"
+ "snapshot_status": "no leaders"
 }
