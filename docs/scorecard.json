@@ -1,7 +1,7 @@
 {
  "schema_version": 2,
  "status": "tracking",
- "snapshots": 7,
+ "snapshots": 8,
  "month_end_snapshots": 1,
  "first_snapshot": "2026-10-30",
  "missing_month_ends": [],
@@ -10,7 +10,7 @@
   {
    "signal_date": "2026-10-30",
    "entry_date": "2026-11-02",
-   "exit_date": "2026-11-11",
+   "exit_date": "2026-11-12",
    "status": "open",
    "data_status": "complete",
    "holdings": 20,
@@ -22,12 +22,12 @@
    "liquid_missing_count": 0,
    "missing_turnover_tickers": [],
    "turnover_l1": 1.0000000000000002,
-   "top20_gross": 0.000769877938218333,
-   "top20_net": -0.0007301220617816673,
-   "same_universe_equal_weight": 0.07107739780187754,
-   "nifty50": 0.08148705545640911,
-   "excess_vs_universe": -0.0718075198636592,
-   "excess_vs_nifty": -0.08221717751819077
+   "top20_gross": 0.01073086626864902,
+   "top20_net": 0.00923086626864902,
+   "same_universe_equal_weight": 0.07712349041066821,
+   "nifty50": 0.08782784654295006,
+   "excess_vs_universe": -0.06789262414201919,
+   "excess_vs_nifty": -0.07859698027430104
   }
  ],
  "cumulative": {
@@ -39,15 +39,15 @@
  },
  "daily_forward": {
   "5d": {
-   "expected_snapshots": 3,
-   "snapshots": 3,
+   "expected_snapshots": 4,
+   "snapshots": 4,
    "incomplete_snapshots": 0,
-   "mean_excess_vs_nifty": -0.08373734902752135,
+   "mean_excess_vs_nifty": -0.07580974906158701,
    "share_positive": 0.0,
-   "setup_fired_n": 9,
-   "setup_fired_mean_excess": -0.029176698709782973,
-   "no_setup_n": 51,
-   "no_setup_mean_excess": -0.09336569908359281
+   "setup_fired_n": 14,
+   "setup_fired_mean_excess": -0.04467797593408729,
+   "no_setup_n": 66,
+   "no_setup_mean_excess": -0.08241345851287485
   },
   "21d": {
    "expected_snapshots": 0,
@@ -73,5 +73,5 @@
   }
  },
  "summary": "Paper log: 1 confirmed month-end snapshot(s) since 2026-10-30; the first completed interval is not available yet.",
- "snapshot_status": "saved leaders_2026-11-11.json"
+ "snapshot_status": "saved leaders_2026-11-12.json"
 }
