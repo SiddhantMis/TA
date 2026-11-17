@@ -1726,6 +1726,77 @@ def test_alert_includes_the_paper_log_line_within_the_limit():
     assert "Paper log since" in text and len(text) <= DISCORD_CONTENT_LIMIT, len(text)
 
 
+def _many_stocks(n_ok=12):
+    """n_ok healthy stocks ending 2026-10-30 plus one that stopped two sessions earlier; benchmark with the same calendar."""
+    frames = {f"OK{i:02d}": _lead_frame(0.0005 + 0.0002 * i, 2e6 + 1e5 * i) for i in range(n_ok)}
+    frames["LAG"] = _lead_frame(0.003, 5e6, cut_last=2)
+    return frames, _lead_frame(0.0004, 1e6)
+
+
+def _bench_with_early_bar(bench):
+    b = bench.copy()
+    b.loc[pd.Timestamp("2026-11-02")] = b.iloc[-1] * 1.001            # the ETF's newest bar, which no stock has yet
+    return b
+
+
+def test_strict_gate_rejects_everything_when_the_benchmark_is_a_bar_ahead_and_common_session_fixes_it():
+    import analyzer as A
+    frames, bench = _many_stocks()
+    ahead = _bench_with_early_bar(bench)
+    # the failure mode seen on 2026-11-11: comparing each stock with the benchmark's own last bar marks ALL of them stale
+    assert {A.relative_strength_metrics(df, ahead)["relative_strength_status"] for df in frames.values()} == {"stale_stock_close"}
+    session, diag = A.common_session(frames, ahead)
+    assert session == pd.Timestamp("2026-10-30") and diag["benchmark_last_date"] == "2026-11-02" and diag["share_with_data"] >= 0.9
+    b2 = A.truncate_to_session(ahead, session)
+    status = {t: A.relative_strength_metrics(A.truncate_to_session(df, session), b2)["relative_strength_status"] for t, df in frames.items()}
+    assert status["LAG"] == "stale_stock_close" and all(v == "ok" for t, v in status.items() if t != "LAG")   # only the real straggler stays stale
+
+
+def test_common_session_falls_back_when_the_newest_bar_is_thin_and_handles_empty_inputs():
+    import analyzer as A
+    frames = {f"S{i:02d}": _lead_frame(0.001, 1e6) for i in range(20)}
+    bench = _lead_frame(0.0004, 1e6)
+    for t in list(frames)[:5]:                                                       # only 5 of 20 have a newer bar
+        f = frames[t].copy(); f.loc[pd.Timestamp("2026-11-02")] = f.iloc[-1]; frames[t] = f
+    b = _bench_with_early_bar(bench)
+    session, diag = A.common_session(frames, b)
+    assert session == pd.Timestamp("2026-10-30") and diag["candidates"][0] == ("2026-11-02", 0.25)
+    assert A.common_session({}, b)[0] is None and A.common_session(frames, None)[0] is None
+
+
+def test_run_leaders_still_ranks_when_the_etf_publishes_a_bar_early():
+    import analyzer as A
+    import leaders as LD
+    frames, bench = _many_stocks()
+    ahead = _bench_with_early_bar(bench)
+    real = A.fetch_ticker
+    A.fetch_ticker = lambda t: frames[t.replace(".NS", "")]
+    try:
+        out = LD.run_leaders([f"{t}.NS" for t in frames], benchmark_df=ahead, liquid_top=20, board=5, sleep=0)
+    finally:
+        A.fetch_ticker = real
+    assert len(out["leaders"]) == 5 and out["as_of"] == "2026-10-30"
+    d = out["diagnostics"]
+    assert d["rs_status_counts"].get("ok") == 12 and d["rs_status_counts"].get("stale_stock_close") == 1
+    assert d["session_alignment"]["benchmark_last_date"] == "2026-11-02" and d["session_alignment"]["chosen_session"] == "2026-10-30"
+
+
+def test_run_screen_aligns_the_watchlist_scan_too():
+    import analyzer as A
+    frames = {f"W{i}": _lead_frame(0.001 + 0.0005 * i, 2e6, n=520) for i in range(3)}
+    bench = _bench_with_early_bar(_lead_frame(0.0004, 1e6, n=520))
+    real_fetch, real_sleep = A.fetch_ticker, A.YF_SLEEP_SECONDS
+    A.fetch_ticker = lambda t: bench if t == A.RS_BENCHMARK else frames[t.replace(".NS", "")]
+    A.YF_SLEEP_SECONDS = 0
+    try:
+        results = A.run_screen([f"{t}.NS" for t in frames])
+    finally:
+        A.fetch_ticker, A.YF_SLEEP_SECONDS = real_fetch, real_sleep
+    assert len(results) == 3 and all(r["date"] == "2026-10-30" for r in results)
+    assert sum(1 for r in results if r.get("relative_strength_12_1_pct") is not None) == 3     # ranked, not rejected as stale
+    assert A.LAST_SESSION_DIAGNOSTICS["chosen_session"] == "2026-10-30" and A.LAST_SESSION_DIAGNOSTICS["benchmark_last_date"] == "2026-11-02"
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

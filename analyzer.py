@@ -201,6 +201,37 @@ def _adjusted_close_series(df: Optional[pd.DataFrame]) -> pd.Series:
     return close[close > 0]
 
 
+LAST_SESSION_DIAGNOSTICS: dict = {}
+
+
+def common_session(frames: dict, benchmark_df, min_share: float = 0.90, lookback: int = 6):
+    """Latest session on which the benchmark AND at least `min_share` of the loaded stocks have a valid close.
+
+    relative_strength_metrics() rejects every stock whose last bar differs from the benchmark's. If Yahoo publishes the
+    ETF's newest bar before the stocks' (or a minority of stocks lags), comparing each stock with the benchmark's own last
+    date rejects the WHOLE universe and the leaderboard comes out empty. Aligning everything to this common session keeps
+    only the real stragglers stale. Returns (Timestamp or None, diagnostics)."""
+    diag = {"benchmark_last_date": None, "chosen_session": None, "share_with_data": None, "stocks": len(frames), "candidates": []}
+    if benchmark_df is None or getattr(benchmark_df, "empty", True) or not frames:
+        return None, diag
+    bench = _adjusted_close_series(benchmark_df).dropna()
+    if bench.empty:
+        return None, diag
+    diag["benchmark_last_date"] = bench.index[-1].date().isoformat()
+    closes = {t: set(_adjusted_close_series(df).dropna().index) for t, df in frames.items()}
+    for d in list(bench.index[-lookback:])[::-1]:
+        share = sum(1 for idx in closes.values() if d in idx) / len(frames)
+        diag["candidates"].append((d.date().isoformat(), round(share, 3)))
+        if share >= min_share:
+            diag["chosen_session"], diag["share_with_data"] = d.date().isoformat(), round(share, 3)
+            return d, diag
+    return None, diag
+
+
+def truncate_to_session(df, session):
+    return df if df is None or session is None else df.loc[df.index <= session]
+
+
 def relative_strength_metrics(df: pd.DataFrame, benchmark_df: Optional[pd.DataFrame]) -> dict:
     """Return 12-1 and 6-month relative returns on the benchmark's session calendar.
 
@@ -1074,12 +1105,29 @@ def run_screen(watchlist: list[str] = WATCHLIST) -> list[dict]:
         print(f"[warning] benchmark fetch failed for {RS_BENCHMARK}: {e}; momentum ranking unavailable", file=sys.stderr)
     time.sleep(YF_SLEEP_SECONDS)
 
+    frames = {}
     for t in watchlist:
         try:
             df = fetch_ticker(t)
             if df is None or df.empty:
                 print(f"[skip] no data for {t}", file=sys.stderr)
-                continue
+            else:
+                frames[t] = df
+        except Exception as e:
+            print(f"[error] {t}: {e}", file=sys.stderr)
+        time.sleep(YF_SLEEP_SECONDS)
+    # Align everything to the latest session that the benchmark and >= 90% of the stocks share, so one early or lagging
+    # bar cannot make the strict per-stock freshness gate reject the whole universe.
+    session, diag = common_session(frames, benchmark_df)
+    LAST_SESSION_DIAGNOSTICS.clear()
+    LAST_SESSION_DIAGNOSTICS.update(diag)
+    if session is not None:
+        benchmark_df = truncate_to_session(benchmark_df, session)
+        frames = {t: truncate_to_session(df, session) for t, df in frames.items()}
+    elif benchmark_df is not None and frames:
+        print(f"[warning] no common session shared by the benchmark and 90% of stocks: {diag['candidates']}", file=sys.stderr)
+    for t, df in frames.items():
+        try:
             r = score_ticker(df, t, benchmark_df)
             if r:
                 results.append(asdict(r))
@@ -1088,7 +1136,6 @@ def run_screen(watchlist: list[str] = WATCHLIST) -> list[dict]:
                       f"(needs 2y+ for S/R; likely a recent IPO)", file=sys.stderr)
         except Exception as e:
             print(f"[error] {t}: {e}", file=sys.stderr)
-        time.sleep(YF_SLEEP_SECONDS)
     rank_relative_strength(results)
     return results
 
