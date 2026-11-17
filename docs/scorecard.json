@@ -1,7 +1,7 @@
 {
  "schema_version": 2,
  "status": "tracking",
- "snapshots": 9,
+ "snapshots": 10,
  "month_end_snapshots": 1,
  "first_snapshot": "2026-10-30",
  "missing_month_ends": [],
@@ -10,7 +10,7 @@
   {
    "signal_date": "2026-10-30",
    "entry_date": "2026-11-02",
-   "exit_date": "2026-11-13",
+   "exit_date": "2026-11-16",
    "status": "open",
    "data_status": "complete",
    "holdings": 20,
@@ -22,12 +22,12 @@
    "liquid_missing_count": 0,
    "missing_turnover_tickers": [],
    "turnover_l1": 1.0000000000000002,
-   "top20_gross": 0.015264036838386712,
-   "top20_net": 0.013764036838386713,
-   "same_universe_equal_weight": 0.0712229701841868,
-   "nifty50": 0.08186450817921731,
-   "excess_vs_universe": -0.05745893334580009,
-   "excess_vs_nifty": -0.0681004713408306
+   "top20_gross": -0.006597250394179965,
+   "top20_net": -0.008097250394179965,
+   "same_universe_equal_weight": 0.06406799478336866,
+   "nifty50": 0.0855254655614992,
+   "excess_vs_universe": -0.07216524517754863,
+   "excess_vs_nifty": -0.09362271595567917
   }
  ],
  "cumulative": {
@@ -73,5 +73,5 @@
   }
  },
  "summary": "Paper log: 1 confirmed month-end snapshot(s) since 2026-10-30; the first completed interval is not available yet.",
- "snapshot_status": "saved leaders_2026-11-13.json"
+ "snapshot_status": "saved leaders_2026-11-16.json"
 }
