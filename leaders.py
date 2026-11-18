@@ -19,6 +19,7 @@ import argparse
 import json
 import math
 import os
+from collections import Counter
 import sys
 import time
 from datetime import datetime
@@ -537,7 +538,7 @@ def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=B
     if benchmark_df is None or benchmark_df.empty:
         raise RuntimeError(f"no benchmark data for {A.RS_BENCHMARK}")
     sleep = A.YF_SLEEP_SECONDS if sleep is None else sleep
-    rows, frames, failed = [], {}, []
+    frames, failed = {}, []
     started, partial = time.time(), False
     for t in universe:
         if time.time() - started > max_seconds:        # a slow Yahoo day must not hold the whole daily run hostage
@@ -549,12 +550,25 @@ def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=B
             if df is None or df.empty or len(df) < 260:
                 failed.append(t)
             else:
-                rows.append({"ticker": t, **leader_metrics(df, benchmark_df)})
                 frames[t] = df
         except Exception as e:                                   # one bad symbol must not sink the run
             failed.append(t)
             print(f"[error] {t}: {e}", file=sys.stderr)
         time.sleep(sleep)
+    # Rank every stock on ONE common session (the latest the benchmark and >= 90% of loaded stocks share). Comparing each
+    # stock with the benchmark's own last bar rejected the entire universe whenever the ETF's newest bar arrived first.
+    session, alignment = A.common_session(frames, benchmark_df)
+    if session is not None:
+        benchmark_df = A.truncate_to_session(benchmark_df, session)
+        frames = {t: A.truncate_to_session(df, session) for t, df in frames.items()}
+    rows = []
+    for t, df in frames.items():
+        try:
+            rows.append({"ticker": t, **leader_metrics(df, benchmark_df)})
+        except Exception as e:
+            failed.append(t)
+            print(f"[error] {t}: {e}", file=sys.stderr)
+    frames = {t: df for t, df in frames.items() if t in {r["ticker"] for r in rows}}
     leaders, counts = select_leaders(rows, liquid_top, board)
     for r in leaders:                                            # structure read for the leaders only
         s = None
@@ -584,6 +598,10 @@ def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=B
         "definition": (f"Top {liquid_top} by 126-day traded value of the Nifty 500 list, close above 200-day average, "
                        "ranked by 12-1 return relative to the benchmark (latest 21 sessions skipped)."),
         "evidence": EVIDENCE, "setup_record": SETUP_RECORD, "counts": counts, "failed_tickers": failed[:60], "leaders": leaders,
+        # Why a list is short or empty: status of every stock, and how the common session was chosen.
+        "diagnostics": {"rs_status_counts": dict(Counter(r.get("relative_strength_status") for r in rows)),
+                        "missing_traded_value": sum(1 for r in rows if not r.get("traded_value_126d")),
+                        "session_alignment": alignment},
     }
     if history_dir:                                   # the paper-trading log must never be able to break the scan
         try:
