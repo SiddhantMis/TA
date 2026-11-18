@@ -531,7 +531,7 @@ def log_and_score(payload: dict, frames: dict, benchmark_df, history_dir=SNAPSHO
 
 
 def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=BOARD_SIZE, sleep=None,
-                max_seconds=2700, history_dir=None):
+                max_seconds=2700, history_dir=None, max_session=None, require_session=None):
     universe = universe or load_universe()
     if benchmark_df is None:
         benchmark_df = A.fetch_ticker(A.RS_BENCHMARK)
@@ -557,7 +557,7 @@ def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=B
         time.sleep(sleep)
     # Rank every stock on ONE common session (the latest the benchmark and >= 90% of loaded stocks share). Comparing each
     # stock with the benchmark's own last bar rejected the entire universe whenever the ETF's newest bar arrived first.
-    session, alignment = A.common_session(frames, benchmark_df)
+    session, alignment = A.common_session(frames, benchmark_df, max_session=max_session)
     if session is not None:
         benchmark_df = A.truncate_to_session(benchmark_df, session)
         frames = {t: A.truncate_to_session(df, session) for t, df in frames.items()}
@@ -603,6 +603,12 @@ def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=B
                         "missing_traded_value": sum(1 for r in rows if not r.get("traded_value_126d")),
                         "session_alignment": alignment},
     }
+    if require_session is not None and out["as_of"] != require_session.isoformat():
+        # Today's session is not available yet: save NOTHING (no snapshot, no scorecard) and let the caller retry later.
+        out["not_ready"] = True
+        out["expected_session"] = require_session.isoformat()
+        out["snapshot_status"] = f"not saved: data as of {out['as_of']}, expected {require_session.isoformat()}"
+        return out
     if history_dir:                                   # the paper-trading log must never be able to break the scan
         try:
             sc = log_and_score(out, frames, benchmark_df, history_dir,

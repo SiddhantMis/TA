@@ -34,7 +34,7 @@ import json
 import sys
 import time
 from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from datetime import date, datetime, time as dt_time, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -203,8 +203,40 @@ def _adjusted_close_series(df: Optional[pd.DataFrame]) -> pd.Series:
 
 LAST_SESSION_DIAGNOSTICS: dict = {}
 
+# NSE closes at 15:30 IST. From 17:00 IST the session's final bars are expected to be published; before that the
+# "expected" session is still the previous trading day.
+SESSION_READY_AFTER = dt_time(17, 0)
+NSE_HOLIDAYS_FILE = "universe/nse_holidays.txt"
 
-def common_session(frames: dict, benchmark_df, min_share: float = 0.90, lookback: int = 6):
+
+def load_nse_holidays(path: str = NSE_HOLIDAYS_FILE) -> frozenset:
+    """Optional, user-maintained list of NSE trading holidays (one YYYY-MM-DD per line, '#' comments allowed)."""
+    out = set()
+    try:
+        with open(path) as fh:
+            for line in fh:
+                text = line.split("#", 1)[0].strip()
+                if text:
+                    out.add(date.fromisoformat(text))
+    except FileNotFoundError:
+        pass
+    return frozenset(out)
+
+
+def expected_session(now=None, holidays=None) -> date:
+    """The latest NSE session whose final bar should be available at `now` (weekends and listed holidays skipped)."""
+    now = now or datetime.now(IST)
+    now = now.astimezone(IST) if now.tzinfo else now.replace(tzinfo=IST)
+    d = now.date()
+    if now.time() < SESSION_READY_AFTER:
+        d -= timedelta(days=1)
+    holidays = load_nse_holidays() if holidays is None else holidays
+    while d.weekday() >= 5 or d in holidays:
+        d -= timedelta(days=1)
+    return d
+
+
+def common_session(frames: dict, benchmark_df, min_share: float = 0.90, lookback: int = 6, max_session=None):
     """Latest session on which the benchmark AND at least `min_share` of the loaded stocks have a valid close.
 
     relative_strength_metrics() rejects every stock whose last bar differs from the benchmark's. If Yahoo publishes the
@@ -218,6 +250,8 @@ def common_session(frames: dict, benchmark_df, min_share: float = 0.90, lookback
     if bench.empty:
         return None, diag
     diag["benchmark_last_date"] = bench.index[-1].date().isoformat()
+    if max_session is not None:                       # never rank on a bar newer than the session we are waiting for
+        bench = bench.loc[bench.index <= pd.Timestamp(max_session)]
     closes = {t: set(_adjusted_close_series(df).dropna().index) for t, df in frames.items()}
     for d in list(bench.index[-lookback:])[::-1]:
         share = sum(1 for idx in closes.values() if d in idx) / len(frames)
@@ -1093,7 +1127,7 @@ def fetch_ticker(ticker: str) -> Optional[pd.DataFrame]:
     return data
 
 
-def run_screen(watchlist: list[str] = WATCHLIST) -> list[dict]:
+def run_screen(watchlist: list[str] = WATCHLIST, max_session=None) -> list[dict]:
     results = []
     benchmark_df = None
     try:
@@ -1118,7 +1152,7 @@ def run_screen(watchlist: list[str] = WATCHLIST) -> list[dict]:
         time.sleep(YF_SLEEP_SECONDS)
     # Align everything to the latest session that the benchmark and >= 90% of the stocks share, so one early or lagging
     # bar cannot make the strict per-stock freshness gate reject the whole universe.
-    session, diag = common_session(frames, benchmark_df)
+    session, diag = common_session(frames, benchmark_df, max_session=max_session)
     LAST_SESSION_DIAGNOSTICS.clear()
     LAST_SESSION_DIAGNOSTICS.update(diag)
     if session is not None:
