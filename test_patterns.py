@@ -1797,6 +1797,137 @@ def test_run_screen_aligns_the_watchlist_scan_too():
     assert A.LAST_SESSION_DIAGNOSTICS["chosen_session"] == "2026-10-30" and A.LAST_SESSION_DIAGNOSTICS["benchmark_last_date"] == "2026-11-02"
 
 
+def _ist(y, m, d, hh, mm):
+    from datetime import datetime
+    from analyzer import IST
+    return datetime(y, m, d, hh, mm, tzinfo=IST)
+
+
+def test_expected_session_waits_for_17_ist_skips_weekends_and_listed_holidays():
+    from datetime import date, datetime
+    import analyzer as A
+    none = frozenset()
+    assert A.expected_session(_ist(2026, 11, 16, 19, 0), none) == date(2026, 11, 16)         # Monday evening: today
+    assert A.expected_session(_ist(2026, 11, 16, 16, 59), none) == date(2026, 11, 13)        # before 17:00: still the previous session (Fri)
+    assert A.expected_session(_ist(2026, 11, 17, 0, 30), none) == date(2026, 11, 16)         # a retry just after midnight IST: Monday's session
+    assert A.expected_session(_ist(2026, 11, 14, 12, 0), none) == date(2026, 11, 13)         # Saturday: Friday
+    assert A.expected_session(_ist(2026, 11, 16, 19, 0), frozenset({date(2026, 11, 16)})) == date(2026, 11, 13)   # Monday is a holiday
+    assert A.expected_session(datetime(2026, 11, 16, 19, 0), none) == date(2026, 11, 16)    # naive datetimes are read as IST
+
+
+def test_nse_holiday_file_parsing():
+    import os
+    import tempfile
+    from datetime import date
+    import analyzer as A
+    p = os.path.join(tempfile.mkdtemp(), "h.txt")
+    open(p, "w").write("# header\n2026-11-24  # example holiday\n\n2026-12-25\n")
+    assert A.load_nse_holidays(p) == frozenset({date(2026, 11, 24), date(2026, 12, 25)})
+    assert A.load_nse_holidays("/nonexistent/holidays.txt") == frozenset()
+
+
+def test_common_session_never_ranks_on_a_bar_newer_than_the_expected_session():
+    import analyzer as A
+    frames, bench = _many_stocks()
+    for t in list(frames):
+        f = frames[t].copy(); f.loc[pd.Timestamp("2026-11-02")] = f.iloc[-1]; frames[t] = f      # every stock AND the benchmark already have a newer bar
+    ahead = _bench_with_early_bar(bench)
+    assert A.common_session(frames, ahead)[0] == pd.Timestamp("2026-11-02")
+    session, diag = A.common_session(frames, ahead, max_session=pd.Timestamp("2026-10-30"))
+    assert session == pd.Timestamp("2026-10-30") and all(c[0] <= "2026-10-30" for c in diag["candidates"])
+
+
+def test_session_gate_and_idempotency_marker():
+    import os
+    import tempfile
+    from datetime import date
+    import main as M
+    exp = date(2026, 11, 16)
+    assert M.session_gate({"chosen_session": "2026-11-16"}, exp)["ready"] is True
+    old = M.session_gate({"chosen_session": "2026-11-13", "candidates": []}, exp)
+    assert old["ready"] is False and "2026-11-13" in old["message"] and "2026-11-16" in old["message"]       # an older session is never accepted
+    assert M.session_gate({"chosen_session": None, "candidates": [("2026-11-16", 0.4)]}, exp)["ready"] is False
+    assert M.session_gate({}, exp)["ready"] is False
+    d = tempfile.mkdtemp()
+    assert M.already_published(exp, d) is False
+    open(os.path.join(d, "leaders_2026-11-16.json"), "w").write("{}")
+    assert M.already_published(exp, d) is True and M.already_published(date(2026, 11, 17), d) is False
+    assert M.EXIT_NOT_READY == 75
+
+
+def test_run_leaders_saves_nothing_when_the_expected_session_is_missing():
+    import os
+    import tempfile
+    from datetime import date
+    import analyzer as A
+    import leaders as LD
+    frames, bench = _many_stocks()
+    real = A.fetch_ticker
+    A.fetch_ticker = lambda t: frames[t.replace(".NS", "")]
+    uni = [f"{t}.NS" for t in frames]
+    try:
+        d1 = os.path.join(tempfile.mkdtemp(), "history")
+        late = LD.run_leaders(uni, benchmark_df=bench, liquid_top=20, board=5, sleep=0, history_dir=d1, require_session=date(2026, 11, 2))
+        assert late["not_ready"] is True and "not saved" in late["snapshot_status"]
+        assert not os.path.exists(d1) or os.listdir(d1) == []                                  # no snapshot, no scorecard
+        d2 = os.path.join(tempfile.mkdtemp(), "history")
+        ok = LD.run_leaders(uni, benchmark_df=bench, liquid_top=20, board=5, sleep=0, history_dir=d2, require_session=date(2026, 10, 30))
+        assert not ok.get("not_ready") and ok["snapshot_status"].startswith("saved") and os.listdir(d2) == ["leaders_2026-10-30.json"]
+    finally:
+        A.fetch_ticker = real
+
+
+def _run_main(tmp, env, *, chosen, expected="2026-11-16"):
+    """Execute main.py as __main__ with the data layer stubbed. Returns (exit code, files written, discord calls, run_screen calls)."""
+    import os
+    import runpy
+    from datetime import date
+    import alerts
+    import analyzer as A
+    calls = {"discord": [], "screen": 0}
+    saved = (A.run_screen, A.expected_session, alerts.send_discord_failure, os.getcwd(), dict(os.environ))
+    A.expected_session = lambda now=None, holidays=None: date.fromisoformat(expected)
+    def fake_screen(*a, **k):
+        calls["screen"] += 1
+        A.LAST_SESSION_DIAGNOSTICS.clear()
+        A.LAST_SESSION_DIAGNOSTICS.update({"chosen_session": chosen, "candidates": []})
+        return [{"ticker": "X.NS", "date": chosen or "2026-11-13", "flag": False, "above_sma50": True}]
+    A.run_screen = fake_screen
+    alerts.send_discord_failure = lambda msg, **k: calls["discord"].append(msg)
+    os.chdir(tmp)
+    os.environ.update(env)
+    try:
+        try:
+            runpy.run_path(os.path.join(saved[3], "main.py"), run_name="__main__")
+            code = 0
+        except SystemExit as e:
+            code = e.code
+    finally:
+        A.run_screen, A.expected_session, alerts.send_discord_failure = saved[0], saved[1], saved[2]
+        os.chdir(saved[3]); os.environ.clear(); os.environ.update(saved[4])
+    return code, sorted(os.listdir(os.path.join(tmp, "docs"))) if os.path.isdir(os.path.join(tmp, "docs")) else [], calls["discord"], calls["screen"]
+
+
+def test_main_aborts_with_code_75_saves_nothing_and_stays_quiet_until_the_last_attempt():
+    import tempfile
+    code, files, discord, screens = _run_main(tempfile.mkdtemp(), {"SKIP_WIDE_LEADERS": "1"}, chosen="2026-11-13")      # data is a session behind
+    assert code == 75 and files == [] and discord == [] and screens == 1
+    code, files, discord, _ = _run_main(tempfile.mkdtemp(), {"SKIP_WIDE_LEADERS": "1", "FINAL_ATTEMPT": "true"}, chosen="2026-11-13")
+    assert code == 75 and files == [] and len(discord) == 1 and "last attempt" in discord[0] and "2026-11-16" in discord[0]
+    code, files, discord, _ = _run_main(tempfile.mkdtemp(), {"SKIP_WIDE_LEADERS": "1"}, chosen=None)                  # no shared session at all
+    assert code == 75 and files == [] and discord == []
+
+
+def test_main_exits_immediately_when_the_session_is_already_published():
+    import os
+    import tempfile
+    tmp = tempfile.mkdtemp()
+    os.makedirs(os.path.join(tmp, "docs", "history"))
+    open(os.path.join(tmp, "docs", "history", "leaders_2026-11-16.json"), "w").write("{}")
+    code, _, discord, screens = _run_main(tmp, {"SKIP_WIDE_LEADERS": "1"}, chosen="2026-11-16")
+    assert code == 0 and screens == 0 and discord == []                                    # no scan at all on a later retry attempt
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0
