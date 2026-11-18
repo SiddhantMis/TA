@@ -2,8 +2,21 @@ name: EOD Stock Screener
 
 on:
   schedule:
-    - cron: '30 13 * * 1-5'   # 13:30 UTC = 7:00 PM IST, after Yahoo EOD data is expected
-  workflow_dispatch: {}
+    # Three attempts per trading day, ~2.5 hours apart. Each attempt scans only if the expected session's data is
+    # available AND that session has not been published yet; otherwise it saves nothing and the next attempt retries.
+    - cron: '30 13 * * 1-5'   # 13:30 UTC = 7:00 PM IST
+    - cron: '0 16 * * 1-5'    # 16:00 UTC = 9:30 PM IST
+    - cron: '30 18 * * 1-5'   # 18:30 UTC = 12:00 AM IST (the LAST attempt: only this one sends a failure message)
+  workflow_dispatch:
+    inputs:
+      force_rerun:
+        description: Re-run even if this session is already published
+        type: boolean
+        default: false
+
+concurrency:
+  group: eod-scan
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -25,11 +38,26 @@ jobs:
         run: python test_patterns.py
 
       - name: Run screener
+        id: screen
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python main.py
+          FINAL_ATTEMPT: ${{ github.event.schedule == '30 18 * * 1-5' }}
+          FORCE_RERUN: ${{ inputs.force_rerun }}
+        run: |
+          set +e
+          python main.py
+          code=$?
+          if [ "$code" -eq 75 ]; then
+            # Exit 75 = the expected session's data is not available yet. Nothing was saved or published; a later
+            # scheduled attempt retries. This is deliberately NOT a red run.
+            echo "not_ready=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Expected session data not ready - nothing saved. A later attempt will retry."
+            exit 0
+          fi
+          exit $code
 
       - name: Commit results to docs/
+        if: steps.screen.outputs.not_ready != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -72,7 +100,7 @@ jobs:
           exit 1
 
       - name: Upload results as artifact too
-        if: always()
+        if: always() && steps.screen.outputs.not_ready != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: latest-screen

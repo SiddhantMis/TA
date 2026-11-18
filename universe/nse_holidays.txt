@@ -1,0 +1,4 @@
+# NSE trading holidays, one YYYY-MM-DD per line ('#' starts a comment).
+# The daily scan waits for the latest NSE session. On a holiday no new session ever appears, so the scheduled attempts
+# would all end 'not ready' and the last one would send a failure message. Listing the holiday here makes the scan
+# skip that day instead. Copy the dates from NSE's published holiday list for the year; this file starts empty on purpose.
