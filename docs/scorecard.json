@@ -1,7 +1,7 @@
 {
  "schema_version": 2,
  "status": "tracking",
- "snapshots": 9,
+ "snapshots": 10,
  "month_end_snapshots": 1,
  "first_snapshot": "2026-10-30",
  "missing_month_ends": [],
@@ -10,7 +10,7 @@
   {
    "signal_date": "2026-10-30",
    "entry_date": "2026-11-02",
-   "exit_date": "2026-11-13",
+   "exit_date": "2026-11-17",
    "status": "open",
    "data_status": "complete",
    "holdings": 20,
@@ -22,12 +22,12 @@
    "liquid_missing_count": 0,
    "missing_turnover_tickers": [],
    "turnover_l1": 1.0000000000000002,
-   "top20_gross": 0.015264036838386712,
-   "top20_net": 0.013764036838386713,
-   "same_universe_equal_weight": 0.0712229701841868,
-   "nifty50": 0.08186450817921731,
-   "excess_vs_universe": -0.05745893334580009,
-   "excess_vs_nifty": -0.0681004713408306
+   "top20_gross": -0.015551447753572428,
+   "top20_net": -0.017051447753572428,
+   "same_universe_equal_weight": 0.06277678007578462,
+   "nifty50": 0.09303639464346558,
+   "excess_vs_universe": -0.07982822782935704,
+   "excess_vs_nifty": -0.110087842397038
   }
  ],
  "cumulative": {
@@ -39,15 +39,15 @@
  },
  "daily_forward": {
   "5d": {
-   "expected_snapshots": 5,
-   "snapshots": 5,
+   "expected_snapshots": 6,
+   "snapshots": 6,
    "incomplete_snapshots": 0,
-   "mean_excess_vs_nifty": -0.060486718749016774,
-   "share_positive": 0.2,
-   "setup_fired_n": 16,
-   "setup_fired_mean_excess": -0.040934669335225576,
-   "no_setup_n": 84,
-   "no_setup_mean_excess": -0.06421091863735795
+   "mean_excess_vs_nifty": -0.054728199911686336,
+   "share_positive": 0.16666666666666666,
+   "setup_fired_n": 21,
+   "setup_fired_mean_excess": -0.037846268912141615,
+   "no_setup_n": 99,
+   "no_setup_mean_excess": -0.058309215578256426
   },
   "21d": {
    "expected_snapshots": 0,
@@ -73,5 +73,5 @@
   }
  },
  "summary": "Paper log: 1 confirmed month-end snapshot(s) since 2026-10-30; the first completed interval is not available yet.",
- "snapshot_status": "saved leaders_2026-11-13.json"
+ "snapshot_status": "saved leaders_2026-11-17.json"
 }
