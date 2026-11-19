@@ -44,6 +44,8 @@ jobs:
         run: python bench_check.py
       - name: Run the rules test
         run: python portfolio_rules.py --years 10 --oos-frac 0.35 --cost-pct 0.30
+      - name: Reconstruct PIT sample daily drawdowns
+        run: python scripts/study_pit_sample_drawdown.py
       - name: Probe missing histories via TejHQ API
         run: python scripts/probe_tejhq_history.py
       - uses: actions/cache/save@v4
@@ -66,6 +68,8 @@ jobs:
             results/tejhq_source_metadata.md
             results/tejhq_symbol_continuity_audit.csv
             results/pit_session_calendar_audit.csv
+            results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.csv
+            results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.md
             results/corporate_action_audit.csv
             results/corporate_action_quarantine.csv
           if-no-files-found: warn
@@ -74,7 +78,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f results/corporate_action_audit.csv results/corporate_action_quarantine.csv results/bench_check.md results/portfolio_rules_report.md results/pit_price_history_audit.csv results/pit_daily_coverage_audit.csv results/pit_tejhq_coverage_audit.csv results/pit_tejhq_initial_coverage_probe.csv results/tejhq_source_metadata.md results/tejhq_symbol_continuity_audit.csv results/pit_session_calendar_audit.csv
+          git add -f results/corporate_action_audit.csv results/corporate_action_quarantine.csv results/bench_check.md results/portfolio_rules_report.md results/pit_price_history_audit.csv results/pit_daily_coverage_audit.csv results/pit_tejhq_coverage_audit.csv results/pit_tejhq_initial_coverage_probe.csv results/tejhq_source_metadata.md results/tejhq_symbol_continuity_audit.csv results/pit_session_calendar_audit.csv results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.csv results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.md
           if git diff --cached --quiet; then
             echo "No generated report changes."
             exit 0
