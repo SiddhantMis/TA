@@ -18,19 +18,20 @@ Interpretation: all three factors have near-zero average rank-IC in this already
 
 Of 40 attempted six-month baskets, 29 are complete and 11 are incomplete. The 11 incomplete baskets contain 12 affected stock positions. No basket is reweighted after an invalid holding is detected.
 
-| Sample | Signal date | Unsupported holding(s) |
-|---|---|---|
-| S2 | 2020-05-07 | NESTLEIND |
-| S3 | 2020-06-19 | AJANTPHARM, NESTLEIND |
-| S5 | 2020-10-05 | AARTIDRUGS |
-| S6 | 2020-11-25 | AARTIDRUGS |
-| S7 | 2021-01-06 | AARTIDRUGS |
-| S8 | 2021-02-08 | AARTIDRUGS |
-| S13 | 2022-02-08 | BSOFT |
-| S14 | 2022-03-16 | BSOFT |
-| S15 | 2022-04-27 | SUZLON |
-| S16 | 2022-06-01 | SUZLON |
-| S40 | 2026-03-10 | VEDL |
+| Sample | Signal date | Symbol | Exact ex-date | Corporate-action type |
+|---|---|---|---|---|
+| S13 | 2022-02-08 | BSOFT | 2022-07-14 | buyback |
+| S14 | 2022-03-16 | BSOFT | 2022-07-14 | buyback |
+| S15 | 2022-04-27 | SUZLON | 2022-10-03 | rights |
+| S16 | 2022-06-01 | SUZLON | 2022-10-03 | rights |
+| S2 | 2020-05-07 | NESTLEIND | 2020-10-29 | other |
+| S3 | 2020-06-19 | AJANTPHARM | 2020-11-12 | buyback |
+| S3 | 2020-06-19 | NESTLEIND | 2020-10-29 | other |
+| S40 | 2026-03-10 | VEDL | 2026-04-30 | demerger |
+| S5 | 2020-10-05 | AARTIDRUGS | 2021-03-30 | buyback |
+| S6 | 2020-11-25 | AARTIDRUGS | 2021-03-30 | buyback |
+| S7 | 2021-01-06 | AARTIDRUGS | 2021-03-30 | buyback |
+| S8 | 2021-02-08 | AARTIDRUGS | 2021-03-30 | buyback |
 
 The published six-month return summary is therefore conditional on the 29 complete baskets. Its +17.91% raw mean and +8.87% benchmark mean must not be interpreted as a 40-basket result.
 
