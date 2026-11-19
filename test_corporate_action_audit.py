@@ -119,10 +119,13 @@ class TestActionQuarantine(unittest.TestCase):
             membership_df=membership,
         )
         side = 0.30 / 200.0
-        expected_event_return = (0.10 - side) / 2.0
+        survivor_return = float(other["Close"].iloc[254] / other["Close"].iloc[253] - 1.0)
+        expected_event_return = (survivor_return - side) / 2.0
         self.assertAlmostEqual(series["EW_universe_daily"][254], 1.0 + expected_event_return, places=10)
         self.assertIn("Equal-weight control forced-exit events: 1", report)
-        self.assertIn("AAA.NS 2018-12-19", report)
+        self.assertIn(f"AAA.NS {idx[254].date().isoformat()}", report)
+        self.assertIn(f"prior close {float(frame['Close'].iloc[253]):.6f}", report)
+        self.assertIn(f"cost {side / 2.0:.8f}", report)
         self.assertIn("reason=unsupported_corporate_action", report)
 
 
