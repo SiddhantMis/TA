@@ -200,6 +200,8 @@ def main() -> None:
     diagnostics_path = SAMPLE_DIR / "task4_diagnostics.md"
     diagnostics = diagnostics_path.read_text(encoding="utf-8")
     section_start = diagnostics.find("## 1. Cross-sectional factor rank-IC")
+    if section_start < 0:
+        section_start = diagnostics.find("## 1. All-eligible cross-sectional factor rank-IC")
     section_end = diagnostics.find("## 2. Six-month incomplete-basket audit", section_start)
     if section_start < 0 or section_end < 0:
         raise RuntimeError("Could not locate the factor-IC section in task4_diagnostics.md")
