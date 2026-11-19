@@ -33,6 +33,9 @@ import research as R
 UNIVERSE_FILE = "universe/nifty500.txt"
 LIQUID_TOP = 200
 BOARD_SIZE = 20
+RANKED_SNAPSHOT_SIZE = 40
+LIVE_RETAIN_RANK = 30
+LIVE_REBALANCE_DAY = 28
 TV_WINDOW = 126
 EVIDENCE = ("Backtest 2017-2026, monthly top-20 by 12-1 relative strength among the point-in-time top-200 liquid "
             "Nifty 500 names above their 200-day average: ~28%/yr vs ~15% for holding the same universe equal-weight "
@@ -133,11 +136,26 @@ MIN_COVERAGE_PCT = 90.0
 
 
 def snapshot_record(payload: dict) -> dict:
-    """What gets saved each day: the top-20 plus the liquid universe (for the equal-weight baseline)."""
+    """What gets saved each day: top-20 leaders, top-40 eligible ranked stocks (for the live top-30 hold buffer),
+    and the liquid universe (for the equal-weight baseline)."""
+    ranked_src = payload.get("eligible_ranked")
+    if ranked_src is None:
+        ranked_src = payload.get("leaders", [])
+    ranked = [
+        {
+            "ticker": r["ticker"],
+            "rank": r.get("leader_rank", r.get("rank")),
+            "rs12_1": r.get("relative_strength_12_1_pct", r.get("rs12_1")),
+            "close": r.get("last_close", r.get("close")),
+        }
+        for r in ranked_src[:RANKED_SNAPSHOT_SIZE]
+        if r.get("ticker")
+    ]
     return {
         "as_of": payload["as_of"], "benchmark": payload["benchmark"], "counts": payload["counts"],
         "leaders": [{"ticker": r["ticker"], "rank": r["leader_rank"], "rs12_1": r["relative_strength_12_1_pct"],
                      "close": r["last_close"], "fired": (r.get("plan") or {}).get("fired", [])} for r in payload["leaders"]],
+        "ranked": ranked,
         "liquid": payload.get("liquid_universe", []),
     }
 
@@ -215,6 +233,24 @@ def _benchmark_return(benchmark_df, entry_date, exit_date, exit_kind):
     return exit_value / entry - 1.0
 
 
+def _benchmark_regime_lookup(benchmark_df: pd.DataFrame, calendar: pd.DatetimeIndex):
+    """Return a lookup function mapping a session Timestamp -> 'BULL', 'BEAR', or 'UNKNOWN'
+    from benchmark Close vs its 200-session simple moving average."""
+    close = pd.to_numeric(benchmark_df["Close"], errors="coerce").reindex(calendar)
+    sma200 = close.rolling(200, min_periods=200).mean()
+
+    def regime_at(day: pd.Timestamp) -> str:
+        if day not in calendar:
+            return "UNKNOWN"
+        c = close.at[day]
+        m = sma200.at[day]
+        if not (np.isfinite(c) and np.isfinite(m) and m > 0):
+            return "UNKNOWN"
+        return "BULL" if float(c) > float(m) else "BEAR"
+
+    return regime_at
+
+
 def _month_end_snapshots(snaps, calendar):
     """Use a completed month's final session, confirmed by the next month's data."""
     observed_months = sorted({session.strftime("%Y-%m") for session in calendar})
@@ -247,63 +283,156 @@ def _month_end_snapshots(snaps, calendar):
                 })
     return eligible, missing_month_ends
 
-def build_scorecard(snaps: list, frames: dict, benchmark_df: pd.DataFrame,
-                    cost_pct: float = 0.30, n_hold: int = BOARD_SIZE) -> dict:
-    """Score confirmed month-end leader snapshots with fixed weights and drift-aware turnover.
 
-    Signal is the final benchmark session of a completed month; entry is the next
-    session open. A missing month-end signal or missing price keeps cumulative
-    performance incomplete instead of silently stitching dissimilar periods.
+def _live_rebalance_snapshots(snaps, calendar, min_day: int = LIVE_REBALANCE_DAY):
+    """Select the Variant B (live) rebalance snapshot for each month.
+
+    Rule:
+      - First snapshot on or after day `min_day` (28th) in that month.
+      - If a completed month has no calendar session on or after `min_day` (e.g., February
+        when the 28th falls on a weekend), use that month's last snapshot.
+      - An in-progress month with no session on or after `min_day` yet is not triggered early.
     """
-    if benchmark_df is None or benchmark_df.empty or not {"Open", "Close"}.issubset(benchmark_df.columns):
-        return {
-            "status": "unavailable", "snapshots": len(snaps), "monthly": [],
-            "daily_forward": {}, "summary": "Paper log unavailable: benchmark history is missing.",
-        }
-    calendar = pd.DatetimeIndex(benchmark_df.index).sort_values()
-    if len(calendar) < 2:
-        return {
-            "status": "unavailable", "snapshots": len(snaps), "monthly": [],
-            "daily_forward": {}, "summary": "Paper log unavailable: benchmark history is too short.",
-        }
-    if not snaps:
-        return {
-            "status": "collecting", "snapshots": 0, "monthly": [],
-            "daily_forward": {}, "missing_month_ends": [],
-            "summary": "Paper log: no snapshots yet.",
-        }
+    observed_months = sorted({session.strftime("%Y-%m") for session in calendar})
+    completed_months = set(observed_months[:-1])
+    sessions_by_month = {}
+    for session in calendar:
+        sessions_by_month.setdefault(session.strftime("%Y-%m"), []).append(session)
 
-    signals, missing_month_ends = _month_end_snapshots(snaps, calendar)
-    outside_window = []
+    snaps_by_month = {}
     for snap in snaps:
+        raw = snap.get("as_of")
+        if not raw:
+            continue
         try:
-            if pd.Timestamp(snap["as_of"]) < calendar[0]:
-                outside_window.append(str(snap["as_of"]))
-        except (KeyError, TypeError, ValueError):
-            outside_window.append(str(snap.get("as_of", "unknown")))
+            day = pd.Timestamp(raw)
+        except (TypeError, ValueError):
+            continue
+        if day not in calendar:
+            continue
+        month = day.strftime("%Y-%m")
+        snaps_by_month.setdefault(month, {})[day] = snap
 
+    first_month = min(snaps_by_month, default=None)
+    if first_month is None:
+        return [], []
+
+    eligible = []
+    missing = []
+    for month in observed_months:
+        if month < first_month:
+            continue
+        month_sessions = sessions_by_month[month]
+        ge_sessions = [d for d in month_sessions if d.day >= min_day]
+        month_snaps = snaps_by_month.get(month, {})
+        if ge_sessions:
+            ge_snaps = [month_snaps[d] for d in sorted(month_snaps) if d.day >= min_day]
+            if ge_snaps:
+                eligible.append(ge_snaps[0])
+            elif month in completed_months:
+                missing.append({
+                    "month": month,
+                    "expected_signal_date": ge_sessions[0].date().isoformat(),
+                })
+        elif month in completed_months:
+            last_session = month_sessions[-1]
+            if month_snaps:
+                eligible.append(month_snaps[max(month_snaps)])
+            else:
+                missing.append({
+                    "month": month,
+                    "expected_signal_date": last_session.date().isoformat(),
+                })
+    return eligible, missing
+
+
+def _snapshot_ranked(snap: dict) -> list[dict]:
+    """Return deduplicated ranked eligible entries from a snapshot.
+
+    New-format snapshots include `ranked` (up to top 40); legacy snapshots only have
+    `leaders` (top 20), so earlier months naturally behave as no-buffer.
+    """
+    source = snap.get("ranked") if snap.get("ranked") is not None else snap.get("leaders", [])
+    seen, out = set(), []
+    for pos, item in enumerate(source, 1):
+        ticker = item.get("ticker")
+        if not ticker or ticker in seen:
+            continue
+        seen.add(ticker)
+        raw_rank = item.get("rank", item.get("leader_rank", pos))
+        out.append({"ticker": ticker, "rank": int(raw_rank) if raw_rank is not None else pos})
+    out.sort(key=lambda x: (x["rank"], x["ticker"]))
+    return out
+
+
+def _select_variant_holdings(snap: dict, incumbents: list[str], regime: str,
+                             n_hold: int = BOARD_SIZE, use_buffer: bool = False,
+                             retain_rank: int = LIVE_RETAIN_RANK) -> list[str]:
+    """Select target holdings for a paper-log variant.
+
+    - BEAR regime -> cash ([]).
+    - Without buffer (or with no incumbents): top `n_hold` eligible stocks (rank <= n_hold).
+    - With buffer (Variant B): keep incumbents still eligible and ranked <= `retain_rank` (30),
+      then fill remaining slots up to `n_hold` (20) ONLY from stocks ranked <= `n_hold`.
+    """
+    if regime == "BEAR" or n_hold <= 0:
+        return []
+    ranked = _snapshot_ranked(snap)
+    if not use_buffer or not incumbents:
+        return [item["ticker"] for item in ranked if item["rank"] <= n_hold][:n_hold]
+    rank_by_ticker = {item["ticker"]: item["rank"] for item in ranked}
+    kept = [t for t in incumbents if t in rank_by_ticker and rank_by_ticker[t] <= retain_rank]
+    kept.sort(key=lambda t: (rank_by_ticker[t], t))
+    selected = kept[:n_hold]
+    selected_set = set(selected)
+    for item in ranked:
+        if len(selected) >= n_hold:
+            break
+        if item["rank"] <= n_hold and item["ticker"] not in selected_set:
+            selected.append(item["ticker"])
+            selected_set.add(item["ticker"])
+    return selected
+
+
+def _score_variant(signals: list, missing_signals: list, frames: dict, benchmark_df: pd.DataFrame,
+                   calendar: pd.DatetimeIndex, regime_at, outside_window: list, *,
+                   cost_pct: float = 0.30, n_hold: int = BOARD_SIZE,
+                   use_buffer: bool = False, use_regime: bool = True,
+                   retain_rank: int = LIVE_RETAIN_RANK) -> tuple[list[dict], dict]:
+    """Simulate one paper-log variant over a sequence of rebalance signal snapshots."""
     monthly = []
     previous_weights = None
     previous_entry = None
+    incumbents = []
     for i, snap in enumerate(signals):
         signal_date = pd.Timestamp(snap["as_of"])
+        month = signal_date.strftime("%Y-%m")
+        regime = regime_at(signal_date) if use_regime else "UNFILTERED"
         entry_pos = calendar.searchsorted(signal_date, side="right")
         if entry_pos >= len(calendar):
             monthly.append({
-                "signal_date": snap["as_of"], "status": "pending",
+                "month": month,
+                "signal_date": snap["as_of"],
+                "regime": regime,
+                "status": "pending",
                 "data_status": "waiting_for_next_session",
             })
             continue
         entry_date = calendar[entry_pos]
 
-        top = list(dict.fromkeys(
-            item["ticker"] for item in snap.get("leaders", []) if item.get("ticker")
-        ))
         liquid = list(dict.fromkeys(
             item["ticker"] for item in snap.get("liquid", []) if item.get("ticker")
         ))
+        regime_unknown = use_regime and regime == "UNKNOWN"
+        if regime_unknown:
+            selected = []
+        else:
+            selected = _select_variant_holdings(
+                snap, incumbents, regime if use_regime else "BULL",
+                n_hold=n_hold, use_buffer=use_buffer, retain_rank=retain_rank,
+            )
         current_weights = {
-            ticker: 1.0 / float(n_hold) for ticker in top
+            ticker: 1.0 / float(n_hold) for ticker in selected
         } if n_hold > 0 else {}
 
         next_entry = None
@@ -325,9 +454,9 @@ def build_scorecard(snaps: list, frames: dict, benchmark_df: pd.DataFrame,
 
         turnover = None
         missing_turnover = []
-        if not period_gap and n_hold > 0:
-            if previous_weights is None:
-                # First paper entry: only the capital actually invested is traded.
+        if not period_gap and not regime_unknown and n_hold > 0:
+            if previous_weights is None or not previous_weights:
+                # First entry or re-entry from 100% cash: traded weight equals new invested weight.
                 turnover = sum(current_weights.values())
             else:
                 individual_returns = {}
@@ -355,82 +484,240 @@ def build_scorecard(snaps: list, frames: dict, benchmark_df: pd.DataFrame,
                         )
 
         if period_gap:
-            top_gross = universe_gross = benchmark_return = net = None
-            top_priced = universe_priced = 0
-            top_missing = list(top)
+            gross = universe_gross = benchmark_return = net = None
+            priced = universe_priced = 0
+            missing_selected = list(selected)
             universe_missing = list(liquid)
             data_status = "missing_month_end_snapshot"
-        else:
-            top_gross, top_priced, top_missing = _basket_return(
-                top, frames, entry_date, exit_date, exit_kind, denominator=n_hold,
+        elif regime_unknown:
+            gross = net = None
+            priced = 0
+            missing_selected = []
+            universe_gross, universe_priced, universe_missing = _basket_return(
+                liquid, frames, entry_date, exit_date, exit_kind, denominator=len(liquid),
             )
+            benchmark_return = _benchmark_return(benchmark_df, entry_date, exit_date, exit_kind)
+            data_status = "regime_unavailable"
+        else:
+            if use_regime and regime == "BEAR":
+                gross, priced, missing_selected = 0.0, 0, []
+            else:
+                gross, priced, missing_selected = _basket_return(
+                    selected, frames, entry_date, exit_date, exit_kind, denominator=n_hold,
+                )
             universe_gross, universe_priced, universe_missing = _basket_return(
                 liquid, frames, entry_date, exit_date, exit_kind, denominator=len(liquid),
             )
             benchmark_return = _benchmark_return(benchmark_df, entry_date, exit_date, exit_kind)
             net = (
-                top_gross - turnover * cost_pct / 200.0
-                if top_gross is not None and turnover is not None else None
+                gross - turnover * cost_pct / 200.0
+                if gross is not None and turnover is not None else None
             )
             data_complete = (
-                top_gross is not None and universe_gross is not None
+                gross is not None and universe_gross is not None
                 and benchmark_return is not None and turnover is not None
-                and not top_missing and not universe_missing and not missing_turnover
+                and not missing_selected and not universe_missing and not missing_turnover
             )
-            if not data_complete:
-                data_status = "missing_price_or_turnover_data"
-            else:
-                data_status = "complete"
+            data_status = "complete" if data_complete else "missing_price_or_turnover_data"
 
         row_status = ("closed" if closed else "open") if data_status == "complete" else (
             "incomplete_data" if closed else "open_incomplete"
         )
         monthly.append({
+            "month": month,
             "signal_date": snap["as_of"],
             "entry_date": entry_date.date().isoformat(),
             "exit_date": exit_date.date().isoformat(),
+            "regime": regime,
+            "in_cash": bool(use_regime and regime == "BEAR"),
             "status": row_status,
             "data_status": data_status,
-            "holdings": len(top),
-            "priced": top_priced,
-            "expected_holdings": len(top),
-            "missing_tickers": top_missing[:20],
+            "holdings": len(selected),
+            "holding_tickers": list(selected),
+            "priced": priced,
+            "expected_holdings": len(selected),
+            "missing_tickers": missing_selected[:20],
             "liquid_universe_size": len(liquid),
             "liquid_priced": universe_priced,
             "liquid_missing_count": len(universe_missing),
             "missing_turnover_tickers": missing_turnover[:20],
             "turnover_l1": turnover,
-            "top20_gross": top_gross,
-            "top20_net": net,
+            "gross": gross,
+            "net": net,
             "same_universe_equal_weight": universe_gross,
             "nifty50": benchmark_return,
             "excess_vs_universe": net - universe_gross if net is not None and universe_gross is not None else None,
             "excess_vs_nifty": net - benchmark_return if net is not None and benchmark_return is not None else None,
         })
 
-        # Keep the actual target at the entry session. The next month's turnover
-        # calculation drifts these weights by each constituent's open-to-open return.
-        previous_weights = current_weights
-        previous_entry = entry_date
+        if regime_unknown:
+            previous_weights = None
+            previous_entry = None
+            incumbents = []
+        else:
+            previous_weights = current_weights
+            previous_entry = entry_date
+            incumbents = list(selected)
 
     closed_rows = [row for row in monthly if row.get("status") in ("closed", "incomplete_data")]
     incomplete_closed = [row for row in closed_rows if row.get("data_status") != "complete"]
     complete_closed = [row for row in closed_rows if row.get("data_status") == "complete"]
-    audit_incomplete = bool(missing_month_ends or outside_window)
+    audit_incomplete = bool(missing_signals or outside_window)
     cumulative = {
         "status": "complete" if closed_rows and not incomplete_closed and not audit_incomplete else "incomplete",
         "months": len(complete_closed),
-        "top20_net": None,
+        "net": None,
         "same_universe_equal_weight": None,
         "nifty50": None,
     }
     if closed_rows and not incomplete_closed and not audit_incomplete:
-        for key in ("top20_net", "same_universe_equal_weight", "nifty50"):
+        for key in ("net", "same_universe_equal_weight", "nifty50"):
             values = [row[key] for row in closed_rows]
             if all(value is not None and np.isfinite(value) for value in values):
                 cumulative[key] = float(np.prod([1.0 + value for value in values]) - 1.0)
             else:
                 cumulative["status"] = "incomplete"
+    return monthly, cumulative
+
+
+def _build_comparison_rows(raw_monthly: list, simple_monthly: list, live_monthly: list) -> list[dict]:
+    """Align raw top-20, Variant A (simple), Variant B (live), and benchmarks by month."""
+    by_month = {}
+    for bucket, rows in (("raw", raw_monthly), ("simple", simple_monthly), ("live", live_monthly)):
+        for row in rows:
+            month = row.get("month") or str(row.get("signal_date", ""))[:7]
+            if not month:
+                continue
+            by_month.setdefault(month, {})[bucket] = row
+    comparison = []
+    for month in sorted(by_month):
+        entry = by_month[month]
+        r_row, s_row, l_row = entry.get("raw"), entry.get("simple"), entry.get("live")
+        ref = r_row or s_row or l_row or {}
+        comparison.append({
+            "month": month,
+            "regime": (s_row or l_row or {}).get("regime"),
+            "simple_signal_date": s_row.get("signal_date") if s_row else None,
+            "live_signal_date": l_row.get("signal_date") if l_row else None,
+            "raw_signal_date": r_row.get("signal_date") if r_row else None,
+            "simple_status": s_row.get("status") if s_row else None,
+            "live_status": l_row.get("status") if l_row else None,
+            "raw_status": r_row.get("status") if r_row else None,
+            "simple_net": s_row.get("net") if s_row else None,
+            "live_net": l_row.get("net") if l_row else None,
+            "raw_top20_net": r_row.get("top20_net") if r_row else None,
+            "same_universe_equal_weight": ref.get("same_universe_equal_weight"),
+            "nifty50": ref.get("nifty50"),
+        })
+    return comparison
+
+
+def build_scorecard(snaps: list, frames: dict, benchmark_df: pd.DataFrame,
+                    cost_pct: float = 0.30, n_hold: int = BOARD_SIZE,
+                    retain_rank: int = LIVE_RETAIN_RANK) -> dict:
+    """Score confirmed leader snapshots with fixed weights and drift-aware turnover.
+
+    Reports side by side:
+      - raw_top20 (existing `monthly` / `cumulative`): month-end top-20, no buffer, no regime filter
+      - simple (Variant A): month-end top-20, no buffer, BEAR (NIFTYBEES <= 200-DMA) -> cash
+      - live (Variant B): first snapshot >= 28th (or month's last snapshot in months like February),
+        top-30 incumbent hold buffer filled from top-20, BEAR -> cash
+      - Nifty 50 (benchmark ETF) and same-universe equal weight
+
+    Missing signals or missing prices make the affected interval incomplete rather than
+    silently reweighting survivors or stitching across gaps.
+    """
+    if benchmark_df is None or benchmark_df.empty or not {"Open", "Close"}.issubset(benchmark_df.columns):
+        return {
+            "status": "unavailable", "snapshots": len(snaps), "monthly": [],
+            "variants": {}, "comparison": [],
+            "daily_forward": {}, "summary": "Paper log unavailable: benchmark history is missing.",
+        }
+    calendar = pd.DatetimeIndex(benchmark_df.index).sort_values()
+    if len(calendar) < 2:
+        return {
+            "status": "unavailable", "snapshots": len(snaps), "monthly": [],
+            "variants": {}, "comparison": [],
+            "daily_forward": {}, "summary": "Paper log unavailable: benchmark history is too short.",
+        }
+    if not snaps:
+        return {
+            "status": "collecting", "snapshots": 0, "monthly": [],
+            "variants": {}, "comparison": [],
+            "daily_forward": {}, "missing_month_ends": [],
+            "summary": "Paper log: no snapshots yet.",
+        }
+
+    signals, missing_month_ends = _month_end_snapshots(snaps, calendar)
+    live_signals, missing_live_signals = _live_rebalance_snapshots(snaps, calendar)
+    outside_window = []
+    for snap in snaps:
+        try:
+            if pd.Timestamp(snap["as_of"]) < calendar[0]:
+                outside_window.append(str(snap["as_of"]))
+        except (KeyError, TypeError, ValueError):
+            outside_window.append(str(snap.get("as_of", "unknown")))
+
+    regime_at = _benchmark_regime_lookup(benchmark_df, calendar)
+
+    # Existing raw top-20 (unbuffered, no regime filter) preserved at top-level monthly/cumulative
+    raw_rows, raw_cum = _score_variant(
+        signals, missing_month_ends, frames, benchmark_df, calendar, regime_at, outside_window,
+        cost_pct=cost_pct, n_hold=n_hold, use_buffer=False, use_regime=False, retain_rank=retain_rank,
+    )
+    monthly = []
+    for row in raw_rows:
+        mapped = dict(row)
+        if "gross" in mapped:
+            mapped["top20_gross"] = mapped.pop("gross")
+        if "net" in mapped:
+            mapped["top20_net"] = mapped.pop("net")
+        monthly.append(mapped)
+
+    cumulative = {
+        "status": raw_cum["status"],
+        "months": raw_cum["months"],
+        "top20_net": raw_cum["net"],
+        "same_universe_equal_weight": raw_cum["same_universe_equal_weight"],
+        "nifty50": raw_cum["nifty50"],
+    }
+
+    # Variant A (simple): month-end, no buffer, BEAR -> cash
+    simple_monthly, simple_cumulative = _score_variant(
+        signals, missing_month_ends, frames, benchmark_df, calendar, regime_at, outside_window,
+        cost_pct=cost_pct, n_hold=n_hold, use_buffer=False, use_regime=True, retain_rank=retain_rank,
+    )
+
+    # Variant B (live): first snapshot >= 28th (Feb last snapshot), top-30 buffer, BEAR -> cash
+    live_monthly, live_cumulative = _score_variant(
+        live_signals, missing_live_signals, frames, benchmark_df, calendar, regime_at, outside_window,
+        cost_pct=cost_pct, n_hold=n_hold, use_buffer=True, use_regime=True, retain_rank=retain_rank,
+    )
+
+    comparison = _build_comparison_rows(monthly, simple_monthly, live_monthly)
+    variants = {
+        "simple": {
+            "label": "Simple (month-end, no buffer, BEAR=cash)",
+            "signals": len(signals),
+            "missing_signals": missing_month_ends,
+            "monthly": simple_monthly,
+            "cumulative": simple_cumulative,
+        },
+        "live": {
+            "label": "Live (>=28th / Feb last, top-30 buffer, BEAR=cash)",
+            "signals": len(live_signals),
+            "missing_signals": missing_live_signals,
+            "monthly": live_monthly,
+            "cumulative": live_cumulative,
+        },
+        "raw_top20": {
+            "label": "Raw top-20 (month-end, no buffer, no regime filter)",
+            "signals": len(signals),
+            "missing_signals": missing_month_ends,
+            "monthly": monthly,
+            "cumulative": cumulative,
+        },
+    }
 
     # Overlapping 5/21/63-session diagnostics, explicitly count missing-price samples.
     forward = {}
@@ -482,11 +769,20 @@ def build_scorecard(snaps: list, frames: dict, benchmark_df: pd.DataFrame,
             "no_setup_mean_excess": float(np.mean(quiet_excess)) if quiet_excess else None,
         }
 
+    closed_rows = [row for row in monthly if row.get("status") in ("closed", "incomplete_data")]
+    incomplete_closed = [row for row in closed_rows if row.get("data_status") != "complete"]
+    complete_closed = [row for row in closed_rows if row.get("data_status") == "complete"]
     first = min((str(snap.get("as_of")) for snap in snaps if snap.get("as_of")), default="unknown")
     if cumulative["status"] == "complete":
+        extra = ""
+        if simple_cumulative["status"] == "complete" and live_cumulative["status"] == "complete":
+            extra = (
+                f" | simple {simple_cumulative['net'] * 100:+.1f}% vs "
+                f"live {live_cumulative['net'] * 100:+.1f}%"
+            )
         summary = (
             f"Paper log since {first}: {len(closed_rows)} completed month(s): "
-            f"top-20 {cumulative['top20_net'] * 100:+.1f}% vs Nifty "
+            f"top-20 {cumulative['top20_net'] * 100:+.1f}%{extra} vs Nifty "
             f"{cumulative['nifty50'] * 100:+.1f}% vs same-universe equal-weight "
             f"{cumulative['same_universe_equal_weight'] * 100:+.1f}% (after costs; far too early to judge)."
         )
@@ -505,7 +801,7 @@ def build_scorecard(snaps: list, frames: dict, benchmark_df: pd.DataFrame,
         )
 
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "status": cumulative["status"] if closed_rows else "tracking",
         "snapshots": len(snaps),
         "month_end_snapshots": len(signals),
@@ -514,9 +810,12 @@ def build_scorecard(snaps: list, frames: dict, benchmark_df: pd.DataFrame,
         "snapshots_outside_price_window": outside_window,
         "monthly": monthly,
         "cumulative": cumulative,
+        "variants": variants,
+        "comparison": comparison,
         "daily_forward": forward,
         "summary": summary,
     }
+
 
 def log_and_score(payload: dict, frames: dict, benchmark_df, history_dir=SNAPSHOT_DIR, scorecard_path="docs/scorecard.json") -> dict:
     """Save today's snapshot (if the scan was healthy), then rebuild the scorecard from all snapshots."""
@@ -569,7 +868,17 @@ def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=B
             failed.append(t)
             print(f"[error] {t}: {e}", file=sys.stderr)
     frames = {t: df for t, df in frames.items() if t in {r["ticker"] for r in rows}}
-    leaders, counts = select_leaders(rows, liquid_top, board)
+    ranked_pool, counts = select_leaders(rows, liquid_top, max(board, RANKED_SNAPSHOT_SIZE))
+    leaders = ranked_pool[:board]
+    eligible_ranked = [
+        {
+            "ticker": r["ticker"],
+            "leader_rank": r["leader_rank"],
+            "relative_strength_12_1_pct": r["relative_strength_12_1_pct"],
+            "last_close": r["last_close"],
+        }
+        for r in ranked_pool[:RANKED_SNAPSHOT_SIZE]
+    ]
     for r in leaders:                                            # structure read for the leaders only
         s = None
         try:
@@ -594,7 +903,8 @@ def run_leaders(universe=None, benchmark_df=None, liquid_top=LIQUID_TOP, board=B
     counts["partial_scan_time_limit"] = partial
     counts["load_coverage_pct"] = round(100 * (len(universe) - len(failed)) / len(universe), 1)
     out = {
-        "as_of": benchmark_df.index[-1].date().isoformat(), "benchmark": A.RS_BENCHMARK, "liquid_universe": liquid_universe,
+        "as_of": benchmark_df.index[-1].date().isoformat(), "benchmark": A.RS_BENCHMARK,
+        "liquid_universe": liquid_universe, "eligible_ranked": eligible_ranked,
         "definition": (f"Top {liquid_top} by 126-day traded value of the Nifty 500 list, close above 200-day average, "
                        "ranked by 12-1 return relative to the benchmark (latest 21 sessions skipped)."),
         "evidence": EVIDENCE, "setup_record": SETUP_RECORD, "counts": counts, "failed_tickers": failed[:60], "leaders": leaders,

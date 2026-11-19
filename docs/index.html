@@ -19,6 +19,7 @@
   .conf-low { color: #9aa0aa; }
   .notes-list { margin: 0; padding-left: 16px; color: #9aa0aa; font-size: 12px; }
   .err { color: #f87171; }
+  .sub { color: #7a8194; font-size: 11px; display: block; }
   .refresh { font-size: 12px; color: #5b8def; cursor: pointer; text-decoration: underline; }
 </style>
 </head>
@@ -139,15 +140,54 @@
                  </tr>`; }).join('')}</tbody>
              </table></div>`
           : (wl && wl.error ? `<h2>Momentum leaders</h2><p class="section-note">Wide-universe scan unavailable: ${esc(wl.error)}</p>` : '');
+
+        const comparison = (scorecard && scorecard.comparison)
+          ? scorecard.comparison.filter(m => m.raw_status !== 'pending' || m.simple_status !== 'pending' || m.live_status !== 'pending')
+          : [];
         const months = (scorecard && scorecard.monthly) ? scorecard.monthly.filter(m => m.status !== 'pending') : [];
-        const scoreHtml = scorecard
-          ? `<h2>Paper-trading log</h2>
-             <p class="section-note">${esc(scorecard.summary || '')} Signals are taken only from confirmed final benchmark sessions of completed months and entered at the next session open. Each top-20 slot receives 1/20 weight; unused slots remain cash. Turnover includes weight drift between rebalances and a 0.30% round-trip cost assumption. Missing constituent prices or month-end snapshots make the affected interval incomplete rather than reweighting survivors. This is a paper experiment, not a validated live return.</p>
-             ${(scorecard.missing_month_ends || []).length ? `<p class="err">Missing month-end scans: ${(scorecard.missing_month_ends || []).map(x => esc(x.month)).join(', ')}. Cumulative returns are withheld.</p>` : ''}
-             ${months.length ? `<div class="table-wrap"><table>
+        const variants = (scorecard && scorecard.variants) || {};
+        const cumSimple = (variants.simple && variants.simple.cumulative) || {};
+        const cumLive = (variants.live && variants.live.cumulative) || {};
+        const cumRaw = (scorecard && scorecard.cumulative) || {};
+        const hasCumulative = (cumSimple.months > 0 || cumLive.months > 0 || cumRaw.months > 0);
+        const fmtStatus = m => {
+          const parts = [m.simple_status, m.live_status, m.raw_status].filter(Boolean);
+          const uniq = [...new Set(parts)];
+          return uniq.length ? uniq.join(' / ') : '—';
+        };
+        const scoreTableHtml = comparison.length
+          ? `<div class="table-wrap"><table>
+               <thead><tr><th>Month</th><th>Regime</th><th>Simple A (net)</th><th>Live B (net)</th><th>Raw top-20 (net)</th><th>Same universe (EW)</th><th>Nifty 50</th><th>Status</th></tr></thead>
+               <tbody>${comparison.map(m => `<tr>
+                 <td><strong>${esc(m.month)}</strong></td>
+                 <td>${esc(m.regime || '—')}</td>
+                 <td>${pctF(m.simple_net)}${m.simple_signal_date ? `<span class="sub">${esc(m.simple_signal_date)}</span>` : ''}</td>
+                 <td>${pctF(m.live_net)}${m.live_signal_date ? `<span class="sub">${esc(m.live_signal_date)}</span>` : ''}</td>
+                 <td>${pctF(m.raw_top20_net)}${m.raw_signal_date ? `<span class="sub">${esc(m.raw_signal_date)}</span>` : ''}</td>
+                 <td>${pctF(m.same_universe_equal_weight)}</td>
+                 <td>${pctF(m.nifty50)}</td>
+                 <td>${esc(fmtStatus(m))}</td>
+               </tr>`).join('')}
+               ${hasCumulative ? `<tr>
+                 <td><strong>Cumulative (closed)</strong></td>
+                 <td>—</td>
+                 <td><strong>${pctF(cumSimple.net)}</strong></td>
+                 <td><strong>${pctF(cumLive.net)}</strong></td>
+                 <td><strong>${pctF(cumRaw.top20_net)}</strong></td>
+                 <td><strong>${pctF(cumRaw.same_universe_equal_weight ?? cumSimple.same_universe_equal_weight)}</strong></td>
+                 <td><strong>${pctF(cumRaw.nifty50 ?? cumSimple.nifty50)}</strong></td>
+                 <td>${esc(cumRaw.status || cumSimple.status || '—')}</td>
+               </tr>` : ''}</tbody>
+             </table></div>`
+          : (months.length ? `<div class="table-wrap"><table>
                <thead><tr><th>Signal date</th><th>Status</th><th>Top 20 (net)</th><th>Same universe, equal weight</th><th>Nifty 50</th></tr></thead>
                <tbody>${months.map(m => `<tr><td>${esc(m.signal_date)}</td><td>${esc(m.data_status || m.status)}</td><td>${pctF(m.top20_net)}</td><td>${pctF(m.same_universe_equal_weight)}</td><td>${pctF(m.nifty50)}</td></tr>`).join('')}</tbody>
-             </table></div>` : ''}`
+             </table></div>` : '');
+        const scoreHtml = scorecard
+          ? `<h2>Paper-trading log</h2>
+             <p class="section-note">${esc(scorecard.summary || '')} Tracks Variant A (simple month-end top-20, no buffer, BEAR=cash), Variant B (live first snapshot ≥28th or month-end in February, top-30 hold buffer filled from top-20, BEAR=cash), and Raw top-20 (month-end, no regime filter) side by side. Entries occur at the next session open, each slot receives 1/20 weight (unused slots or BEAR regime remain cash), and turnover includes weight drift with a 0.30% round-trip cost assumption. Missing constituent prices or snapshots make the affected interval incomplete rather than reweighting survivors. This is a paper experiment, not a validated live return.</p>
+             ${(scorecard.missing_month_ends || []).length ? `<p class="err">Missing month-end scans: ${(scorecard.missing_month_ends || []).map(x => esc(x.month)).join(', ')}. Cumulative returns are withheld.</p>` : ''}
+             ${scoreTableHtml}`
           : '';
 
         const html = `
