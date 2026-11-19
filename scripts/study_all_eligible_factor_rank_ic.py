@@ -194,8 +194,42 @@ def main() -> None:
         "",
         "Per-date results: `all_eligible_factor_rank_ic.csv`; summary: `all_eligible_factor_rank_ic_summary.csv`.",
     ])
-    (SAMPLE_DIR / "all_eligible_factor_rank_ic.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print("\n".join(lines))
+    (SAMPLE_DIR / "all_eligible_factor_rank_ic.md").write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+
+    # Replace the obsolete selected-top-20 IC section in the main Task 4 report.
+    diagnostics_path = SAMPLE_DIR / "task4_diagnostics.md"
+    diagnostics = diagnostics_path.read_text(encoding="utf-8")
+    section_start = diagnostics.find("## 1. Cross-sectional factor rank-IC")
+    section_end = diagnostics.find("## 2. Six-month incomplete-basket audit", section_start)
+    if section_start < 0 or section_end < 0:
+        raise RuntimeError("Could not locate the factor-IC section in task4_diagnostics.md")
+    section = [
+        "## 1. All-eligible cross-sectional factor rank-IC",
+        "",
+        f"TejHQ dataset revision: `{PIN}`",
+        "Eligibility: point-in-time NIFTY 500 members with at least 253 observed sessions, ranked by 126-session "
+        "average raw traded value (top 200), adjusted close above the 200-DMA, and corporate-action quarantine eligibility. "
+        "Factors are measured at the signal close. Forward returns use next-session adjusted open to the sample's fixed "
+        "horizon exit close; names with an unsupported corporate action between signal and exit are omitted only from "
+        "that horizon's return cross-section.",
+        "",
+        "| Horizon | Factor | Sample dates | Mean eligible N | Mean valid-return N | Mean Spearman IC | Median Spearman IC |",
+        "|---|---|---:|---:|---:|---:|---:|",
+    ]
+    for r in summary.itertuples(index=False):
+        section.append(
+            f"| {r.horizon} | {FACTORS[r.factor]} | {r.sample_dates} | {r.mean_eligible_n:.1f} | "
+            f"{r.mean_return_valid_n:.1f} | {r.mean_ic:+.4f} | {r.median_ic:+.4f} |"
+        )
+    section.extend([
+        "",
+        "IC is computed across all eligible stocks on each signal date, not only the selected top-20. The 40 dates "
+        "overlap and are descriptive rather than independent statistical trials. Per-date observations and summary "
+        "CSVs are stored alongside this report.",
+        "",
+    ])
+    diagnostics_path.write_text(diagnostics[:section_start] + "\\n".join(section) + diagnostics[section_end:], encoding="utf-8")
+    print("\\n".join(lines))
 
 
 if __name__ == "__main__":
