@@ -228,7 +228,7 @@ def main() -> None:
         "CSVs are stored alongside this report.",
         "",
     ])
-    diagnostics_path.write_text(diagnostics[:section_start] + "\\n".join(section) + diagnostics[section_end:], encoding="utf-8")
+    diagnostics_path.write_text(diagnostics[:section_start] + "\n".join(section) + diagnostics[section_end:], encoding="utf-8")
     print("\\n".join(lines))
 
 
