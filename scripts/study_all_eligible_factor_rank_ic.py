@@ -194,7 +194,7 @@ def main() -> None:
         "",
         "Per-date results: `all_eligible_factor_rank_ic.csv`; summary: `all_eligible_factor_rank_ic_summary.csv`.",
     ])
-    (SAMPLE_DIR / "all_eligible_factor_rank_ic.md").write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+    (SAMPLE_DIR / "all_eligible_factor_rank_ic.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     # Replace the obsolete selected-top-20 IC section in the main Task 4 report.
     diagnostics_path = SAMPLE_DIR / "task4_diagnostics.md"
@@ -231,7 +231,7 @@ def main() -> None:
         "",
     ])
     diagnostics_path.write_text(diagnostics[:section_start] + "\n".join(section) + diagnostics[section_end:], encoding="utf-8")
-    print("\\n".join(lines))
+    print("\n".join(lines))
 
 
 if __name__ == "__main__":

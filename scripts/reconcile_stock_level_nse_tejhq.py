@@ -200,8 +200,32 @@ def main() -> None:
     if section_start < 0 or section_end < 0:
         raise RuntimeError("Could not locate the NSE reconciliation section in task4_diagnostics.md")
     old_section = diagnostics[section_start:section_end]
-    benchmark_detail = old_section.split("\n", 2)[2].strip()
+    stock_sub = old_section.find("### Stock-level individual-equity reconciliation")
+    etf_part = old_section[:stock_sub] if stock_sub >= 0 else old_section
+    etf_sub = etf_part.find("### NIFTYBEES benchmark (ETF only)")
+    if etf_sub >= 0:
+        benchmark_detail = etf_part[etf_sub + len("### NIFTYBEES benchmark (ETF only)"):].strip()
+    else:
+        benchmark_detail = etf_part.split("\n", 2)[2].strip()
     stock_status = "VERIFIED" if all_verified else "UNVERIFIED"
+    if all_verified:
+        stock_body = (
+            f"**Status: {stock_status}.** All 10 deterministic sampled equities matched official NSE EQ raw OHLC "
+            f"across their sample windows; per-session diffs are in `{DETAIL.name}` and summaries in `{summary_path.name}`."
+        )
+    else:
+        stock_body = (
+            f"**Status: {stock_status}.** The deterministic sample covers six dropped-basket corporate-action names "
+            "(NESTLEIND, AJANTPHARM, AARTIDRUGS, BSOFT, SUZLON, VEDL) and four clean controls "
+            "(ADANIGREEN, NAVINFLUOR, DIXON, DMART), using the signal date of each affected basket position. "
+            "The GitHub Actions runner was blocked by the official NSE website: the NSE homepage bootstrap returned "
+            "HTTP 403 Forbidden, and the historical EQ endpoint returned non-JSON responses for all 10 names. "
+            "There are therefore zero verified common stock sessions and no defensible OHLC differences to report. "
+            "**Do not infer stock-level accuracy from the 2,463-session NIFTYBEES benchmark match.** "
+            "Individual-stock OHLC remains UNVERIFIED until official NSE equity history can be retrieved. "
+            f"Per-symbol errors and session counts are in `{summary_path.name}`; "
+            f"the empty per-session comparison file is `{DETAIL.name}`."
+        )
     stock_section = [
         "## 3. NSE / TejHQ reconciliation",
         "",
@@ -211,16 +235,7 @@ def main() -> None:
         "",
         "### Stock-level individual-equity reconciliation",
         "",
-        f"**Status: {stock_status}.** The deterministic sample covers six dropped-basket corporate-action names "
-        "(NESTLEIND, AJANTPHARM, AARTIDRUGS, BSOFT, SUZLON, VEDL) and four clean controls "
-        "(ADANIGREEN, NAVINFLUOR, DIXON, DMART), using the signal date of each affected basket position.",
-        "The GitHub Actions runner was blocked by the official NSE website: the NSE homepage bootstrap returned "
-        "HTTP 403 Forbidden, and the historical EQ endpoint returned non-JSON responses for all 10 names. "
-        "There are therefore zero verified common stock sessions and no defensible OHLC differences to report.",
-        "**Do not infer stock-level accuracy from the 2,463-session NIFTYBEES benchmark match.** "
-        "Individual-stock OHLC remains UNVERIFIED until official NSE equity history can be retrieved.",
-        "Per-symbol errors and session counts are in " + String.fromCharCode(96) + "stock_level_nse_tejhq_reconciliation_summary.csv" + String.fromCharCode(96) + "; "
-        "the empty per-session comparison file is " + String.fromCharCode(96) + "stock_level_nse_tejhq_reconciliation.csv" + String.fromCharCode(96) + ".",
+        stock_body,
         "",
     ]
     diagnostics_path.write_text(
