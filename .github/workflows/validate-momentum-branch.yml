@@ -12,6 +12,7 @@ on:
       - "main.py"
       - "alerts.py"
       - "test_patterns.py"
+      - "test_scorecard_variants.py"
       - "docs/index.html"
       - "docs/RESEARCH_AUTOMATION.md"
       - "scripts/**"
@@ -27,6 +28,7 @@ on:
       - "main.py"
       - "alerts.py"
       - "test_patterns.py"
+      - "test_scorecard_variants.py"
       - "docs/index.html"
       - ".github/workflows/**"
   workflow_dispatch: {}
@@ -47,6 +49,9 @@ jobs:
         run: pip install -r requirements.txt
       - name: Run deterministic regression suite
         run: python test_patterns.py
+      - name: Run scorecard variant tests when present
+        if: hashFiles('test_scorecard_variants.py') != ''
+        run: python test_scorecard_variants.py
       - name: Run portfolio ledger tests when present
         if: hashFiles('test_momentum_portfolio.py') != ''
         run: python test_momentum_portfolio.py
