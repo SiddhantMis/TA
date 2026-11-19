@@ -147,7 +147,9 @@ def _row(label, d):
 
 def report(t: pd.DataFrame, args) -> str:
     head = f"{'group':<30}{'signals':>8}{'trades':>8}{'win%':>8}{'avg R':>9}{'sum R':>9}"
-    out = [f"Backtest: {t.ticker.nunique()} tickers, {args.years}y, max hold {args.max_hold}d, "
+    # A no-signal run returns an empty DataFrame without any columns.
+    ticker_count = 0 if t.empty else t.ticker.nunique()
+    out = [f"Backtest: {ticker_count} tickers, {args.years}y, max hold {args.max_hold}d, "
            f"trigger window {args.trigger_days}d, costs {args.cost_pct}% round trip",
            "R = net of costs; 1R = fill-to-stop distance. Stop wins any same-bar tie.", ""]
     if t.empty:

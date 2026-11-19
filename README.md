@@ -1,5 +1,37 @@
 # TA Screener
 
+## Private scanner and tracker application
+
+The new `app.py` provides separate **TA setups** and **momentum baskets**, each
+with model tracking and its own actual execution journal. It preserves original
+decisions, watches pending setups across sessions, and records fills, cash,
+corrections and outcomes in private durable storage. Personal and wide-universe
+scans share the same rule versions. A model fill never becomes an actual holding.
+
+Start with the local synthetic preview on Python 3.13, without an active private
+`.streamlit/secrets.toml`:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+$env:DATABASE_URL = $null
+$env:TRACKER_ENV = "local"
+$env:TRACKER_DEMO = "1"
+.venv\Scripts\python.exe -m scanner_tracker demo
+.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1
+```
+
+Use [DEPLOYMENT.md](DEPLOYMENT.md) for the private Streamlit/Supabase setup,
+staging verification, backup/restore and worker controls. The new worker's
+schedules remain disabled until `TRACKER_SCHEDULE_ENABLED=true` is deliberately
+set as a repository variable. Real credentials belong in private server settings;
+the committed `.env.example` and `.streamlit/secrets.toml.example` contain
+placeholders. Configure model capital and risk settings before scanning.
+
+The sections below describe the legacy public JSON/Pages/Discord screener and
+its research history. Its existing workflow remains separate from the private
+application and continues to use its existing trigger and outputs.
+
 EOD technical-analysis and momentum watchlist for Indian equities. It ranks
 relative-strength leaders and reports chart structure for manual review. It
 does not make validated buy calls, decide position size, or replace the trade
