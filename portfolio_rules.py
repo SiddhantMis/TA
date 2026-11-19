@@ -248,12 +248,30 @@ def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0
                 if t > 0 and np.isfinite(C[t - 1, j])
             )
             for j in affected_holdings:
-                if t <= 0 or not np.isfinite(C_raw[t - 1, j]) or C_raw[t - 1, j] <= 0:
+                if t <= 0:
                     raise RuntimeError(
                         f"Cannot force-exit {P['cols'][j]} on {idx[t].date()}: "
-                        "the prior session's observed close is unavailable."
+                        "there is no preceding session."
                     )
-                prior_close = float(C_raw[t - 1, j])
+                prior_session_close = C_raw[t - 1, j]
+                if np.isfinite(prior_session_close) and prior_session_close > 0:
+                    prior_close = float(prior_session_close)
+                    last_observed_session = idx[t - 1].date().isoformat()
+                    prior_session_bar_observed = True
+                else:
+                    # A halted/missing bar does not erase the last valid mark.
+                    # C is the close series forward-filled only for valuation.
+                    prior_close = float(C[t - 1, j])
+                    observed = np.flatnonzero(
+                        np.isfinite(C_raw[:t, j]) & (C_raw[:t, j] > 0)
+                    )
+                    if not np.isfinite(prior_close) or prior_close <= 0 or observed.size == 0:
+                        raise RuntimeError(
+                            f"Cannot force-exit {P['cols'][j]} on {idx[t].date()}: "
+                            "no valid last-observed close is available."
+                        )
+                    last_observed_session = idx[int(observed[-1])].date().isoformat()
+                    prior_session_bar_observed = False
                 proceeds = float(sh.pop(j) * prior_close)
                 transaction_cost = proceeds * side
                 cash += proceeds - transaction_cost
@@ -261,7 +279,9 @@ def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0
                 forced_exit_events.append({
                     "symbol": P["cols"][j],
                     "session": idx[t].date().isoformat(),
-                    "prior_close_session": idx[t - 1].date().isoformat(),
+                    "prior_close_session": last_observed_session,
+                    "last_observed_session": last_observed_session,
+                    "prior_session_bar_observed": prior_session_bar_observed,
                     "prior_close_used": prior_close,
                     "cost": transaction_cost,
                     "reason": "unsupported_corporate_action",

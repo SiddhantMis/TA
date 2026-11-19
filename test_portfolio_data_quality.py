@@ -194,5 +194,31 @@ class PortfolioMissingBarTests(unittest.TestCase):
         self.assertEqual(excluded.strftime("%Y-%m-%d").tolist(), ["2024-01-03"])
 
 
+    def test_held_position_forced_exit_uses_last_observed_close_after_missing_prior_bar(self):
+        self.frame.attrs["unsupported_action_dates"] = [
+            self.idx[self.missing_pos + 1].date().isoformat()
+        ]
+        prepared = prepare(
+            {"AAA.NS": self.frame}, self.bench,
+            membership_df=self.membership,
+        )
+        result = simulate(
+            prepared, signals={self.missing_pos - 1}, start=253,
+            size=1, retain=1, regime="off", cost_pct=0.30,
+        )
+        self.assertEqual(result["forced_exit_count"], 1)
+        event = result["forced_exit_events"][0]
+        last_observed = self.idx[self.missing_pos - 1]
+        self.assertEqual(event["session"], self.idx[self.missing_pos + 1].date().isoformat())
+        self.assertEqual(event["last_observed_session"], last_observed.date().isoformat())
+        self.assertEqual(event["prior_close_session"], last_observed.date().isoformat())
+        self.assertFalse(event["prior_session_bar_observed"])
+        self.assertAlmostEqual(
+            event["prior_close_used"],
+            prepared["C"][self.missing_pos, 0],
+        )
+        self.assertGreater(event["cost"], 0.0)
+
+
 if __name__ == "__main__":
     unittest.main()
