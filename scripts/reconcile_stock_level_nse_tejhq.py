@@ -194,6 +194,8 @@ def main() -> None:
     diagnostics_path = BASE / "task4_diagnostics.md"
     diagnostics = diagnostics_path.read_text(encoding="utf-8")
     section_start = diagnostics.find("## 3. NSE / TejHQ NIFTYBEES price reconciliation")
+    if section_start < 0:
+        section_start = diagnostics.find("## 3. NSE / TejHQ reconciliation")
     section_end = diagnostics.find("## 4. Intra-window maximum drawdown", section_start)
     if section_start < 0 or section_end < 0:
         raise RuntimeError("Could not locate the NSE reconciliation section in task4_diagnostics.md")
