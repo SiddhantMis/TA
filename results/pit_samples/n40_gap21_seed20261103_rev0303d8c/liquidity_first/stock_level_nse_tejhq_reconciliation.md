@@ -8,11 +8,11 @@ Comparison is raw NSE EQ OHLC against TejHQ raw_open/raw_high/raw_low/raw_close,
 | Symbol | Sample | Signal date | Status | Common sessions | Max abs open diff | high diff | low diff | close diff |
 |---|---|---|---|---:|---:|---:|---:|---:|
 | AARTIDRUGS | flagged_CA | 2020-10-05 | UNVERIFIED | 0 |  |  |  |  |
-| AJANTPHARM | flagged_CA | 2020-05-07 | UNVERIFIED | 0 |  |  |  |  |
-| BSOFT | flagged_CA | 2020-10-05 | UNVERIFIED | 0 |  |  |  |  |
+| AJANTPHARM | flagged_CA | 2020-06-19 | UNVERIFIED | 0 |  |  |  |  |
+| BSOFT | flagged_CA | 2022-02-08 | UNVERIFIED | 0 |  |  |  |  |
 | NESTLEIND | flagged_CA | 2020-05-07 | UNVERIFIED | 0 |  |  |  |  |
 | SUZLON | flagged_CA | 2022-04-27 | UNVERIFIED | 0 |  |  |  |  |
-| VEDL | flagged_CA | 2021-04-05 | UNVERIFIED | 0 |  |  |  |  |
+| VEDL | flagged_CA | 2026-03-10 | UNVERIFIED | 0 |  |  |  |  |
 | ADANIGREEN | clean_control | 2020-03-24 | UNVERIFIED | 0 |  |  |  |  |
 | NAVINFLUOR | clean_control | 2020-03-24 | UNVERIFIED | 0 |  |  |  |  |
 | DIXON | clean_control | 2020-03-24 | UNVERIFIED | 0 |  |  |  |  |
