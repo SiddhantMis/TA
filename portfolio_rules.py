@@ -224,7 +224,7 @@ def select_target(rank_row, incumbents, buffer: bool, size=SIZE, retain=RETAIN) 
 
 def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0.30,
              size=SIZE, retain=RETAIN, start=START, regime_source="etf"):
-    """Daily engine: no synthetic opens, actual closes for signals, stale closes for valuation only."""
+    """Daily engine with prior-close forced exits for unsupported corporate actions."""
     idx, O, C = P["idx"], P["O"], P["C"]
     C_raw = P.get("C_raw", C)
     n, side = len(idx), cost_pct / 200.0
@@ -235,20 +235,47 @@ def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0
     stale_holding_days, max_stale_sessions = 0, 0
     action_events = P.get("unsupported_action_event", np.zeros(O.shape, dtype=bool))
     action_blocked_entries = []
+    forced_exit_events = []
+
     for t in range(start, n):
+        reb = (t - 1) in signals and (t - 1) >= start - 1
         affected_holdings = [j for j in sh if action_events[t, j]]
+        forced_exit_value = 0.0
+        turnover_equity_before = None
         if affected_holdings:
-            names = [P["cols"][j] for j in affected_holdings]
-            raise RuntimeError(
-                f"Unsupported corporate action affects held position(s) {names} on {idx[t].date()}; "
-                "valuation and execution quarantined until instrument/cash entitlements are resolved."
+            turnover_equity_before = cash + sum(
+                q * C[t - 1, j] for j, q in sh.items()
+                if t > 0 and np.isfinite(C[t - 1, j])
             )
+            for j in affected_holdings:
+                if t <= 0 or not np.isfinite(C_raw[t - 1, j]) or C_raw[t - 1, j] <= 0:
+                    raise RuntimeError(
+                        f"Cannot force-exit {P['cols'][j]} on {idx[t].date()}: "
+                        "the prior session's observed close is unavailable."
+                    )
+                prior_close = float(C_raw[t - 1, j])
+                proceeds = float(sh.pop(j) * prior_close)
+                transaction_cost = proceeds * side
+                cash += proceeds - transaction_cost
+                forced_exit_value += proceeds
+                forced_exit_events.append({
+                    "symbol": P["cols"][j],
+                    "session": idx[t].date().isoformat(),
+                    "prior_close_session": idx[t - 1].date().isoformat(),
+                    "prior_close_used": prior_close,
+                    "cost": transaction_cost,
+                    "reason": "unsupported_corporate_action",
+                })
+                hwm.pop(j, None)
+                last_close_seen.pop(j, None)
+                pending.discard(j)
+
         o, c, actual_c = O[t], C[t], C_raw[t]
         prior_mark = C[t - 1] if t > 0 else c
         valid_open = np.isfinite(o) & (o > 0)
         mark_o = np.where(valid_open, o, prior_mark)
         mark_o = np.where(np.isfinite(mark_o), mark_o, c)
-        reb = (t - 1) in signals and (t - 1) >= start - 1
+
         if reb or pending:
             traded = 0.0
             stopped_today = set()
@@ -301,8 +328,6 @@ def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0
                     want, cur = per_slot, sh.get(j, 0.0) * o[j]
                     delta = want - cur
                     if delta > 1e-12:
-                        # Reserve transaction costs before committing cash so
-                        # a fully invested target does not create negative cash.
                         spendable = max(cash - traded * side, 0.0) / (1.0 + side)
                         delta = min(delta, spendable)
                         if delta <= 1e-12:
@@ -316,8 +341,16 @@ def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0
                         cash += -delta
                         sh[j] = sh[j] + delta / o[j]
                         traded += -delta
-                turns.append(traded / equity_before if equity_before > 0 else 0.0)
+                turnover_base = (
+                    turnover_equity_before
+                    if forced_exit_value > 0 and turnover_equity_before and turnover_equity_before > 0
+                    else equity_before
+                )
+                turns.append((traded + forced_exit_value) / turnover_base if turnover_base > 0 else 0.0)
             cash -= traded * side
+        elif forced_exit_value > 0:
+            turnover_base = turnover_equity_before or 0.0
+            turns.append(forced_exit_value / turnover_base if turnover_base > 0 else 0.0)
 
         total = cash + sum(q * c[j] for j, q in sh.items())
         eq[t] = total
@@ -342,8 +375,10 @@ def simulate(P, signals: set, buffer=True, regime="cash", trail=None, cost_pct=0
         "stale_holding_days": stale_holding_days,
         "max_stale_sessions": max_stale_sessions,
         "action_blocked_entries": action_blocked_entries,
+        "forced_exit_events": forced_exit_events,
+        "forced_exit_count": len(forced_exit_events),
+        "forced_exit_cost_total": float(sum(e["cost"] for e in forced_exit_events)),
     }
-
 
 # ---------------------------------------------------------------- metrics ---
 def metrics(eq, start_pos, end_pos):
@@ -545,20 +580,49 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
     bc = P["bench_close"]
     bench_eq = np.full(n, np.nan); bench_eq[START:] = bc[START:] / bc[START]
     C = P["C"]; C_raw = P["C_raw"]; univ = P["univ"]
+    side = cost_pct / 200.0
     dr = np.full(n, np.nan)
-    for t in range(START + 1, n):
-        action_exposure = univ[t - 1] & P["unsupported_action_event"][t]
-        if action_exposure.any():
-            names = [P["cols"][j] for j in np.flatnonzero(action_exposure)]
-            raise RuntimeError(
-                f"Unsupported corporate action affects equal-weight control exposure {names} on {idx[t].date()}; "
-                "refusing to fabricate cross-action returns or reweight the remaining names."
-            )
-        m = univ[t - 1] & np.isfinite(C_raw[t]) & np.isfinite(C_raw[t - 1]) & (C_raw[t - 1] > 0)
-        if m.any():
-            dr[t] = np.mean(C_raw[t][m] / C_raw[t - 1][m] - 1)
     ew_eq = np.full(n, np.nan); ew_eq[START] = 1.0
+    ew_forced_exit_events = []
     for t in range(START + 1, n):
+        members = univ[t - 1]
+        action_exposure = members & P["unsupported_action_event"][t]
+        if action_exposure.any():
+            # Keep the affected equal-weight slots in cash for this event session.
+            # Do not divide only by surviving constituents: that would silently reweight them.
+            valid_survivors = (
+                members & ~action_exposure
+                & np.isfinite(C_raw[t]) & np.isfinite(C_raw[t - 1])
+                & (C_raw[t - 1] > 0)
+            )
+            slots = int(valid_survivors.sum() + action_exposure.sum())
+            if slots:
+                slot_value = float(ew_eq[t - 1] / slots)
+                for j in np.flatnonzero(action_exposure):
+                    prior_close = C_raw[t - 1, j]
+                    if not np.isfinite(prior_close) or prior_close <= 0:
+                        raise RuntimeError(
+                            f"Cannot force-exit equal-weight control symbol {P['cols'][j]} "
+                            f"on {idx[t].date()}: the prior session's observed close is unavailable."
+                        )
+                    ew_forced_exit_events.append({
+                        "symbol": P["cols"][j],
+                        "session": idx[t].date().isoformat(),
+                        "prior_close_session": idx[t - 1].date().isoformat(),
+                        "prior_close_used": float(prior_close),
+                        "cost": slot_value * side,
+                        "reason": "unsupported_corporate_action",
+                    })
+                survivor_returns = (
+                    C_raw[t, valid_survivors] / C_raw[t - 1, valid_survivors] - 1
+                )
+                dr[t] = (
+                    float(np.sum(survivor_returns)) - int(action_exposure.sum()) * side
+                ) / slots
+        else:
+            m = members & np.isfinite(C_raw[t]) & np.isfinite(C_raw[t - 1]) & (C_raw[t - 1] > 0)
+            if m.any():
+                dr[t] = np.mean(C_raw[t][m] / C_raw[t - 1][m] - 1)
         ew_eq[t] = ew_eq[t - 1] * (1 + (dr[t] if np.isfinite(dr[t]) else 0.0))
     series = {**{k: v["equity"] for k, v in runs.items()},
               "NIFTYBEES_adjusted_buyhold": bench_eq, "EW_universe_daily": ew_eq}
@@ -689,6 +753,14 @@ def run_rules(frames: dict, bench_df: pd.DataFrame, oos_frac=0.35, cost_pct=0.30
            *([f"Session calendar / regime diagnostic: {source_metadata.get('session_calendar_source', 'official NSE NIFTY 50 index history')} | {index_quality['bars']} bars; max abs daily move {index_quality['max_abs_daily_return_pct']:.2f}%"] if index_quality else []),
            "NIFTY50_price_index is an official NSE PRICE index (not a total-return index).",
            "CAGR / vol / Sharpe(rf=0) / max drawdown (daily)"]
+    out += ["", "-- unsupported corporate-action handling --",
+            f"Equal-weight control forced-exit events: {len(ew_forced_exit_events)} "
+            "(prior-close liquidation; cash slot retained for the event session; no survivor reweighting)."]
+    for event in ew_forced_exit_events:
+        out.append(
+            f"  {event['symbol']} {event['session']}: prior close {event['prior_close_used']:.6f}; "
+            f"cost {event['cost']:.8f}; reason={event['reason']}"
+        )
     for per in ("FULL", "IS", "OOS"):
         out += ["", f"-- {per} --", f"{'':<28}{'CAGR':>8}{'vol':>8}{'Sharpe':>8}{'maxDD':>9}"]
         for k in series:
@@ -949,7 +1021,7 @@ def main(argv=None):
         f"Stock universe: TejHQ adjusted NSE OHLC (dataset revision {source_metadata.get('dataset_revision', 'unknown')}), "
         "back-adjusted for splits, bonuses and dividends; raw exchange volume/turnover retained; "
         "mergers/demergers/rights/buybacks are not scaled; these and unclassified actions reset eligibility only from the ex-date, preserving earlier history. "
-        "A held position or equal-weight control exposed across an unsupported action fails closed until entitlements are resolved. "
+        "Held positions exposed to an unsupported action are liquidated at the prior session close after one-side transaction costs and their slots stay in cash until the next scheduled rebalance. The equal-weight control likewise exits affected constituents at prior close, charges the same per-side cost, and keeps the affected slots in cash for the event session without reweighting survivors. "
         "Performance benchmark: official NSE Indices NIFTY 500 gross TRI with dividends reinvested. NIFTYBEES remains the live regime filter and secondary price comparison. "
         "New listings and post-event histories are ineligible until 253 consecutive observed sessions exist. "
         "Corporate-action event details and reset decisions are in corporate_action_audit.csv and corporate_action_quarantine.csv. "
