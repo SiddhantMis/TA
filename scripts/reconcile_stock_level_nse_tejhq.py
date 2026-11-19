@@ -67,11 +67,12 @@ def main() -> None:
         raise RuntimeError("Stock-level reconciliation must use the pinned TejHQ revision")
     samples = pd.read_csv(SAMPLES, dtype=str, keep_default_na=False)
     signals = {}
+    dropped = samples.loc[samples["6M_return_status"].eq("unsupported_corporate_action_during_hold")]
     for symbol in sorted(FLAGGED):
-        match = samples.loc[samples["symbol"].eq(symbol)]
+        match = dropped.loc[dropped["symbol"].eq(symbol)]
         if match.empty:
-            raise RuntimeError(f"Flagged stock {symbol} is absent from the sample")
-        signals[symbol] = pd.Timestamp(match.iloc[0]["signal_date"]).normalize()
+            raise RuntimeError(f"Flagged stock {symbol} has no dropped six-month sample position")
+        signals[symbol] = pd.Timestamp(match.sort_values("signal_date").iloc[0]["signal_date"]).normalize()
     for symbol in CLEAN:
         match = samples.loc[samples["symbol"].eq(symbol)]
         if match.empty:
@@ -188,6 +189,42 @@ def main() -> None:
         f"Per-symbol summary: `{summary_path.name}`.",
     ])
     REPORT.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    # Explicitly separate the ETF benchmark check from individual-equity evidence.
+    diagnostics_path = BASE / "task4_diagnostics.md"
+    diagnostics = diagnostics_path.read_text(encoding="utf-8")
+    section_start = diagnostics.find("## 3. NSE / TejHQ NIFTYBEES price reconciliation")
+    section_end = diagnostics.find("## 4. Intra-window maximum drawdown", section_start)
+    if section_start < 0 or section_end < 0:
+        raise RuntimeError("Could not locate the NSE reconciliation section in task4_diagnostics.md")
+    old_section = diagnostics[section_start:section_end]
+    benchmark_detail = old_section.split("\n", 2)[2].strip()
+    stock_status = "VERIFIED" if all_verified else "UNVERIFIED"
+    stock_section = [
+        "## 3. NSE / TejHQ reconciliation",
+        "",
+        "### NIFTYBEES benchmark (ETF only)",
+        "",
+        benchmark_detail,
+        "",
+        "### Stock-level individual-equity reconciliation",
+        "",
+        f"**Status: {stock_status}.** The deterministic sample covers six dropped-basket corporate-action names "
+        "(NESTLEIND, AJANTPHARM, AARTIDRUGS, BSOFT, SUZLON, VEDL) and four clean controls "
+        "(ADANIGREEN, NAVINFLUOR, DIXON, DMART), using the signal date of each affected basket position.",
+        "The GitHub Actions runner was blocked by the official NSE website: the NSE homepage bootstrap returned "
+        "HTTP 403 Forbidden, and the historical EQ endpoint returned non-JSON responses for all 10 names. "
+        "There are therefore zero verified common stock sessions and no defensible OHLC differences to report.",
+        "**Do not infer stock-level accuracy from the 2,463-session NIFTYBEES benchmark match.** "
+        "Individual-stock OHLC remains UNVERIFIED until official NSE equity history can be retrieved.",
+        "Per-symbol errors and session counts are in " + String.fromCharCode(96) + "stock_level_nse_tejhq_reconciliation_summary.csv" + String.fromCharCode(96) + "; "
+        "the empty per-session comparison file is " + String.fromCharCode(96) + "stock_level_nse_tejhq_reconciliation.csv" + String.fromCharCode(96) + ".",
+        "",
+    ]
+    diagnostics_path.write_text(
+        diagnostics[:section_start] + "\n".join(stock_section) + diagnostics[section_end:],
+        encoding="utf-8",
+    )
     print("\n".join(lines))
 
 
