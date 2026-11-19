@@ -76,15 +76,15 @@ jobs:
             results/tejhq_symbol_continuity_audit.csv
             results/pit_session_calendar_audit.csv
             results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.csv
-            results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/intra_window_drawdown.md
+            results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.md
             results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/task4_diagnostics.md
             results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/all_eligible_factor_rank_ic.csv
             results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/all_eligible_factor_rank_ic.md
             results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/all_eligible_factor_rank_ic_summary.csv
             results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/dropped_basket_ca_events.csv
             results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/stock_level_nse_tejhq_reconciliation.csv
-            results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/stock_level_nse_tejhq_reconciliation.md
-            results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/stock_level_nse_tejhq_reconciliation_summary.csv
+            results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/stock_level_nse_tejhq_reconciliation.md
+            results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/stock_level_nse_tejhq_reconciliation_summary.csv
             results/corporate_action_audit.csv
             results/corporate_action_quarantine.csv
           if-no-files-found: warn
@@ -93,7 +93,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f results/corporate_action_audit.csv results/corporate_action_quarantine.csv results/bench_check.md results/portfolio_rules_report.md results/pit_price_history_audit.csv results/pit_daily_coverage_audit.csv results/pit_tejhq_coverage_audit.csv results/pit_tejhq_initial_coverage_probe.csv results/tejhq_source_metadata.md results/tejhq_symbol_continuity_audit.csv results/pit_session_calendar_audit.csv results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.csv results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.md results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/task4_diagnostics.md results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/all_eligible_factor_rank_ic.csv results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/all_eligible_factor_rank_ic.md results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/all_eligible_factor_rank_ic_summary.csv results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/dropped_basket_ca_events.csv results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/stock_level_nse_tejhq_reconciliation.csv results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/stock_level_nse_tejhq_reconciliation.md results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/stock_level_nse_tejhq_reconciliation_summary.csv
+          git add -f results/corporate_action_audit.csv results/corporate_action_quarantine.csv results/bench_check.md results/portfolio_rules_report.md results/pit_price_history_audit.csv results/pit_daily_coverage_audit.csv results/pit_tejhq_coverage_audit.csv results/pit_tejhq_initial_coverage_probe.csv results/tejhq_source_metadata.md results/tejhq_symbol_continuity_audit.csv results/pit_session_calendar_audit.csv results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.csv results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.md results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/task4_diagnostics.md results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/all_eligible_factor_rank_ic.csv results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/all_eligible_factor_rank_ic.md results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/all_eligible_factor_rank_ic_summary.csv results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/dropped_basket_ca_events.csv results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/stock_level_nse_tejhq_reconciliation.csv results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/stock_level_nse_tejhq_reconciliation.md results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/stock_level_nse_tejhq_reconciliation_summary.csv
           if git diff --cached --quiet; then
             echo "No generated report changes."
             exit 0
