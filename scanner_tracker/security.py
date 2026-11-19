@@ -4,8 +4,13 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import math
 import os
 import secrets
+import time
+
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_LOCKOUT_SECONDS = 60
 
 
 def hash_password(password: str, *, iterations=600_000):
@@ -53,13 +58,31 @@ def require_app_access():
     if st.session_state.get("owner_authenticated") == fingerprint:
         return True
     st.title("TA & Momentum Tracker")
+    now = time.monotonic()
+    locked_until = st.session_state.get("owner_login_locked_until")
+    if locked_until is not None:
+        if now < locked_until:
+            remaining = max(1, math.ceil(locked_until - now))
+            st.error(f"Too many failed sign-in attempts. Try again in {remaining} second(s).")
+            st.stop()
+        st.session_state.pop("owner_login_locked_until", None)
+        st.session_state["owner_login_failures"] = 0
     with st.form("owner_login", clear_on_submit=True):
         password = st.text_input("Application password", type="password")
         submitted = st.form_submit_button("Sign in")
     if submitted:
         if verify_password(password, encoded):
+            st.session_state.pop("owner_login_failures", None)
+            st.session_state.pop("owner_login_locked_until", None)
             st.session_state["owner_authenticated"] = fingerprint
             st.rerun()
         else:
-            st.error("Incorrect application password.")
+            failures = int(st.session_state.get("owner_login_failures", 0)) + 1
+            if failures >= MAX_LOGIN_ATTEMPTS:
+                st.session_state["owner_login_locked_until"] = now + LOGIN_LOCKOUT_SECONDS
+                st.session_state["owner_login_failures"] = 0
+                st.error(f"Too many failed sign-in attempts. Sign-in is locked for {LOGIN_LOCKOUT_SECONDS} seconds.")
+            else:
+                st.session_state["owner_login_failures"] = failures
+                st.error("Incorrect application password.")
     st.stop()

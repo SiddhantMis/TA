@@ -322,6 +322,7 @@ def _candidate_detail(service, candidate):
 
 def _ta(service):
     st.subheader("Individual TA setups")
+    st.info("Experimental parallel track — tested TA setup families (reversal, breakout55, pullback20) have no demonstrated edge yet; kept permanently alongside Momentum for ongoing observation.")
     st.caption("Patterns are research signals. A score is not a probability of success. Rejected, expired and data-blocked cases remain part of the record.")
     candidates = service.candidates(mode="TA")
     cols = st.columns(3)

@@ -317,13 +317,19 @@ class TrackerService:
             raise ValueError("A future event cannot be recorded as an already-confirmed actual execution or cash movement.")
 
     def _canonical_csv(self, mode, text):
-        reader = csv.DictReader(io.StringIO(text.lstrip("\ufeff")))
+        from .ledger import MAX_CSV_BYTES, MAX_CSV_ROWS
+        raw_text = str(text)
+        if len(raw_text.encode("utf-8")) > MAX_CSV_BYTES:
+            raise ValueError(f"CSV exceeds the {MAX_CSV_BYTES // (1024 * 1024)} MB upload limit.")
+        reader = csv.DictReader(io.StringIO(raw_text.lstrip("\ufeff")))
         if not reader.fieldnames:
             raise ValueError("CSV requires a header.")
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=reader.fieldnames)
         writer.writeheader()
-        for row in reader:
+        for count, row in enumerate(reader, 1):
+            if count > MAX_CSV_ROWS:
+                raise ValueError(f"CSV exceeds the {MAX_CSV_ROWS:,}-row import limit.")
             if str(row.get("mode", "")).upper() != mode:
                 raise ValueError("Every imported execution must match the selected mode.")
             row["symbol"] = symbol_name(row.get("symbol", ""))

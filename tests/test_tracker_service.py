@@ -13,6 +13,7 @@ from sqlalchemy import func, select, text
 
 from scanner_tracker.db import make_engine, transaction
 from scanner_tracker.demo import synthetic_frames
+from scanner_tracker.ledger import MAX_CSV_BYTES, MAX_CSV_ROWS
 from scanner_tracker.models import CandidateEvent, LedgerEvent, PriceSnapshot
 from scanner_tracker.service import TrackerService
 from scanner_tracker.storage import InputArchive
@@ -65,6 +66,24 @@ def test_fill_import_is_previewed_atomic_idempotent_and_mode_isolated(service):
     assert service.ledger("TA") == state
     with transaction(service.engine) as session:
         assert session.scalar(select(func.count()).select_from(LedgerEvent)) == 1
+
+
+def test_service_import_enforces_size_and_row_limits(service):
+    configure(service, "TA", 100_000_000)
+    oversized = csv_text(["a" * (MAX_CSV_BYTES + 1)])
+    preview = service.preview_import("TA", oversized)
+    assert preview["valid"] is False
+    assert any("2 MB" in str(err) for err in preview["errors"])
+    with pytest.raises(ValueError, match="2 MB"):
+        service.commit_import("TA", oversized)
+
+    too_many = csv_text([f"e{i},TA,2026-11-02,DEMOA,BUY,1,1,0," for i in range(MAX_CSV_ROWS + 1)])
+    preview_rows = service.preview_import("TA", too_many)
+    assert preview_rows["valid"] is False
+    assert any("5,000-row" in str(err) for err in preview_rows["errors"])
+    with pytest.raises(ValueError, match="5,000-row"):
+        service.commit_import("TA", too_many)
+    assert service.ledger("TA")["holdings"] == {}
 
 
 def test_import_signal_must_exist_and_match_symbol_and_mode(service):

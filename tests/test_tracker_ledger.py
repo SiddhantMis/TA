@@ -5,6 +5,7 @@ import json
 import unittest
 
 from scanner_tracker.ledger import (
+    MAX_CSV_BYTES, MAX_CSV_ROWS,
     configure_opening_positions, correct_fill, import_fills_csv, new_ledger,
     ledger_as_of, record_cash_event, record_corporate_action, record_fill,
 )
@@ -129,6 +130,25 @@ class LedgerTests(unittest.TestCase):
         result = import_fills_csv(state, text, commit=True)
         self.assertFalse(result["valid"])
         self.assertEqual(result["state"], state)
+
+    def test_csv_rejects_oversized_byte_payload_and_row_count_limits(self):
+        state = new_ledger("TA", 100_000_000)
+        header = "execution_id,mode,executed_at,symbol,side,quantity,price_inr,fees_inr\n"
+        too_big = header + ("x" * (MAX_CSV_BYTES + 1))
+        oversized = import_fills_csv(state, too_big, commit=True)
+        self.assertFalse(oversized["valid"])
+        self.assertFalse(oversized["committed"])
+        self.assertEqual(oversized["state"], state)
+        self.assertIn("2 MB", oversized["errors"][0]["error"])
+
+        too_many_rows = header + "".join(
+            f"e{i},TA,2026-11-02,ABC.NS,BUY,1,1,0\n" for i in range(MAX_CSV_ROWS + 1)
+        )
+        over_rows = import_fills_csv(state, too_many_rows, commit=True)
+        self.assertFalse(over_rows["valid"])
+        self.assertFalse(over_rows["committed"])
+        self.assertEqual(over_rows["state"], state)
+        self.assertIn("5,000-row", over_rows["errors"][0]["error"])
 
     def test_fills_cannot_spend_future_opening_cash(self):
         state = new_ledger("TA", 2000)

@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from scanner_tracker.security import hash_password
+from scanner_tracker.security import LOGIN_LOCKOUT_SECONDS, MAX_LOGIN_ATTEMPTS, hash_password
 
 
 def protected_fixture():
@@ -47,6 +47,37 @@ def test_valid_hash_rejects_wrong_password_and_allows_correct_password(monkeypat
         app.button[0].click().run()
         assert "PRIVATE SYNTHETIC SENTINEL" not in visible(app)
         assert any("Incorrect" in item.value for item in app.error)
+        app.text_input[0].set_value(password)
+        app.button[0].click().run()
+        assert not app.exception
+        assert "PRIVATE SYNTHETIC SENTINEL" in visible(app)
+
+
+def test_failed_login_attempts_trigger_60_second_lockout_and_recover(monkeypatch):
+    monkeypatch.setenv("TRACKER_DEMO", "0")
+    password = "synthetic test password only"
+    encoded = hash_password(password, iterations=100000)
+    clock = [1000.0]
+    with patch("scanner_tracker.security.secret_value", side_effect=lambda name, default=None: encoded if name == "TRACKER_APP_PASSWORD_HASH" else default), \
+         patch("scanner_tracker.security.time.monotonic", side_effect=lambda: clock[0]):
+        app = AppTest.from_function(protected_fixture).run()
+        for attempt in range(MAX_LOGIN_ATTEMPTS):
+            app.text_input[0].set_value(f"wrong attempt {attempt}")
+            app.button[0].click().run()
+            assert "PRIVATE SYNTHETIC SENTINEL" not in visible(app)
+        assert any("locked" in item.value.lower() for item in app.error)
+
+        # During the 60-second lockout window, sign-in remains blocked.
+        clock[0] += LOGIN_LOCKOUT_SECONDS / 2
+        app.run()
+        assert "PRIVATE SYNTHETIC SENTINEL" not in visible(app)
+        assert len(app.text_input) == 0
+        assert any("Try again" in item.value for item in app.error)
+
+        # Once lockout expires, the form returns and the valid password succeeds.
+        clock[0] += LOGIN_LOCKOUT_SECONDS
+        app.run()
+        assert len(app.text_input) == 1
         app.text_input[0].set_value(password)
         app.button[0].click().run()
         assert not app.exception

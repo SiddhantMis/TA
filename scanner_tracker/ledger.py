@@ -15,6 +15,8 @@ import re
 CENT = Decimal("0.01")
 ZERO = Decimal("0")
 MODES = {"TA", "MOMENTUM"}
+MAX_CSV_BYTES = 2 * 1024 * 1024
+MAX_CSV_ROWS = 5_000
 CSV_COLUMNS = (
     "execution_id", "mode", "executed_at", "symbol", "side", "quantity",
     "price_inr", "fees_inr",
@@ -385,14 +387,29 @@ def import_fills_csv(state, text, commit=False):
     mutated and an invalid file returns the original state, never partial fills.
     """
     _check_state(state)
-    reader = csv.DictReader(io.StringIO(str(text).lstrip("\ufeff")), strict=True)
+    raw_text = str(text)
+    if len(raw_text.encode("utf-8")) > MAX_CSV_BYTES:
+        return {
+            "state": deepcopy(state), "rows": [],
+            "errors": [{"row": 1, "error": f"CSV exceeds the {MAX_CSV_BYTES // (1024 * 1024)} MB upload limit"}],
+            "valid": False, "committed": False,
+        }
+    reader = csv.DictReader(io.StringIO(raw_text.lstrip("\ufeff")), strict=True)
     errors, rows, trial = [], [], deepcopy(state)
     headers = reader.fieldnames or []
     missing = [name for name in CSV_COLUMNS if name not in headers]
     if missing or len(headers) != len(set(headers)):
         return {"state": deepcopy(state), "rows": [], "errors": [{"row": 1, "error": "missing/duplicate CSV columns: " + ", ".join(missing)}], "valid": False, "committed": False}
+    raw_rows = []
     try:
-        raw_rows = list(reader)
+        for count, raw in enumerate(reader, 1):
+            if count > MAX_CSV_ROWS:
+                return {
+                    "state": deepcopy(state), "rows": [],
+                    "errors": [{"row": count + 1, "error": f"CSV exceeds the {MAX_CSV_ROWS:,}-row import limit"}],
+                    "valid": False, "committed": False,
+                }
+            raw_rows.append(raw)
     except csv.Error as exc:
         return {"state": deepcopy(state), "rows": [], "errors": [{"row": reader.line_num, "error": str(exc)}], "valid": False, "committed": False}
     normalized_rows = []
