@@ -52,57 +52,77 @@ def check_total_failure(watchlist: list, results: list) -> str | None:
     return None
 
 
-def check_stale_after_cutoff(run_ts: datetime, results: list, cutoff: dt_time,
-                             expected_session: str | date | None = None) -> str | None:
-    """Require each scored row to match the expected completed exchange session.
+EXIT_NOT_READY = 75          # EX_TEMPFAIL: today's session data is not available yet; nothing was saved, retry later
 
-    The executable supplies the NSE calendar date, including before cutoff and
-    on holidays. Omitted expected_session retains the old helper's time contract
-    for callers that explicitly use it as an after-cutoff check.
-    """
-    if not results or (expected_session is None and run_ts.time() < cutoff):
+
+def already_published(expected, history_dir: str = "docs/history") -> bool:
+    """True once the paper-log snapshot for the expected session exists, so later retry attempts exit immediately."""
+    return os.path.exists(os.path.join(history_dir, f"leaders_{expected.isoformat()}.json"))
+
+
+def session_gate(diag: dict, expected) -> dict:
+    """Decide whether the scan has the expected session. Never accepts an older session as a substitute."""
+    chosen = (diag or {}).get("chosen_session")
+    if chosen is None:
+        return {"ready": False, "message": f"No session shared by the benchmark and 90% of stocks "
+                                           f"(candidates {(diag or {}).get('candidates')}); expected {expected.isoformat()}."}
+    got = date.fromisoformat(chosen)
+    if got < expected:
+        return {"ready": False, "message": f"Latest complete session in the data is {got.isoformat()}; expected {expected.isoformat()}."}
+    return {"ready": True, "message": ""}
+
+
+def abort_not_ready(message: str, run_ts, final_attempt: bool) -> None:
+    """Abort WITHOUT saving or publishing anything. The scheduled retries (every ~2.5h) try again; only the last
+    attempt of the day sends a Discord message, so a late data feed does not spam you."""
+    print(f"[not ready] {message} Nothing saved or published.", file=sys.stderr)
+    if final_attempt:
+        send_discord_failure(message + " This was the last attempt for today and nothing was saved. If it was an NSE holiday, add the date to "
+                             "universe/nse_holidays.txt; otherwise the data feed is late.", run_timestamp=run_ts)
+    sys.exit(EXIT_NOT_READY)
+
+
+def check_stale_after_cutoff(run_ts: datetime, results: list, cutoff: dt_time) -> str | None:
+    """After the EOD cutoff, today's candle should be present -- the
+    drop-unsettled-today guard was disabled specifically to allow it
+    through. This verifies that assumption held: if it's past cutoff
+    and the latest scored date still isn't today, Yahoo genuinely
+    hasn't published yet, and that needs to fail loudly rather than
+    silently ship yesterday's close as if it were current. Pulled out
+    for the same reason as check_total_failure -- this shipped with
+    zero test coverage inside the __main__ block, untestable without
+    a subprocess or a full yfinance mock."""
+    if run_ts.time() < cutoff or not results:
         return None
-    expected = date.fromisoformat(expected_session) if isinstance(expected_session, str) else expected_session
-    expected = expected or run_ts.date()
-    mismatched = []
-    for row in results:
-        value = row.get("date")
-        try:
-            scored_date = date.fromisoformat(value)
-        except (TypeError, ValueError):
-            scored_date = None
-        if scored_date != expected:
-            mismatched.append(f"{row.get('ticker', '<unknown>')}={value or 'missing date'}")
-    if mismatched:
-        details = ", ".join(mismatched[:8])
-        if len(mismatched) > 8:
-            details += f", +{len(mismatched) - 8} more"
+    latest_score_date = max(date.fromisoformat(r["date"]) for r in results)
+    if latest_score_date != run_ts.date():
         return (
-            f"{len(mismatched)} scored row(s) do not match completed NSE session "
-            f"{expected.isoformat()}: {details}. Treat stale or misaligned data as unavailable."
+            f"Latest screener data is {latest_score_date.isoformat()}, not today's close "
+            f"({run_ts.date().isoformat()}). Yahoo has not published the completed EOD candle yet."
         )
     return None
 
 
 if __name__ == "__main__":
-    from scanner_tracker.market import latest_completed_session
-
     run_ts = datetime.now(IST)
-    expected_session = latest_completed_session(run_ts)
-    if run_ts.time() >= EOD_CUTOFF:
+    expected = analyzer_module.expected_session(run_ts)
+    final_attempt = os.environ.get("FINAL_ATTEMPT") == "true"
+    if os.environ.get("FORCE_RERUN") != "true" and already_published(expected):
+        print(f"Session {expected.isoformat()} is already published; nothing to do.")
+        sys.exit(0)
+    if run_ts.time() >= EOD_CUTOFF or expected < run_ts.date():
         enable_settled_daily_candle()
 
-    results = run_screen()
+    results = run_screen(max_session=expected)
 
     failure_message = check_total_failure(WATCHLIST, results)
     if failure_message:
         send_discord_failure(failure_message, run_timestamp=run_ts)
         raise RuntimeError(failure_message)
 
-    stale_message = check_stale_after_cutoff(run_ts, results, EOD_CUTOFF, expected_session)
-    if stale_message:
-        send_discord_failure(stale_message, run_timestamp=run_ts)
-        raise RuntimeError(stale_message)
+    gate = session_gate(analyzer_module.LAST_SESSION_DIAGNOSTICS, expected)
+    if not gate["ready"]:                 # checked BEFORE the 30-minute wide scan so a late feed costs ~2 minutes, not 30
+        abort_not_ready(gate["message"], run_ts, final_attempt)
 
     # flag = pattern/checklist gate; trade_ok = R:R gate (analyzer.build_trade_plan).
     # Only setups passing both are "flagged"; the rest are listed as watch-only so
@@ -119,10 +139,12 @@ if __name__ == "__main__":
     wide_leaders = None
     if os.environ.get("SKIP_WIDE_LEADERS") != "1":
         try:
-            wide_leaders = wide.run_leaders(history_dir="docs/history")
+            wide_leaders = wide.run_leaders(history_dir="docs/history", max_session=expected, require_session=expected)
         except Exception as e:
             print(f"[warning] wide leaders failed: {e}", file=sys.stderr)
             wide_leaders = {"error": str(e)}
+    if wide_leaders and wide_leaders.get("not_ready"):
+        abort_not_ready(f"The wide scan ended on {wide_leaders['as_of']}; expected {expected.isoformat()}.", run_ts, final_attempt)
     breadth = (round(sum(1 for r in results if r["above_sma50"]) / len(results), 2)
                if results else None)
 
@@ -134,7 +156,6 @@ if __name__ == "__main__":
     with open(OUTPUT_PATH, "w") as f:
         json.dump(wide.sanitize_json({
             "run_timestamp": run_ts.isoformat(),
-            "expected_session": expected_session,
             "note": "Every 'date'/'close' below is the last COMPLETE session as of run_timestamp, "
                      "never a same-day live price. The momentum leaderboard ranks 12-1 adjusted "
                      "returns relative to NIFTYBEES within this fixed watchlist; it is descriptive "
