@@ -59,8 +59,9 @@ def main() -> None:
     for r in result.sort_values(["sample_id", "symbol", "ex_date"]).itertuples(index=False):
         lines.append(f"| {r.sample_id} | {r.signal_date} | {r.symbol} | {r.ex_date} | {r.corporate_action_type} |")
     md = REPORT.read_text(encoding="utf-8")
-    start_marker = "| Sample | Signal date | Unsupported holding(s) |"
-    start = md.find(start_marker)
+    start = md.find("| Sample | Signal date | Unsupported holding(s) |")
+    if start < 0:
+        start = md.find("| Sample | Signal date | Symbol | Exact ex-date | Corporate-action type |")
     if start < 0:
         raise RuntimeError("Could not find the six-month exclusion table in task4_diagnostics.md")
     end = md.find("\n\n", start)
