@@ -159,8 +159,11 @@ class TejHQAdjustedLoaderTests(unittest.TestCase):
 
     @patch("huggingface_hub.HfApi")
     def test_dataset_revision_uses_dataset_specific_info_method(self, api):
+        import os
+
         api.return_value.dataset_info.return_value.sha = "a" * 40
-        self.assertEqual(get_dataset_revision(), "a" * 40)
+        with patch.dict(os.environ, {"TEJHQ_DATASET_REVISION": ""}):
+            self.assertEqual(get_dataset_revision(), "a" * 40)
         api.return_value.dataset_info.assert_called_once_with(REPO_ID)
 
     def test_same_symbol_new_isin_within_30_days_is_one_chain(self):
