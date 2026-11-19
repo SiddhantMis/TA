@@ -67,15 +67,28 @@ class TestActionQuarantine(unittest.TestCase):
         self.assertTrue(np.isnan(prepared["rank"][752, 0]))
         self.assertTrue(np.isfinite(prepared["rank"][753, 0]))
 
-    def test_unsupported_action_while_held_fails_closed_at_event_not_before(self):
+    def test_unsupported_action_while_held_exits_at_prior_close_after_cost_and_holds_cash(self):
         idx, frame, bench, membership = self._world()
         frame.attrs["unsupported_action_dates"] = [idx[500].date().isoformat()]
-        prefix = prepare({"AAA.NS": frame.iloc[:500]}, bench.iloc[:500], membership_df=membership)
-        ordinary = simulate(prefix, {252}, size=1, regime="off", cost_pct=0)
-        self.assertTrue(np.isfinite(ordinary["equity"][499]))
         prepared = prepare({"AAA.NS": frame}, bench, membership_df=membership)
-        with self.assertRaisesRegex(RuntimeError, "held position.*AAA.NS.*valuation and execution quarantined"):
-            simulate(prepared, {252}, size=1, regime="off", cost_pct=0)
+        result = simulate(prepared, {252, 550}, size=1, regime="off", cost_pct=0.30)
+
+        self.assertTrue(np.isfinite(result["equity"][499]))
+        self.assertEqual(result["forced_exit_count"], 1)
+        event = result["forced_exit_events"][0]
+        prior_close = float(prepared["C_raw"][499, 0])
+        expected_cost = float(result["equity"][499]) * (0.30 / 200.0)
+        self.assertEqual(event["symbol"], "AAA.NS")
+        self.assertEqual(event["session"], idx[500].date().isoformat())
+        self.assertEqual(event["prior_close_session"], idx[499].date().isoformat())
+        self.assertAlmostEqual(event["prior_close_used"], prior_close)
+        self.assertAlmostEqual(event["cost"], expected_cost, places=10)
+        self.assertEqual(event["reason"], "unsupported_corporate_action")
+        self.assertAlmostEqual(result["equity"][500], result["equity"][499] - expected_cost, places=10)
+        # The next rebalance is at index 551; the quarantined symbol is still ineligible,
+        # so the position remains cash rather than being silently re-entered.
+        self.assertAlmostEqual(result["equity"][551], result["equity"][500], places=10)
+        np.testing.assert_allclose(result["equity"][500:], result["equity"][500], rtol=0, atol=1e-10)
 
     def test_signal_before_action_cannot_fill_on_the_unsupported_action_session(self):
         idx, frame, bench, membership = self._world()
@@ -86,13 +99,31 @@ class TestActionQuarantine(unittest.TestCase):
         self.assertEqual(result["action_blocked_entries"], [{"symbol": "AAA.NS",
             "session": idx[500].date().isoformat(), "reason": "unsupported_corporate_action_on_execution_session"}])
 
-    def test_equal_weight_control_cannot_silently_drop_an_affected_constituent(self):
-        idx, frame, bench, membership = self._world()
-        # The action precedes the first eligible monthly rebalance; strategies
-        # still hold cash, but yesterday's equal-weight control owns the stock.
+    def test_equal_weight_control_exits_at_prior_close_cost_without_reweighting_survivors(self):
+        idx, frame, bench, _ = self._world()
         frame.attrs["unsupported_action_dates"] = [idx[254].date().isoformat()]
-        with self.assertRaisesRegex(RuntimeError, "equal-weight control exposure.*AAA.NS"):
-            run_rules({"AAA.NS": frame}, bench, membership_df=membership)
+        other = frame.copy()
+        other.attrs = {}
+        factor = np.ones(len(idx))
+        factor[254:] = 1.10
+        for column in ("Open", "High", "Low", "Close"):
+            other[column] = other[column].to_numpy() * factor
+        membership = pd.DataFrame([
+            {"symbol": symbol, "valid_from": idx[0], "valid_to": pd.NaT,
+             "source": "fixture", "source_url": "fixture", "notes": ""}
+            for symbol in ("AAA", "BBB")
+        ])
+
+        series, report = run_rules(
+            {"AAA.NS": frame, "BBB.NS": other}, bench, cost_pct=0.30,
+            membership_df=membership,
+        )
+        side = 0.30 / 200.0
+        expected_event_return = (0.10 - side) / 2.0
+        self.assertAlmostEqual(series["EW_universe_daily"][254], 1.0 + expected_event_return, places=10)
+        self.assertIn("Equal-weight control forced-exit events: 1", report)
+        self.assertIn("AAA.NS 2018-12-19", report)
+        self.assertIn("reason=unsupported_corporate_action", report)
 
 
 if __name__=="__main__": unittest.main()
