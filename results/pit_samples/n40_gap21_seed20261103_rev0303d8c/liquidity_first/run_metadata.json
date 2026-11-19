@@ -8,7 +8,7 @@
   "min_gap": 21,
   "selection_order": "liquidity_first",
   "revision_differs_from_upstream_head": true,
-  "upstream_dataset_head_at_run": "e0ceb628f071f011b1653735037e3e996b807057",
+  "upstream_dataset_head_at_run": "770ca7ce2333734fed93faf2915ca40cd7dab2ad",
   "calendar": {
     "sessions": 1919,
     "first": "2019-01-01",
