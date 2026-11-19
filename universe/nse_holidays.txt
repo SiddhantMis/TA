@@ -1,4 +1,22 @@
 # NSE trading holidays, one YYYY-MM-DD per line ('#' starts a comment).
 # The daily scan waits for the latest NSE session. On a holiday no new session ever appears, so the scheduled attempts
 # would all end 'not ready' and the last one would send a failure message. Listing the holiday here makes the scan
-# skip that day instead. Copy the dates from NSE's published holiday list for the year; this file starts empty on purpose.
+# skip that day instead.
+# Source: NSE Capital Market circulars NSE/CMTR/71775 (12 Dec 2025) and NSE/CMTR/72260 (12 Jan 2026).
+
+2026-01-15  # Municipal Corporation Election - Maharashtra (NSE/CMTR/72260)
+2026-01-26  # Republic Day
+2026-03-03  # Holi
+2026-03-26  # Shri Ram Navami
+2026-03-31  # Shri Mahavir Jayanti
+2026-04-03  # Good Friday
+2026-04-14  # Dr. Baba Saheb Ambedkar Jayanti
+2026-05-01  # Maharashtra Day
+2026-05-28  # Bakri Id
+2026-06-26  # Muharram
+2026-09-14  # Ganesh Chaturthi
+2026-10-02  # Mahatma Gandhi Jayanti
+2026-10-20  # Dussehra
+2026-11-10  # Diwali-Balipratipada
+2026-11-24  # Prakash Gurpurb Sri Guru Nanak Dev
+2026-12-25  # Christmas
