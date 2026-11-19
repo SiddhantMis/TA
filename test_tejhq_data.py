@@ -249,5 +249,21 @@ class TejHQAdjustedLoaderTests(unittest.TestCase):
             self.assertTrue(diagnostics["_source"]["cache_reused"])
 
 
+class DatasetRevisionPinTests(unittest.TestCase):
+    def test_explicit_dataset_revision_environment_pin_is_used_without_network_lookup(self):
+        import os
+
+        pinned = "0303d8c95b4519765a9d5556fd9c2d430f8f81d8"
+        with patch.dict(os.environ, {"TEJHQ_DATASET_REVISION": pinned}):
+            self.assertEqual(get_dataset_revision(), pinned)
+
+    def test_invalid_dataset_revision_environment_pin_fails_closed(self):
+        import os
+
+        with patch.dict(os.environ, {"TEJHQ_DATASET_REVISION": "latest"}):
+            with self.assertRaisesRegex(ValueError, "40-character hexadecimal"):
+                get_dataset_revision()
+
+
 if __name__ == "__main__":
     unittest.main()

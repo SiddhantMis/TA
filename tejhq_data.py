@@ -7,6 +7,7 @@ Raw price rows are never committed to this repository.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Iterable
 
@@ -24,7 +25,13 @@ SERIES = {"EQ", "BE", "BZ"}
 
 
 def get_dataset_revision() -> str:
-    """Return the immutable Hugging Face dataset commit used for a reproducible run."""
+    """Return an explicitly pinned dataset commit, or resolve upstream when unpinned."""
+    pinned = os.environ.get("TEJHQ_DATASET_REVISION", "").strip()
+    if pinned:
+        if len(pinned) != 40 or any(char not in "0123456789abcdefABCDEF" for char in pinned):
+            raise ValueError("TEJHQ_DATASET_REVISION must be a 40-character hexadecimal commit SHA")
+        return pinned
+
     from huggingface_hub import HfApi
 
     revision = HfApi().dataset_info(REPO_ID).sha

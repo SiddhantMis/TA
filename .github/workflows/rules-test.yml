@@ -16,6 +16,8 @@ permissions:
 
 jobs:
   rules:
+    env:
+      TEJHQ_DATASET_REVISION: 0303d8c95b4519765a9d5556fd9c2d430f8f81d8
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
