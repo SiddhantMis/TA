@@ -203,7 +203,7 @@ class PortfolioMissingBarTests(unittest.TestCase):
             membership_df=self.membership,
         )
         result = simulate(
-            prepared, signals={self.missing_pos - 1}, start=253,
+            prepared, signals={self.missing_pos - 2}, start=253,
             size=1, retain=1, regime="off", cost_pct=0.30,
         )
         self.assertEqual(result["forced_exit_count"], 1)
