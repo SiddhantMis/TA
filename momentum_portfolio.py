@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import argparse
 from copy import deepcopy
-from datetime import date
+from datetime import date, timedelta
 import json
 import math
 import os
@@ -201,14 +201,29 @@ def market_regime_from_closes(closes, window=200):
     }
 
 
-def is_rebalance_due(as_of, state, force=False):
-    if force or not state.get("last_rebalanced_month"):
-        return True
+def rebalance_month_due(as_of, state, force=False):
+    """Return the month being rebalanced, including a missed prior-month 28th trigger.
+
+    A scan on/after the 28th belongs to the current month. If the first available
+    scan is earlier in a new month, it catches up the previous month when that
+    month has not yet been recorded. This handles cases such as February 2026,
+    when the 28th is Saturday and there is no in-month session on/after the 28th.
+    """
     try:
         d = date.fromisoformat(as_of[:10])
-    except ValueError:
-        return False
-    return d.day >= 28 and state.get("last_rebalanced_month") != d.strftime("%Y-%m")
+    except (TypeError, ValueError):
+        return None
+    if force or not state.get("last_rebalanced_month"):
+        return d.strftime("%Y-%m")
+    if d.day >= 28:
+        candidate = d.strftime("%Y-%m")
+    else:
+        candidate = (date(d.year, d.month, 1) - timedelta(days=1)).strftime("%Y-%m")
+    return candidate if state.get("last_rebalanced_month") != candidate else None
+
+
+def is_rebalance_due(as_of, state, force=False):
+    return rebalance_month_due(as_of, state, force) is not None
 
 
 def build_target_holdings(ranked_rows, rows_by_ticker, actual_holdings, market_regime,
@@ -321,7 +336,8 @@ def apply_scan_result(state, as_of, market_regime, rows_by_ticker, ranked_rows,
         state["actual_holdings"], rows_by_ticker, portfolio_size, hysteresis_rank
     )
     state["actual_holdings"] = actual
-    due = is_rebalance_due(as_of, state, force_rebalance)
+    rebalance_month = rebalance_month_due(as_of, state, force_rebalance)
+    due = rebalance_month is not None
     coverage = number(data_quality.get("coverage_pct"))
     coverage_ok = coverage is not None and coverage >= MIN_SCAN_COVERAGE_PCT
     regime = market_regime.get("regime", "UNKNOWN")
@@ -349,7 +365,7 @@ def apply_scan_result(state, as_of, market_regime, rows_by_ticker, ranked_rows,
                 ranked_rows, rows_by_ticker, actual, regime, portfolio_size, hysteresis_rank
             )
             state["target_as_of"] = as_of
-            state["last_rebalanced_month"] = as_of[:7]
+            state["last_rebalanced_month"] = rebalance_month
             rebalance_status = "REBALANCED"
 
     target = list(state.get("target_holdings") or [])

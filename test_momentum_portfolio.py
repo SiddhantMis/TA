@@ -147,7 +147,7 @@ class PortfolioStateTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             record_execution_fill(state, "ABC.NS", "SELL", 6, 110, execution_id="s1")
 
-    def test_rebalance_runs_once_per_month_after_day28(self):
+    def test_rebalance_runs_once_per_month_after_day28_and_catches_up_short_february(self):
         state = new_state()
         self.assertTrue(is_rebalance_due("2026-11-02", state))
         state["last_rebalanced_month"] = "2026-11"
@@ -156,6 +156,25 @@ class PortfolioStateTests(unittest.TestCase):
         self.assertFalse(is_rebalance_due("2026-11-27", state))
         self.assertTrue(is_rebalance_due("2026-11-28", state))
         self.assertTrue(is_rebalance_due("2026-11-02", state, True))
+
+        # February 2026 has no trading session on/after Saturday the 28th.
+        # The first scan in March catches up February exactly once.
+        state["last_rebalanced_month"] = "2026-01"
+        self.assertTrue(is_rebalance_due("2026-03-02", state))
+        state["last_rebalanced_month"] = "2026-02"
+        self.assertFalse(is_rebalance_due("2026-03-02", state))
+        self.assertTrue(is_rebalance_due("2026-03-30", state))
+
+    def test_february_catchup_records_the_prior_month_not_scan_month(self):
+        state = new_state()
+        state["last_rebalanced_month"] = "2026-01"
+        result = apply_scan_result(
+            state, "2026-03-02",
+            {"regime": "BULL", "benchmark_close": 250, "sma200": 240},
+            {}, [], {"coverage_pct": 100.0},
+        )
+        self.assertEqual(result["rebalance_status"], "REBALANCED")
+        self.assertEqual(result["last_rebalanced_month"], "2026-02")
 
     def test_ai_briefs_handle_empty_actual_portfolio(self):
         state = new_state()
