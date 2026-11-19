@@ -1,0 +1,13 @@
+sample_id,signal_date,symbol,ex_date,corporate_action_type,raw_subject,source_file
+S2,2020-05-07,NESTLEIND,2020-10-29,other,Interim Dividned - Rs 135 Per Share,actions/nse_2020.parquet
+S3,2020-06-19,AJANTPHARM,2020-11-12,buyback,Buyback,actions/nse_2020.parquet
+S3,2020-06-19,NESTLEIND,2020-10-29,other,Interim Dividned - Rs 135 Per Share,actions/nse_2020.parquet
+S5,2020-10-05,AARTIDRUGS,2021-03-30,buyback,Buyback,actions/nse_2021.parquet
+S6,2020-11-25,AARTIDRUGS,2021-03-30,buyback,Buyback,actions/nse_2021.parquet
+S7,2021-01-06,AARTIDRUGS,2021-03-30,buyback,Buyback,actions/nse_2021.parquet
+S8,2021-02-08,AARTIDRUGS,2021-03-30,buyback,Buyback,actions/nse_2021.parquet
+S13,2022-02-08,BSOFT,2022-07-14,buyback,Buyback,actions/nse_2022.parquet
+S14,2022-03-16,BSOFT,2022-07-14,buyback,Buyback,actions/nse_2022.parquet
+S15,2022-04-27,SUZLON,2022-10-03,rights,Rights 5:21 @ Premium Rs 3/-,actions/nse_2022.parquet
+S16,2022-06-01,SUZLON,2022-10-03,rights,Rights 5:21 @ Premium Rs 3/-,actions/nse_2022.parquet
+S40,2026-03-10,VEDL,2026-04-30,demerger,Demerger,actions/nse_2026.parquet

@@ -159,8 +159,11 @@ class TejHQAdjustedLoaderTests(unittest.TestCase):
 
     @patch("huggingface_hub.HfApi")
     def test_dataset_revision_uses_dataset_specific_info_method(self, api):
+        import os
+
         api.return_value.dataset_info.return_value.sha = "a" * 40
-        self.assertEqual(get_dataset_revision(), "a" * 40)
+        with patch.dict(os.environ, {"TEJHQ_DATASET_REVISION": ""}):
+            self.assertEqual(get_dataset_revision(), "a" * 40)
         api.return_value.dataset_info.assert_called_once_with(REPO_ID)
 
     def test_same_symbol_new_isin_within_30_days_is_one_chain(self):
@@ -247,6 +250,22 @@ class TejHQAdjustedLoaderTests(unittest.TestCase):
             self.assertEqual(diagnostics["_source"]["start_date"], "2017-01-01")
             self.assertEqual(diagnostics["_source"]["end_date"], "2026-10-13")
             self.assertTrue(diagnostics["_source"]["cache_reused"])
+
+
+class DatasetRevisionPinTests(unittest.TestCase):
+    def test_explicit_dataset_revision_environment_pin_is_used_without_network_lookup(self):
+        import os
+
+        pinned = "0303d8c95b4519765a9d5556fd9c2d430f8f81d8"
+        with patch.dict(os.environ, {"TEJHQ_DATASET_REVISION": pinned}):
+            self.assertEqual(get_dataset_revision(), pinned)
+
+    def test_invalid_dataset_revision_environment_pin_fails_closed(self):
+        import os
+
+        with patch.dict(os.environ, {"TEJHQ_DATASET_REVISION": "latest"}):
+            with self.assertRaisesRegex(ValueError, "40-character hexadecimal"):
+                get_dataset_revision()
 
 
 if __name__ == "__main__":
