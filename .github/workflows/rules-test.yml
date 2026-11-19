@@ -4,7 +4,7 @@ name: Portfolio rules test
 on:
   push:
     branches: [rules-test, pit-nifty500-membership, research/pit-data-quality, codex/research-action-quarantine]
-    paths: ['portfolio_rules.py', 'test_patterns.py', 'pattern_lab.py', 'portfolio.py', 'nifty500_pit.py', 'universe/nifty500_membership_history.csv', 'universe/NIFTY500_PIT_DATA.md', 'test_pit_membership.py', 'nse_benchmark.py', 'bench_check.py', 'test_nse_benchmark.py', 'test_tejhq_data.py', 'test_niftyindices_tri.py', 'test_corporate_action_audit.py', 'test_portfolio_data_quality.py', 'scripts/probe_tejhq_history.py', 'scripts/study_pit_sample_drawdown.py', 'tejhq_data.py', 'niftyindices_tri.py', 'corporate_action_audit.py', 'requirements.txt', '.github/workflows/rules-test.yml']
+    paths: ['portfolio_rules.py', 'test_patterns.py', 'pattern_lab.py', 'portfolio.py', 'nifty500_pit.py', 'universe/nifty500_membership_history.csv', 'universe/NIFTY500_PIT_DATA.md', 'test_pit_membership.py', 'nse_benchmark.py', 'bench_check.py', 'test_nse_benchmark.py', 'test_tejhq_data.py', 'test_niftyindices_tri.py', 'test_corporate_action_audit.py', 'test_portfolio_data_quality.py', 'scripts/probe_tejhq_history.py', 'scripts/study_pit_sample_drawdown.py', 'scripts/study_all_eligible_factor_rank_ic.py', 'scripts/study_dropped_basket_ca_events.py', 'scripts/reconcile_stock_level_nse_tejhq.py', 'tejhq_data.py', 'niftyindices_tri.py', 'corporate_action_audit.py', 'requirements.txt', '.github/workflows/rules-test.yml']
   workflow_dispatch:
 
 concurrency:
@@ -39,13 +39,20 @@ jobs:
       - run: python test_niftyindices_tri.py
       - run: python test_corporate_action_audit.py
       - run: python test_portfolio_data_quality.py
-      - run: python -m py_compile portfolio_rules.py nifty500_pit.py pattern_lab.py portfolio.py tejhq_data.py niftyindices_tri.py corporate_action_audit.py
+      - run: python -m py_compile portfolio_rules.py nifty500_pit.py pattern_lab.py portfolio.py tejhq_data.py niftyindices_tri.py corporate_action_audit.py scripts/study_all_eligible_factor_rank_ic.py scripts/study_dropped_basket_ca_events.py scripts/reconcile_stock_level_nse_tejhq.py
       - name: Run NSE benchmark validation
         run: python bench_check.py
       - name: Run the rules test
         run: python portfolio_rules.py --years 10 --oos-frac 0.35 --cost-pct 0.30
       - name: Reconstruct PIT sample daily drawdowns
+        if: github.ref != 'refs/heads/codex/research-action-quarantine'
         run: python scripts/study_pit_sample_drawdown.py
+      - name: Audit dropped-basket corporate-action event types
+        run: python scripts/study_dropped_basket_ca_events.py
+      - name: Compute all-eligible cross-sectional factor rank-IC
+        run: python scripts/study_all_eligible_factor_rank_ic.py
+      - name: Reconcile sampled equity OHLC against official NSE
+        run: python scripts/reconcile_stock_level_nse_tejhq.py
       - name: Probe missing histories via TejHQ API
         run: python scripts/probe_tejhq_history.py
       - uses: actions/cache/save@v4
@@ -69,7 +76,15 @@ jobs:
             results/tejhq_symbol_continuity_audit.csv
             results/pit_session_calendar_audit.csv
             results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.csv
-            results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.md
+            results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/intra_window_drawdown.md
+            results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/task4_diagnostics.md
+            results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/all_eligible_factor_rank_ic.csv
+            results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/all_eligible_factor_rank_ic.md
+            results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/all_eligible_factor_rank_ic_summary.csv
+            results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/dropped_basket_ca_events.csv
+            results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/stock_level_nse_tejhq_reconciliation.csv
+            results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/stock_level_nse_tejhq_reconciliation.md
+            results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/stock_level_nse_tejhq_reconciliation_summary.csv
             results/corporate_action_audit.csv
             results/corporate_action_quarantine.csv
           if-no-files-found: warn
@@ -78,7 +93,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f results/corporate_action_audit.csv results/corporate_action_quarantine.csv results/bench_check.md results/portfolio_rules_report.md results/pit_price_history_audit.csv results/pit_daily_coverage_audit.csv results/pit_tejhq_coverage_audit.csv results/pit_tejhq_initial_coverage_probe.csv results/tejhq_source_metadata.md results/tejhq_symbol_continuity_audit.csv results/pit_session_calendar_audit.csv results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.csv results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.md
+          git add -f results/corporate_action_audit.csv results/corporate_action_quarantine.csv results/bench_check.md results/portfolio_rules_report.md results/pit_price_history_audit.csv results/pit_daily_coverage_audit.csv results/pit_tejhq_coverage_audit.csv results/pit_tejhq_initial_coverage_probe.csv results/tejhq_source_metadata.md results/tejhq_symbol_continuity_audit.csv results/pit_session_calendar_audit.csv results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.csv results/pit_samples/n40_gap21_seed20261103_rev0303d8c/liquidity_first/intra_window_drawdown.md results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/task4_diagnostics.md results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/all_eligible_factor_rank_ic.csv results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/all_eligible_factor_rank_ic.md results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/all_eligible_factor_rank_ic_summary.csv results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/dropped_basket_ca_events.csv results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/stock_level_nse_tejhq_reconciliation.csv results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/stock_level_nse_tejhq_reconciliation.md results/pit_samples/n40_gap21_seed20261103d8c/liquidity_first/stock_level_nse_tejhq_reconciliation_summary.csv
           if git diff --cached --quiet; then
             echo "No generated report changes."
             exit 0
