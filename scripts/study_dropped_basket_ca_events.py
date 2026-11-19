@@ -22,48 +22,42 @@ def main() -> None:
         sample["6M_return_status"].eq("unsupported_corporate_action_during_hold")
     ].copy()
     records = []
-    for row in dropped.itertuples(index=False):
+    for _, row in dropped.iterrows():
         events = audit.loc[
-            audit["symbol"].eq(row.symbol)
-            & audit["ex_date"].gt(row.signal_date_dt)
-            & audit["ex_date"].le(row.exit_date_dt)
+            audit["symbol"].eq(row["symbol"])
+            & audit["ex_date"].gt(row["signal_date_dt"])
+            & audit["ex_date"].le(row["exit_date_dt"])
         ].copy()
         if events.empty:
             raise RuntimeError(
-                f"No corporate_action_audit.csv event for {row.sample_id}/{row.symbol} "
-                f"inside {row.signal_date}..{row._asdict()['6M_exit_date']}"
+                f"No corporate_action_audit.csv event for {row['sample_id']}/{row['symbol']} "
+                f"inside {row['signal_date']}..{row['6M_exit_date']}"
             )
-        types = sorted(events["type"].dropna().unique())
-        invalid_types = set(types) - {"demerger", "buyback", "rights", "merger", "other"}
-        if invalid_types:
-            raise RuntimeError(f"Unexpected corporate-action type(s): {sorted(invalid_types)}")
         for event in events.sort_values("ex_date").itertuples(index=False):
+            action_type = str(event.type).lower()
+            if action_type not in {"demerger", "buyback", "rights", "merger", "other"}:
+                raise RuntimeError(f"Unexpected corporate-action type: {action_type}")
             records.append({
-                "sample_id": row.sample_id,
-                "signal_date": row.signal_date,
-                "symbol": row.symbol,
+                "sample_id": row["sample_id"],
+                "signal_date": row["signal_date"],
+                "symbol": row["symbol"],
                 "ex_date": event.ex_date.date().isoformat(),
-                "corporate_action_type": event.type,
+                "corporate_action_type": action_type,
                 "raw_subject": event.raw_subject,
                 "source_file": event.source_file,
             })
     result = pd.DataFrame(records).drop_duplicates()
     positions = dropped[["sample_id", "symbol"]].drop_duplicates()
-    if positions.shape[0] != 12:
-        raise RuntimeError(f"Expected 12 dropped positions; found {positions.shape[0]}")
     joined = result[["sample_id", "symbol"]].drop_duplicates()
-    if len(joined) != 12:
-        raise RuntimeError(f"Expected 12 joined positions; found {len(joined)}")
+    if len(positions) != 12 or len(joined) != 12:
+        raise RuntimeError(f"Expected 12 joined positions; got {len(positions)} dropped and {len(joined)} joined")
     result.to_csv(OUT, index=False)
-
     lines = [
         "| Sample | Signal date | Symbol | Exact ex-date | Corporate-action type |",
         "|---|---|---|---|---|",
     ]
     for r in result.sort_values(["sample_id", "symbol", "ex_date"]).itertuples(index=False):
-        lines.append(
-            f"| {r.sample_id} | {r.signal_date} | {r.symbol} | {r.ex_date} | {r.corporate_action_type} |"
-        )
+        lines.append(f"| {r.sample_id} | {r.signal_date} | {r.symbol} | {r.ex_date} | {r.corporate_action_type} |")
     md = REPORT.read_text(encoding="utf-8")
     start_marker = "| Sample | Signal date | Unsupported holding(s) |"
     start = md.find(start_marker)
@@ -72,8 +66,7 @@ def main() -> None:
     end = md.find("\n\n", start)
     if end < 0:
         raise RuntimeError("Could not find end of six-month exclusion table")
-    md = md[:start] + "\n".join(lines) + md[end:]
-    REPORT.write_text(md, encoding="utf-8")
+    REPORT.write_text(md[:start] + "\n".join(lines) + md[end:], encoding="utf-8")
     print(f"Joined {len(result)} action rows across {len(joined)} dropped positions")
     print("\n".join(lines))
 
