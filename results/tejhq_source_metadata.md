@@ -1,20 +1,23 @@
-- source: TejHQ prices_adjusted NSE parquet
-- dataset_id: tejhq/indian-markets
-- dataset_revision: 0303d8c95b4519765a9d5556fd9c2d430f8f81d8
-- start_date: 2016-10-13
-- end_date: 2026-10-13
-- series_scope: EQ, BE, BZ (TejHQ published NSE coverage)
 - adjustment_scope: splits, bonuses and dividends; mergers, demergers, rights and buybacks are not scaled
 - adjustment_validation: passed: adj_close equals raw close multiplied by cumulative factor; adjusted OHLC checked
-- liquidity_basis: raw bhavcopy turnover; volume remains raw
-- symbol_history_valid_to: inclusive last trading day; PIT membership valid_to is exclusive
-- instrument_chain_rule: same ISIN is continuous; a new ISIN joins only when the same symbol resumes within 30 calendar days
-- data_terms_url: https://tejhq.dev/data-terms
 - data_terms_as_of: 2026-10-30
 - data_terms_summary: personal research/backtesting permitted; TejHQ holds no NSE/BSE data licence; MIT covers code, not data; exchange terms still apply to commercial use and redistribution
-- price_rows_loaded: 1849690
+- data_terms_url: https://tejhq.dev/data-terms
+- dataset_id: tejhq/indian-markets
+- dataset_revision: 0303d8c95b4519765a9d5556fd9c2d430f8f81d8
+- end_date: 2026-10-13
+- instrument_chain_rule: same ISIN is continuous; a new ISIN joins only when the same symbol resumes within 30 calendar days
 - instrument_chains: 937
 - isins_loaded: 1146
+- liquidity_basis: raw bhavcopy turnover; volume remains raw
+- price_rows_loaded: 1911582
+- series_scope: EQ, BE, BZ (TejHQ published NSE coverage)
+- source: TejHQ prices_adjusted NSE parquet
+- start_date: 2016-10-13
+- symbol_history_valid_to: inclusive last trading day; PIT membership valid_to is exclusive
+- cached_start_date: 2016-10-13
+- cached_end_date: 2026-10-13
+- cache_reused: True
 - benchmark_source: NSE NextApi raw NIFTYBEES OHLC, supplemented only by TejHQ raw NSE bhavcopy bars on validated NSE-calendar sessions absent from NextApi; common dates reconciled
 - benchmark_adjustment_scope: NIFTYBEES split-adjusted for live regime filter; official NIFTY 500 TRI is performance benchmark
 - nifty500_tri_source: NSE Indices historical Total Returns Index Values endpoint
