@@ -82,23 +82,34 @@ def abort_not_ready(message: str, run_ts, final_attempt: bool) -> None:
     sys.exit(EXIT_NOT_READY)
 
 
-def check_stale_after_cutoff(run_ts: datetime, results: list, cutoff: dt_time) -> str | None:
-    """After the EOD cutoff, today's candle should be present -- the
-    drop-unsettled-today guard was disabled specifically to allow it
-    through. This verifies that assumption held: if it's past cutoff
-    and the latest scored date still isn't today, Yahoo genuinely
-    hasn't published yet, and that needs to fail loudly rather than
-    silently ship yesterday's close as if it were current. Pulled out
-    for the same reason as check_total_failure -- this shipped with
-    zero test coverage inside the __main__ block, untestable without
-    a subprocess or a full yfinance mock."""
-    if run_ts.time() < cutoff or not results:
+def check_stale_after_cutoff(run_ts: datetime, results: list, cutoff: dt_time,
+                             expected_session: str | date | None = None) -> str | None:
+    """Require each scored row to match the expected completed exchange session.
+
+    When expected_session is supplied, every scored row is checked against it
+    (including before cutoff and on weekends/holidays). Omitted expected_session
+    retains the after-cutoff time contract for legacy callers.
+    """
+    if not results or (expected_session is None and run_ts.time() < cutoff):
         return None
-    latest_score_date = max(date.fromisoformat(r["date"]) for r in results)
-    if latest_score_date != run_ts.date():
+    expected = date.fromisoformat(expected_session) if isinstance(expected_session, str) else expected_session
+    expected = expected or run_ts.date()
+    mismatched = []
+    for row in results:
+        value = row.get("date")
+        try:
+            scored_date = date.fromisoformat(value)
+        except (TypeError, ValueError):
+            scored_date = None
+        if scored_date != expected:
+            mismatched.append(f"{row.get('ticker', '<unknown>')}={value or 'missing date'}")
+    if mismatched:
+        details = ", ".join(mismatched[:8])
+        if len(mismatched) > 8:
+            details += f", +{len(mismatched) - 8} more"
         return (
-            f"Latest screener data is {latest_score_date.isoformat()}, not today's close "
-            f"({run_ts.date().isoformat()}). Yahoo has not published the completed EOD candle yet."
+            f"{len(mismatched)} scored row(s) do not match completed NSE session "
+            f"{expected.isoformat()}: {details}. Treat stale or misaligned data as unavailable."
         )
     return None
 
@@ -156,6 +167,7 @@ if __name__ == "__main__":
     with open(OUTPUT_PATH, "w") as f:
         json.dump(wide.sanitize_json({
             "run_timestamp": run_ts.isoformat(),
+            "expected_session": expected.isoformat(),
             "note": "Every 'date'/'close' below is the last COMPLETE session as of run_timestamp, "
                      "never a same-day live price. The momentum leaderboard ranks 12-1 adjusted "
                      "returns relative to NIFTYBEES within this fixed watchlist; it is descriptive "

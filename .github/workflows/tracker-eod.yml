@@ -1,0 +1,98 @@
+name: Private scanner tracker EOD
+
+on:
+  schedule:
+    - cron: "45 13 * * *" # 19:15 IST
+    - cron: "45 15 * * *" # 21:15 IST retry
+    - cron: "45 1 * * *"  # 07:15 IST next-morning catch-up
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Private storage environment; production requires main"
+        type: choice
+        options: [staging, production]
+        default: staging
+        required: true
+      mode:
+        description: "Scanner mode"
+        type: choice
+        options: [both, ta, momentum]
+        default: both
+        required: false
+      scope:
+        description: "Universe scope"
+        type: choice
+        options: [all, wide, personal]
+        default: all
+        required: false
+      request_id:
+        description: "Optional refresh request ID; blank is allowed"
+        type: string
+        default: ""
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: private-scanner-tracker-eod
+  cancel-in-progress: false
+
+jobs:
+  private-scan:
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.TRACKER_SCHEDULE_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'production' }}
+    env:
+      TRACKER_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'production' }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      TRACKER_STORAGE_BUCKET: tracker-inputs
+      TRACKER_MODE: ${{ inputs.mode || 'both' }}
+      TRACKER_SCOPE: ${{ inputs.scope || 'all' }}
+      TRACKER_REQUEST_ID: ${{ inputs.request_id }}
+      TRACKER_NOTIFY_ENABLED: ${{ vars.TRACKER_NOTIFY_ENABLED || 'false' }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      TRACKER_SESSION_OVERRIDES: ${{ vars.TRACKER_SESSION_OVERRIDES || '{}' }}
+      TRACKER_SHADOW_MODE: ${{ vars.TRACKER_SHADOW_MODE || 'true' }}
+    steps:
+      - name: Require main for production dispatch
+        shell: bash
+        run: |
+          if [[ "$TRACKER_ENV" == "production" && "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Production scans require the main branch."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'main' || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install verified runtime
+        run: python -m pip install -r requirements.txt
+      - name: Verify private configuration without printing values
+        run: |
+          python - <<'PY'
+          import os
+          required = ("DATABASE_URL", "SUPABASE_URL", "SUPABASE_SERVICE_KEY")
+          missing = [key for key in required if not os.environ.get(key)]
+          if missing:
+              raise SystemExit("Missing private environment secrets: " + ", ".join(missing))
+          if os.environ.get("TRACKER_ENV") not in {"staging", "production"}:
+              raise SystemExit("Worker environment must be staging or production.")
+          if os.environ.get("TRACKER_DEMO"):
+              raise SystemExit("Synthetic demo mode is prohibited in the hosted worker.")
+          PY
+      - name: Scan completed NSE sessions into private storage
+        shell: bash
+        run: |
+          arguments=(--mode "$TRACKER_MODE" --scope "$TRACKER_SCOPE")
+          if [[ -n "$TRACKER_REQUEST_ID" ]]; then
+            arguments+=(--request-id "$TRACKER_REQUEST_ID")
+          fi
+          python -m scanner_tracker scan "${arguments[@]}"
