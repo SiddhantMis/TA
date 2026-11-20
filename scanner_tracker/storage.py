@@ -34,11 +34,20 @@ class InputArchive:
         if len(key) != 72 or not key.endswith(".json.gz") or any(c not in "0123456789abcdef" for c in key[:64]):
             raise ValueError("Invalid input archive key.")
 
+    def _auth_headers(self):
+        key = str(self.key).strip()
+        headers = {"apikey": key}
+        # Supabase opaque API keys (sb_secret_..., sb_publishable_...) are not JWTs
+        # and must only travel on the apikey header, never as Authorization: Bearer.
+        if not key.startswith(("sb_secret_", "sb_publishable_")):
+            headers["Authorization"] = f"Bearer {key}"
+        return headers
+
     def _request(self, method, path, **kwargs):
+        headers = {**self._auth_headers(), **kwargs.pop("headers", {})}
         try:
             response = requests.request(method, self.url.rstrip("/") + path,
-                headers={"Authorization": f"Bearer {self.key}", "apikey": self.key, **kwargs.pop("headers", {})},
-                timeout=(10, 60), **kwargs)
+                headers=headers, timeout=(10, 60), **kwargs)
         except requests.RequestException as exc:
             raise RuntimeError("Private input storage is unreachable.") from exc
         if response.status_code not in (200, 201):
