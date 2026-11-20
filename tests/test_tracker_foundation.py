@@ -1,6 +1,7 @@
 from datetime import datetime
 import io
 import json
+from unittest.mock import Mock, patch
 import zipfile
 
 import pandas as pd
@@ -51,6 +52,46 @@ def test_private_input_archive_is_content_addressed_and_detects_corruption(tmp_p
     (tmp_path / key).write_bytes(b"not a valid gzip record")
     with pytest.raises((ValueError, OSError)):
         archive.get(key)
+
+
+def test_remote_input_archive_sends_only_apikey_header_for_sb_secret_key():
+    archive = InputArchive(url="https://example.supabase.co", key="sb_secret_synthetic_test_key", bucket="tracker-inputs")
+    payload = {"source": "synthetic", "bars": [{"Close": 10}]}
+    stored = {}
+
+    def fake_request(method, url, **kwargs):
+        if method == "POST":
+            stored["data"] = kwargs["data"]
+            stored["post_headers"] = kwargs["headers"]
+            return Mock(status_code=200)
+        stored["get_headers"] = kwargs["headers"]
+        return Mock(status_code=200, content=stored["data"])
+
+    with patch("scanner_tracker.storage.requests.request", side_effect=fake_request):
+        key = archive.put(payload)
+        assert archive.get(key) == payload
+
+    assert stored["post_headers"]["apikey"] == "sb_secret_synthetic_test_key"
+    assert "Authorization" not in stored["post_headers"]
+    assert stored["post_headers"]["Content-Type"] == "application/gzip"
+    assert stored["post_headers"]["x-upsert"] == "true"
+    assert stored["get_headers"] == {"apikey": "sb_secret_synthetic_test_key"}
+
+
+def test_remote_input_archive_keeps_bearer_header_for_legacy_jwt_key():
+    legacy_key = "eyJhbGciOiJIUzI1NiJ9.synthetic.signature"
+    archive = InputArchive(url="https://example.supabase.co", key=legacy_key, bucket="tracker-inputs")
+    captured = {}
+
+    def fake_request(method, url, **kwargs):
+        captured["headers"] = kwargs["headers"]
+        return Mock(status_code=200)
+
+    with patch("scanner_tracker.storage.requests.request", side_effect=fake_request):
+        archive.put({"source": "synthetic", "bars": [{"Close": 10}]})
+
+    assert captured["headers"]["apikey"] == legacy_key
+    assert captured["headers"]["Authorization"] == f"Bearer {legacy_key}"
 
 
 def test_password_hash_does_not_store_plaintext_and_rejects_malformed_hashes():
