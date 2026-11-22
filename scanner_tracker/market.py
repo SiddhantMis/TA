@@ -123,7 +123,7 @@ def frame_payload(frame, source="Yahoo Finance via yfinance"):
 def payload_frame(payload):
     rows = payload.get("bars", [])
     if not rows:
-        return pd.DataFrame(columns=OHLCV)
+        return pd.DataFrame(columns=OHLCV, index=pd.DatetimeIndex([]))
     d = pd.DataFrame(rows).set_index("date")
     d.index = pd.DatetimeIndex(d.index)
     d.index.name = payload.get("index_name")
@@ -141,8 +141,10 @@ class YahooProvider:
     def fetch(self, symbol, as_of, previous=None):
         import yfinance as yf
         cutoff = pd.Timestamp(as_of)
-        if previous is not None:
+        if previous is not None and not previous.empty:
             previous = previous.loc[previous.index <= cutoff]
+        else:
+            previous = None
         start = cutoff - pd.Timedelta(days=900)
         if previous is not None and not previous.empty:
             start = max(start, previous.index[-1] - pd.Timedelta(days=14))
