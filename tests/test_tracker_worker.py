@@ -155,3 +155,16 @@ def test_scheduled_retry_of_complete_scope_skips_fetch_and_publication(service, 
     assert provider.calls == []
     assert service.repo.runs() == before_runs
     assert service.momentum_report() == before_report
+
+
+def test_yahoo_provider_fetch_with_empty_payload_frame(monkeypatch):
+    from scanner_tracker.market import payload_frame
+    frames, _ = synthetic_frames("2026-11-03")
+    data = frames["DEMOB.NS"].copy()
+    empty = payload_frame({})
+    mock_download = Mock(return_value=data)
+    monkeypatch.setattr("yfinance.download", mock_download)
+    result = YahooProvider().fetch("DEMOB.NS", "2026-11-03", previous=empty)
+    assert not result.empty
+    pd.testing.assert_frame_equal(result, data)
+
