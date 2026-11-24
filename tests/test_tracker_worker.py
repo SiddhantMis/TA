@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from scanner_tracker.demo import synthetic_frames
-from scanner_tracker.market import BENCHMARK, YahooProvider
+from scanner_tracker.market import BENCHMARK, YahooProvider, normalize_frame
 from scanner_tracker.service import TrackerService
 from scanner_tracker.storage import InputArchive
 from scanner_tracker.worker import run_eod, worker_lock
@@ -84,10 +84,35 @@ def test_provider_exhausted_retries_raise_instead_of_returning_empty_history(mon
     sleeps = []
     monkeypatch.setattr("yfinance.download", download)
     monkeypatch.setattr("scanner_tracker.market.time.sleep", sleeps.append)
-    with pytest.raises(RuntimeError, match="after three attempts"):
+    with pytest.raises(RuntimeError, match="after three attempts.*ValueError: No market history returned"):
         YahooProvider().fetch("DEMOB.NS", "2026-11-03")
     assert download.call_count == 3
     assert sleeps == [1, 2]
+
+
+def test_normalize_frame_reports_bad_bar_details_and_tolerates_float_epsilon():
+    frames, _ = synthetic_frames("2026-11-03")
+    frame = frames["DEMOB.NS"].copy()
+    as_of = frame.index[-1].date().isoformat()
+
+    # Sub-nanoscale float rounding noise on High/Low bounds is tolerated.
+    noisy = frame.copy()
+    noisy.iloc[-1, noisy.columns.get_loc("High")] = max(
+        noisy.iloc[-1]["Open"], noisy.iloc[-1]["Close"], noisy.iloc[-1]["Low"]
+    ) - 1e-12
+    normalized = normalize_frame(noisy, as_of)
+    assert normalized.index[-1] == pd.Timestamp(as_of)
+
+    # Genuine OHLC bound violation still fails with the exact offending date and reason.
+    bad = frame.copy()
+    bad.iloc[-1, bad.columns.get_loc("High")] = bad.iloc[-1]["Close"] - 1.0
+    with pytest.raises(ValueError, match=f"inconsistent OHLC.*{as_of}"):
+        normalize_frame(bad, as_of)
+
+    # Duplicate session dates still fail with the offending date listed.
+    duped = pd.concat([frame, frame.iloc[-1:]])
+    with pytest.raises(ValueError, match=f"Duplicate source sessions:.*{as_of}"):
+        normalize_frame(duped, as_of)
 
 
 def test_stale_benchmark_fails_before_stock_fetch_and_preserves_prior_publication(service, exchange, monkeypatch):
@@ -167,4 +192,3 @@ def test_yahoo_provider_fetch_with_empty_payload_frame(monkeypatch):
     result = YahooProvider().fetch("DEMOB.NS", "2026-11-03", previous=empty)
     assert not result.empty
     pd.testing.assert_frame_equal(result, data)
-

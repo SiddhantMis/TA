@@ -17,6 +17,17 @@ from .repository import clean, digest
 IST = ZoneInfo("Asia/Kolkata")
 BENCHMARK = "NIFTYBEES.NS"
 OHLCV = ["Open", "High", "Low", "Close", "Volume"]
+OHLC_FLOAT_EPSILON = 1e-9
+
+
+def _format_fetch_error(exc):
+    name = type(exc).__name__
+    message = " ".join(str(exc).split()).strip()
+    if not message:
+        return name
+    if len(message) > 240:
+        message = message[:237] + "..."
+    return f"{name}: {message}"
 
 
 def symbol_name(value):
@@ -84,17 +95,38 @@ def normalize_frame(frame, as_of):
     d.index = d.index.normalize()
     d = d.loc[d.index <= pd.Timestamp(as_of)].sort_index()
     if d.index.has_duplicates:
-        raise ValueError("Duplicate source sessions.")
+        dupes = sorted({stamp.date().isoformat() for stamp in d.index[d.index.duplicated()]})
+        raise ValueError(f"Duplicate source sessions: {', '.join(dupes[:5])}.")
     if not set(OHLCV).issubset(d.columns):
-        raise ValueError("Market history lacks required OHLCV fields.")
+        missing = sorted(set(OHLCV) - set(d.columns))
+        raise ValueError(f"Market history lacks required OHLCV fields: {', '.join(missing)}.")
     for col in d.columns:
         d[col] = pd.to_numeric(d[col], errors="coerce")
     observed = d[OHLCV]
-    bad = observed.isna().any(axis=1) | ~np.isfinite(observed).all(axis=1)
-    bad |= (d[["Open", "High", "Low", "Close"]] <= 0).any(axis=1) | (d.Volume < 0)
-    bad |= (d.High < d[["Open", "Close", "Low"]].max(axis=1)) | (d.Low > d[["Open", "Close", "High"]].min(axis=1))
+    missing_or_nonfinite = observed.isna().any(axis=1) | ~np.isfinite(observed).all(axis=1)
+    non_positive = (d[["Open", "High", "Low", "Close"]] <= 0).any(axis=1) | (d.Volume < 0)
+    inconsistent_ohlc = (
+        (d.High + OHLC_FLOAT_EPSILON < d[["Open", "Close", "Low"]].max(axis=1))
+        | (d.Low - OHLC_FLOAT_EPSILON > d[["Open", "Close", "High"]].min(axis=1))
+    )
+    bad = missing_or_nonfinite | non_positive | inconsistent_ohlc
     if bad.any():
-        raise ValueError("Source history contains missing, non-positive or inconsistent OHLCV bars.")
+        reasons = []
+        if missing_or_nonfinite.any():
+            reasons.append("missing/non-finite")
+        if non_positive.any():
+            reasons.append("non-positive")
+        if inconsistent_ohlc.any():
+            reasons.append("inconsistent OHLC")
+        bad_index = d.index[bad]
+        bad_dates = [stamp.date().isoformat() for stamp in bad_index[:5]]
+        sample_stamp = bad_index[0]
+        sample = d.loc[sample_stamp, OHLCV].to_dict()
+        detail = ", ".join(f"{col}={sample[col]}" for col in OHLCV)
+        raise ValueError(
+            f"Source history contains {', '.join(reasons)} OHLCV bars "
+            f"on {', '.join(bad_dates)} (first bad: {sample_stamp.date().isoformat()} {detail})."
+        )
     return d
 
 
@@ -170,7 +202,9 @@ class YahooProvider:
                     d = pd.concat([old, d]).sort_index()
                 return d.loc[d.index >= cutoff - pd.Timedelta(days=900)]
             except Exception as exc:
-                errors.append(type(exc).__name__)
+                errors.append(_format_fetch_error(exc))
                 if attempt < 2:
                     time.sleep(2 ** attempt)
-        raise RuntimeError(f"{symbol}: history unavailable after three attempts ({','.join(errors)}).")
+        unique_errors = list(dict.fromkeys(errors))
+        summary = "; ".join(unique_errors) if len(unique_errors) < len(errors) else " | ".join(errors)
+        raise RuntimeError(f"{symbol}: history unavailable after three attempts ({summary}).")
