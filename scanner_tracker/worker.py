@@ -13,6 +13,17 @@ import leaders
 from .market import BENCHMARK, YahooProvider, expected_sessions, latest_completed_session, payload_frame
 from .repository import digest
 
+CANARY_UNSETTLED_CLOSE_LIMIT = 5
+
+
+def _is_unsettled_close_error(message, target):
+    text_msg = str(message)
+    return (
+        "missing/non-finite" in text_msg
+        and "Close=nan" in text_msg
+        and str(target) in text_msg
+    )
+
 
 @contextmanager
 def worker_lock(engine):
@@ -85,12 +96,22 @@ def run_eod(service, *, as_of=None, mode="both", scope="all", provider=None, req
             if benchmark.empty or benchmark.index[-1] != pd.Timestamp(target):
                 raise ValueError("Benchmark did not publish the exact required session.")
             frames, errors = {}, {}
+            unsettled_close_errors = 0
             for symbol in sorted(symbols):
                 try:
                     previous = payload_frame(service.repo.prices(symbol))
                     frames[symbol] = provider.fetch(symbol, target, previous)
                 except (ValueError, RuntimeError) as exc:
-                    errors[symbol] = str(exc)
+                    message = str(exc)
+                    errors[symbol] = message
+                    if not frames and _is_unsettled_close_error(message, target):
+                        unsettled_close_errors += 1
+                        if unsettled_close_errors >= CANARY_UNSETTLED_CLOSE_LIMIT:
+                            raise RuntimeError(
+                                f"Upstream market feed has unsettled Close=nan bars for {target} "
+                                f"across the first {unsettled_close_errors} equities; aborting early "
+                                "to preserve previous published decisions."
+                            ) from exc
                 if sleep:
                     time.sleep(sleep)
             result = service.scan_frames(frames, benchmark, target, scopes=scopes, diagnostics=errors,

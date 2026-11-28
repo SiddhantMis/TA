@@ -2,6 +2,7 @@
 from copy import deepcopy
 from unittest.mock import Mock
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -113,6 +114,112 @@ def test_normalize_frame_reports_bad_bar_details_and_tolerates_float_epsilon():
     duped = pd.concat([frame, frame.iloc[-1:]])
     with pytest.raises(ValueError, match=f"Duplicate source sessions:.*{as_of}"):
         normalize_frame(duped, as_of)
+
+
+def test_yahoo_provider_recovers_latest_nan_close_from_valid_adj_close(monkeypatch):
+    frames, _ = synthetic_frames("2026-11-03")
+    expected = frames["DEMOB.NS"].copy()
+    expected["Dividends"] = 0.0
+    expected["Stock Splits"] = 0.0
+    broken = expected.copy()
+    broken.iloc[-1, broken.columns.get_loc("Close")] = np.nan
+    download = Mock(return_value=broken)
+    monkeypatch.setattr("yfinance.download", download)
+    result = YahooProvider().fetch("DEMOB.NS", "2026-11-03")
+    assert download.call_count == 1
+    pd.testing.assert_frame_equal(result, expected, check_freq=False)
+
+
+def test_yahoo_provider_rejects_adj_close_recovery_on_corporate_action(monkeypatch):
+    frames, _ = synthetic_frames("2026-11-03")
+    broken = frames["DEMOB.NS"].copy()
+    broken["Dividends"] = 0.0
+    broken["Stock Splits"] = 0.0
+    broken.iloc[-1, broken.columns.get_loc("Close")] = np.nan
+    broken.iloc[-1, broken.columns.get_loc("Dividends")] = 2.5
+    download = Mock(return_value=broken)
+    monkeypatch.setattr("yfinance.download", download)
+    monkeypatch.setattr("scanner_tracker.market.time.sleep", lambda seconds: None)
+    with pytest.raises(RuntimeError, match="missing/non-finite.*Close=nan"):
+        YahooProvider().fetch("DEMOB.NS", "2026-11-03")
+    # Each of the 3 attempts tries the primary download plus the narrow repair fallback.
+    assert download.call_count == 6
+
+
+def test_yahoo_provider_recovers_latest_nan_close_via_narrow_repair_window(monkeypatch):
+    frames, _ = synthetic_frames("2026-11-03")
+    expected = frames["DEMOB.NS"].copy()
+    broken = expected.copy()
+    broken.iloc[-1, broken.columns.get_loc("Close")] = np.nan
+    broken.iloc[-1, broken.columns.get_loc("Adj Close")] = np.nan
+
+    repaired_window = expected.iloc[-6:].copy()
+    repaired_window["Repaired?"] = False
+    repaired_window.iloc[-1, repaired_window.columns.get_loc("Repaired?")] = True
+    # Mutate an older row inside the repair response to confirm only the cutoff bar is spliced.
+    repaired_window.iloc[0, repaired_window.columns.get_loc("Close")] *= 0.5
+
+    download = Mock(side_effect=[broken, repaired_window])
+    monkeypatch.setattr("yfinance.download", download)
+    result = YahooProvider().fetch("DEMOB.NS", "2026-11-03")
+    assert download.call_count == 2
+    assert download.call_args_list[1].kwargs["repair"] is True
+    assert download.call_args_list[1].kwargs["keepna"] is True
+    assert download.call_args_list[1].kwargs["start"] == "2026-10-27"
+    assert download.call_args_list[1].kwargs["end"] == "2026-11-04"
+    assert "Repaired?" not in result.columns
+    pd.testing.assert_frame_equal(result, expected, check_freq=False)
+
+
+def test_yahoo_provider_does_not_recover_older_bar_nan_close(monkeypatch):
+    frames, _ = synthetic_frames("2026-11-03")
+    broken = frames["DEMOB.NS"].copy()
+    broken.iloc[-2, broken.columns.get_loc("Close")] = np.nan
+    download = Mock(return_value=broken)
+    monkeypatch.setattr("yfinance.download", download)
+    monkeypatch.setattr("scanner_tracker.market.time.sleep", lambda seconds: None)
+    with pytest.raises(RuntimeError, match="missing/non-finite.*Close=nan"):
+        YahooProvider().fetch("DEMOB.NS", "2026-11-03")
+    # Older-bar corruption never triggers repair fallback.
+    assert download.call_count == 3
+
+
+def test_equity_canary_aborts_early_on_market_wide_unsettled_close_nan(service, exchange, monkeypatch):
+    frames, benchmark = synthetic_frames("2026-11-03")
+    symbols = [f"EQ{i:02d}.NS" for i in range(8)]
+    expanded_frames = {sym: frames["DEMOA.NS"].copy() for sym in symbols}
+    monkeypatch.setattr("scanner_tracker.worker.leaders.load_universe", lambda: symbols)
+    service.scan_frames(expanded_frames, benchmark, "2026-11-02", scopes={"wide": symbols}, mode="momentum", source="SYNTHETIC")
+    published = deepcopy(service.momentum_report())
+    snapshots = {sym: deepcopy(service.repo.prices(sym)) for sym in symbols + [BENCHMARK]}
+
+    class UnsettledEquitiesProvider:
+        source = "SYNTHETIC OFFLINE FIXTURE"
+
+        def __init__(self):
+            self.calls = []
+
+        def fetch(self, symbol, as_of, previous=None):
+            self.calls.append((symbol, as_of))
+            if symbol == BENCHMARK:
+                return benchmark.loc[:as_of].copy()
+            raise RuntimeError(
+                f"{symbol}: history unavailable after three attempts "
+                f"(ValueError: Source history contains missing/non-finite OHLCV bars on {as_of} "
+                f"(first bad: {as_of} Open=100.0, High=102.0, Low=99.0, Close=nan, Volume=1000.0).)."
+            )
+
+    provider = UnsettledEquitiesProvider()
+    with pytest.raises(RuntimeError, match="unsettled Close=nan.*2026-11-03.*first 5 equities"):
+        run_eod(service, as_of="2026-11-03", scope="wide", mode="momentum", provider=provider, sleep=0)
+    # 1 benchmark fetch + 5 canary equities, not all 8.
+    assert len(provider.calls) == 6
+    assert provider.calls[0] == (BENCHMARK, "2026-11-03")
+    assert service.momentum_report() == published
+    assert service.status()["latest_success"]["as_of"] == "2026-11-02"
+    assert service.repo.runs()[0]["status"] == "failed"
+    for sym, payload in snapshots.items():
+        assert service.repo.prices(sym) == payload
 
 
 def test_stale_benchmark_fails_before_stock_fetch_and_preserves_prior_publication(service, exchange, monkeypatch):
