@@ -18,6 +18,7 @@ IST = ZoneInfo("Asia/Kolkata")
 BENCHMARK = "NIFTYBEES.NS"
 OHLCV = ["Open", "High", "Low", "Close", "Volume"]
 OHLC_FLOAT_EPSILON = 1e-9
+REPAIR_LOOKBACK_DAYS = 7
 
 
 def _format_fetch_error(exc):
@@ -82,13 +83,16 @@ def expected_sessions(start, end):
     return pd.DatetimeIndex(session_schedule(start, end).index).normalize()
 
 
-def normalize_frame(frame, as_of):
+def _prepare_frame(frame, as_of):
     if frame is None or frame.empty:
         raise ValueError("No market history returned.")
     d = frame.copy()
     if isinstance(d.columns, pd.MultiIndex):
         d.columns = d.columns.get_level_values(0)
     d.columns = [str(c).title() for c in d.columns]
+    drop_cols = [c for c in d.columns if c.lower() == "repaired?"]
+    if drop_cols:
+        d = d.drop(columns=drop_cols)
     d.index = pd.to_datetime(d.index)
     if d.index.tz is not None:
         d.index = d.index.tz_convert(IST).tz_localize(None)
@@ -102,6 +106,10 @@ def normalize_frame(frame, as_of):
         raise ValueError(f"Market history lacks required OHLCV fields: {', '.join(missing)}.")
     for col in d.columns:
         d[col] = pd.to_numeric(d[col], errors="coerce")
+    return d
+
+
+def _invalid_ohlcv_mask(d):
     observed = d[OHLCV]
     missing_or_nonfinite = observed.isna().any(axis=1) | ~np.isfinite(observed).all(axis=1)
     non_positive = (d[["Open", "High", "Low", "Close"]] <= 0).any(axis=1) | (d.Volume < 0)
@@ -109,6 +117,11 @@ def normalize_frame(frame, as_of):
         (d.High + OHLC_FLOAT_EPSILON < d[["Open", "Close", "Low"]].max(axis=1))
         | (d.Low - OHLC_FLOAT_EPSILON > d[["Open", "Close", "High"]].min(axis=1))
     )
+    return missing_or_nonfinite, non_positive, inconsistent_ohlc
+
+
+def _validate_prepared_frame(d):
+    missing_or_nonfinite, non_positive, inconsistent_ohlc = _invalid_ohlcv_mask(d)
     bad = missing_or_nonfinite | non_positive | inconsistent_ohlc
     if bad.any():
         reasons = []
@@ -128,6 +141,97 @@ def normalize_frame(frame, as_of):
             f"on {', '.join(bad_dates)} (first bad: {sample_stamp.date().isoformat()} {detail})."
         )
     return d
+
+
+def normalize_frame(frame, as_of):
+    return _validate_prepared_frame(_prepare_frame(frame, as_of))
+
+
+def _no_corporate_actions_on_date(d, stamp):
+    for col in ("Dividends", "Stock Splits", "Capital Gains"):
+        if col in d.columns:
+            val = d.at[stamp, col]
+            if pd.notna(val) and float(val) != 0.0:
+                return False
+    return True
+
+
+def _can_recover_latest_close(d, cutoff):
+    if d.empty or d.index[-1] != cutoff:
+        return False
+    if len(d) > 1:
+        missing, non_pos, inconsistent = _invalid_ohlcv_mask(d.iloc[:-1])
+        if (missing | non_pos | inconsistent).any():
+            return False
+    close_val = d.at[cutoff, "Close"]
+    if pd.notna(close_val) and np.isfinite(close_val):
+        return False
+    open_v = d.at[cutoff, "Open"]
+    high_v = d.at[cutoff, "High"]
+    low_v = d.at[cutoff, "Low"]
+    vol_v = d.at[cutoff, "Volume"]
+    if any(pd.isna(v) or not np.isfinite(v) for v in (open_v, high_v, low_v, vol_v)):
+        return False
+    if open_v <= 0 or high_v <= 0 or low_v <= 0 or vol_v < 0:
+        return False
+    if high_v + OHLC_FLOAT_EPSILON < max(open_v, low_v) or low_v - OHLC_FLOAT_EPSILON > min(open_v, high_v):
+        return False
+    return True
+
+
+def _recover_latest_close_from_adj_close(d, cutoff):
+    if "Adj Close" not in d.columns or not _no_corporate_actions_on_date(d, cutoff):
+        return False
+    adj = d.at[cutoff, "Adj Close"]
+    if pd.isna(adj) or not np.isfinite(adj) or adj <= 0:
+        return False
+    low_v, high_v = d.at[cutoff, "Low"], d.at[cutoff, "High"]
+    if low_v - OHLC_FLOAT_EPSILON <= adj <= high_v + OHLC_FLOAT_EPSILON:
+        d.at[cutoff, "Close"] = float(adj)
+        return True
+    return False
+
+
+def _recover_latest_close_via_repair(yf, symbol, d, cutoff):
+    try:
+        repaired_raw = yf.download(
+            symbol,
+            start=(cutoff - pd.Timedelta(days=REPAIR_LOOKBACK_DAYS)).date().isoformat(),
+            end=(cutoff + pd.Timedelta(days=1)).date().isoformat(),
+            interval="1d",
+            auto_adjust=False,
+            actions=True,
+            repair=True,
+            keepna=True,
+            progress=False,
+            threads=False,
+            timeout=25,
+        )
+        repaired = _prepare_frame(repaired_raw, cutoff)
+        if cutoff not in repaired.index:
+            return False
+        row = _validate_prepared_frame(repaired.loc[[cutoff]])
+    except Exception:
+        return False
+    for col in d.columns:
+        if col in row.columns:
+            val = row.at[cutoff, col]
+            if pd.notna(val) and np.isfinite(val):
+                if pd.api.types.is_integer_dtype(d[col].dtype):
+                    if float(val).is_integer():
+                        d.at[cutoff, col] = int(val)
+                    else:
+                        d[col] = d[col].astype("float64")
+                        d.at[cutoff, col] = float(val)
+                else:
+                    d.at[cutoff, col] = float(val)
+    if (
+        "Adj Close" in d.columns
+        and (pd.isna(d.at[cutoff, "Adj Close"]) or not np.isfinite(d.at[cutoff, "Adj Close"]))
+        and _no_corporate_actions_on_date(d, cutoff)
+    ):
+        d.at[cutoff, "Adj Close"] = float(d.at[cutoff, "Close"])
+    return True
 
 
 def adjustment_status(frame, since=None):
@@ -170,6 +274,24 @@ def payload_frame(payload):
 class YahooProvider:
     source = "Yahoo Finance via yfinance"
 
+    def _download_and_normalize(self, yf, symbol, start, cutoff):
+        raw = yf.download(
+            symbol,
+            start=start.date().isoformat(),
+            end=(cutoff + pd.Timedelta(days=1)).date().isoformat(),
+            interval="1d",
+            auto_adjust=False,
+            actions=True,
+            progress=False,
+            threads=False,
+            timeout=25,
+        )
+        d = _prepare_frame(raw, cutoff)
+        if _can_recover_latest_close(d, cutoff):
+            if not _recover_latest_close_from_adj_close(d, cutoff):
+                _recover_latest_close_via_repair(yf, symbol, d, cutoff)
+        return _validate_prepared_frame(d)
+
     def fetch(self, symbol, as_of, previous=None):
         import yfinance as yf
         cutoff = pd.Timestamp(as_of)
@@ -183,10 +305,7 @@ class YahooProvider:
         errors = []
         for attempt in range(3):
             try:
-                d = yf.download(symbol, start=start.date().isoformat(),
-                    end=(cutoff + pd.Timedelta(days=1)).date().isoformat(), interval="1d",
-                    auto_adjust=False, actions=True, progress=False, threads=False, timeout=25)
-                d = normalize_frame(d, as_of)
+                d = self._download_and_normalize(yf, symbol, start, cutoff)
                 if previous is not None and not previous.empty:
                     overlap = previous.index.intersection(d.index)
                     revised = False
@@ -194,10 +313,7 @@ class YahooProvider:
                         if column in previous and column in d and len(overlap):
                             revised |= not np.allclose(previous.loc[overlap, column], d.loc[overlap, column], rtol=1e-8, atol=1e-8, equal_nan=True)
                     if revised:
-                        full = yf.download(symbol, start=(cutoff - pd.Timedelta(days=900)).date().isoformat(),
-                            end=(cutoff + pd.Timedelta(days=1)).date().isoformat(), interval="1d",
-                            auto_adjust=False, actions=True, progress=False, threads=False, timeout=25)
-                        return normalize_frame(full, as_of)
+                        return self._download_and_normalize(yf, symbol, cutoff - pd.Timedelta(days=900), cutoff)
                     old = previous.loc[previous.index < d.index.min()]
                     d = pd.concat([old, d]).sort_index()
                 return d.loc[d.index >= cutoff - pd.Timedelta(days=900)]
